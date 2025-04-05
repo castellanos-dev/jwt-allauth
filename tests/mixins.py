@@ -10,7 +10,7 @@ from django.utils.encoding import force_str
 from rest_framework import permissions
 from rest_framework import status
 
-from jwt_allauth.token.tokens import RefreshToken
+from jwt_allauth.tokens.tokens import RefreshToken
 
 
 class CustomPermissionClass(permissions.BasePermission):

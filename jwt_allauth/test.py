@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.test.client import Client
 
-from jwt_allauth.token.app_settings import RefreshToken
+from jwt_allauth.tokens.app_settings import RefreshToken
 
 
 class JAClient(Client):

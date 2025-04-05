@@ -18,10 +18,10 @@ from jwt_allauth.constants import PASS_RESET, PASSWORD_RESET_REDIRECT, PASS_RESE
     ONE_TIME_PERMISSION
 from jwt_allauth.password_reset.permissions import ResetPasswordPermission
 from jwt_allauth.password_reset.serializers import SetPasswordSerializer
-from jwt_allauth.token.app_settings import RefreshToken
-from jwt_allauth.token.models import GenericTokenModel, RefreshTokenWhitelistModel
-from jwt_allauth.token.serializers import GenericTokenModelSerializer
-from jwt_allauth.token.tokens import GenericToken
+from jwt_allauth.tokens.app_settings import RefreshToken
+from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
+from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
+from jwt_allauth.tokens.tokens import GenericToken
 from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m
 
 

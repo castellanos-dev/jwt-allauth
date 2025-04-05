@@ -7,7 +7,7 @@ from rest_framework import exceptions
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
 
-from jwt_allauth.token.app_settings import RefreshToken
+from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.utils import allauth_authenticate
 
 

@@ -5,8 +5,8 @@ from django.utils.crypto import constant_time_compare
 from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import InvalidToken
 
-from jwt_allauth.token.app_settings import RefreshToken
-from jwt_allauth.token.models import RefreshTokenWhitelistModel
+from jwt_allauth.tokens.app_settings import RefreshToken
+from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 
 
 class RemoveRefreshTokenSerializer(serializers.Serializer):

@@ -3,7 +3,7 @@ from django.contrib.auth.forms import SetPasswordForm
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from jwt_allauth.token.models import RefreshTokenWhitelistModel
+from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 
 
 class PasswordChangeSerializer(serializers.Serializer):

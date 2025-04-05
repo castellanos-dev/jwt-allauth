@@ -3,9 +3,9 @@ from typing import Dict, Any
 from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import InvalidToken
 
-from jwt_allauth.token.app_settings import RefreshToken
-from jwt_allauth.token.models import RefreshTokenWhitelistModel
-from jwt_allauth.token.serializers import RefreshTokenWhitelistSerializer
+from jwt_allauth.tokens.app_settings import RefreshToken
+from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
+from jwt_allauth.tokens.serializers import RefreshTokenWhitelistSerializer
 from jwt_allauth.utils import is_email_verified
 
 

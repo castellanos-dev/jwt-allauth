@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from jwt_allauth.token.models import RefreshTokenWhitelistModel, GenericTokenModel
+from jwt_allauth.tokens.models import RefreshTokenWhitelistModel, GenericTokenModel
 
 
 class RefreshTokenWhitelistSerializer(serializers.ModelSerializer):
