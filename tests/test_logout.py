@@ -8,7 +8,6 @@ from jwt_allauth.token.tokens import RefreshToken
 from .mixins import TestsMixin
 
 
-@override_settings(ROOT_URLCONF="tests.urls")
 class LogoutTests(TestsMixin):
     """
     Case #1:

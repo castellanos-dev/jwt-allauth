@@ -4,7 +4,6 @@ from django.test import override_settings
 from .mixins import TestsMixin
 
 
-@override_settings(ROOT_URLCONF="tests.urls")
 class UserDetailsTests(TestsMixin):
     """
     Case #1:

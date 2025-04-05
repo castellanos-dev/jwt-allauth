@@ -13,7 +13,6 @@ class CustomUserPermission(BasePermission):
     accepted_roles = [300]
 
 
-@override_settings(ROOT_URLCONF="tests.urls")
 class LoginTests(TestsMixin):
     """
     Case #1:

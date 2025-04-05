@@ -19,7 +19,6 @@ from jwt_allauth.token.tokens import GenericToken
 from .mixins import TestsMixin
 
 
-@override_settings(ROOT_URLCONF="tests.urls")
 class PasswordResetTests(TestsMixin):
     """
     Case #1:

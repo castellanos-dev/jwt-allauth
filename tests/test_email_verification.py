@@ -6,7 +6,6 @@ from django.test import override_settings
 from .mixins import TestsMixin
 
 
-@override_settings(ROOT_URLCONF="tests.urls")
 class EmailVerificationTests(TestsMixin):
     """
     Case #1:
@@ -74,7 +73,7 @@ class EmailVerificationTests(TestsMixin):
         key = EmailConfirmationHMAC(email_object).key
 
         resp = self.get(f'{self.verify_email_url}{key}/', status_code=302)
-        self.assertRedirects(resp, expected_url='/registration/verified/', fetch_redirect_response=False)
+        self.assertRedirects(resp, expected_url='/jwt-allauth/registration/verified/', fetch_redirect_response=False)
 
     @override_settings(EMAIL_VERIFIED_REDIRECT="/test-verified/")
     def test_email_verification_redirect_url_modified(self):

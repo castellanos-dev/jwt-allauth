@@ -3,7 +3,6 @@ from django.test import override_settings
 from .mixins import TestsMixin
 
 
-@override_settings(ROOT_URLCONF="tests.urls")
 class LoginTests(TestsMixin):
     """
     Case #1:

@@ -7,7 +7,6 @@ from rest_framework import status
 from .mixins import TestsMixin
 
 
-@override_settings(ROOT_URLCONF="tests.urls")
 class RegistrationTests(TestsMixin):
     """
     Case #1:

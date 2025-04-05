@@ -9,7 +9,7 @@ from jwt_allauth.token.tokens import RefreshToken
 from .mixins import TestsMixin
 
 
-@override_settings(ROOT_URLCONF="tests.urls")
+
 class TokenTests(TestsMixin):
     """
     Case #1:

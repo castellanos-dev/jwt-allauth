@@ -5,7 +5,6 @@ from jwt_allauth.token.models import RefreshTokenWhitelistModel
 from .mixins import TestsMixin
 
 
-@override_settings(ROOT_URLCONF="tests.urls")
 class PasswordChangeTests(TestsMixin):
     """
     Case #1:
