@@ -1,2 +1,0 @@
-[console_scripts]
-jwt-allauth = jwt_allauth.bin.jwt_allauth:main
