@@ -26,6 +26,32 @@ class BasePermission(DefaultBasePermission):
     """
     accepted_roles = None
 
+    def _check_role_permission(self, request, include_staff=True):
+        """
+        Internal method to check role-based permissions.
+
+        Args:
+            request (Request): DRF request object containing JWT in auth attribute
+            include_staff (bool): Whether to include staff and superuser roles in the check
+
+        Returns:
+            bool: True if authorized, False otherwise
+        """
+        if not isinstance(self.accepted_roles, list):
+            raise ValueError('`accepted_roles` must be a list.')
+
+        if not hasattr(request, 'auth'):
+            return False
+
+        if not request.auth or 'role' not in request.auth:
+            return False
+
+        roles_to_check = self.accepted_roles
+        if include_staff:
+            roles_to_check = self.accepted_roles + [STAFF_CODE, SUPER_USER_CODE]
+
+        return request.auth['role'] in roles_to_check
+
     def has_permission(self, request, view):
         """
         Determine if the request should be permitted based on JWT roles.
@@ -36,20 +62,11 @@ class BasePermission(DefaultBasePermission):
 
         Returns:
             bool: True if authorized, False otherwise
-
-        Raises:
-            ValueError: If accepted_roles is not a list
         """
-        if not isinstance(self.accepted_roles, list):
-            raise ValueError('`accepted_roles` must be a list.')
-        if hasattr(request, 'auth'):
-            if request.auth and 'role' in request.auth:
-                if request.auth['role'] in self.accepted_roles + [STAFF_CODE, SUPER_USER_CODE]:
-                    return True
-        return False
+        return self._check_role_permission(request, include_staff=True)
 
 
-class BasePermissionStaffExcluded(DefaultBasePermission):
+class BasePermissionStaffExcluded(BasePermission):
     """
     Custom base permission class for role-based access control using JWT claims.
 
@@ -84,10 +101,4 @@ class BasePermissionStaffExcluded(DefaultBasePermission):
         Raises:
             ValueError: If accepted_roles is not a list
         """
-        if not isinstance(self.accepted_roles, list):
-            raise ValueError('`accepted_roles` must be a list.')
-        if hasattr(request, 'auth'):
-            if request.auth and 'role' in request.auth:
-                if request.auth['role'] in self.accepted_roles:
-                    return True
-        return False
+        return self._check_role_permission(request, include_staff=False)

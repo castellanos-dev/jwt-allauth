@@ -1,45 +1,23 @@
-# Moved in Django 1.8 from django to tests/auth_tests/urls.py
+"""
+URL configuration for dummysite project.
 
-from django.urls import path, re_path
-from django.contrib.auth import views
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.urls import urlpatterns
+The `urlpatterns` list routes URLs to views. For more information please see:
+    https://docs.djangoproject.com/en/4.2/topics/http/urls/
+Examples:
+Function views
+    1. Add an import:  from my_app import views
+    2. Add a URL to urlpatterns:  path('', views.home, name='home')
+Class-based views
+    1. Add an import:  from other_app.views import Home
+    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
+Including another URLconf
+    1. Import the include() function: from django.urls import include, path
+    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+"""
+from django.contrib import admin
+from django.urls import path, include
 
-
-# special urls for auth test cases
-urlpatterns += [
-    path('logout/custom_query/', views.LogoutView.as_view(), dict(redirect_field_name='follow')),
-    path('logout/next_page/', views.LogoutView.as_view(), dict(next_page='/somewhere/')),
-    path('logout/next_page/named/', views.LogoutView.as_view(), dict(next_page='password_reset')),
-    path('password_reset_from_email/', views.PasswordResetView.as_view(), dict(from_email='staffmember@example.com')),
-    path('password_reset/custom_redirect/', views.PasswordResetView.as_view(), dict(post_reset_redirect='/custom/')),
-    path(
-        'password_reset/custom_redirect/named/',
-        views.PasswordResetView.as_view(),
-        dict(post_reset_redirect='password_reset')
-    ),
-    path(
-        'password_reset/html_email_template/',
-        views.PasswordResetView.as_view(),
-        dict(html_email_template_name='registration/html_password_reset_email.html')
-    ),
-    re_path(
-        r'^reset/custom/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$',
-        views.PasswordResetConfirmView.as_view(),
-        dict(post_reset_redirect='/custom/')
-    ),
-    re_path(
-        r'^reset/custom/named/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$',
-        views.PasswordResetConfirmView.as_view(),
-        dict(post_reset_redirect='password_reset')
-    ),
-    path('password_change/custom/', views.PasswordChangeView.as_view(), dict(post_change_redirect='/custom/')),
-    path(
-        'password_change/custom/named/',
-        views.PasswordChangeView.as_view(),
-        dict(post_change_redirect='password_reset')
-    ),
-    path('admin_password_reset/', views.PasswordResetView.as_view(), dict(is_admin_site=True)),
-    path('login_required/', login_required(views.PasswordResetView.as_view())),
-    path('login_required_login_url/', login_required(views.PasswordResetView.as_view(), login_url='/somewhere/')),
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('account/', include('jwt_allauth.urls')),
 ]

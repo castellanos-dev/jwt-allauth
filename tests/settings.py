@@ -59,7 +59,7 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
 ]
 
-ROOT_URLCONF = 'dummysite.urls'
+ROOT_URLCONF = 'django_urls'
 
 TEMPLATES = [
     {
