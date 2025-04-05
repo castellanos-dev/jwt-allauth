@@ -1,0 +1,1472 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="login" href="jwt_allauth.login.html" /><link rel="prev" title="Test utils" href="test.html" />
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2024.08.06 -->
+        <title>JWT Allauth modules - JWT Allauth 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">JWT Allauth 1.0.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  
+  <span class="sidebar-brand-text">JWT Allauth 1.0.0 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_endpoints.html">API endpoints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="email_verification.html">Email verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="password_reset.html">Password Reset</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="configuration.html">Configuration</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Configuration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="configuration.settings_py.html">settings.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.serializers.html">Serializers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.user_model.html">User Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.refresh_token.html">Refresh token</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="permissions.html">View Permissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="test.html">Test utils</a></li>
+<li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">JWT Allauth modules</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of JWT Allauth modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.login.html">login</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.logout.html">logout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.password_change.html">password change</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.password_reset.html">password reset</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="jwt_allauth.registration.html">registration</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of registration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.registration.email_verification.html">email verification</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.token.html">token</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.token_refresh.html">token refresh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.user_details.html">user details</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Authors</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/jwt_allauth.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="jwt-allauth-modules">
+<h1>JWT Allauth modules<a class="headerlink" href="#jwt-allauth-modules" title="Link to this heading">¶</a></h1>
+<section id="modules">
+<h2>Modules<a class="headerlink" href="#modules" title="Link to this heading">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jwt_allauth.login.html">login</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.login.html#module-jwt_allauth.login.serializers">jwt_allauth.login.serializers module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.login.html#jwt_allauth.login.serializers.LoginSerializer"><code class="docutils literal notranslate"><span class="pre">LoginSerializer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.login.html#jwt_allauth.login.serializers.LoginSerializer.get_token"><code class="docutils literal notranslate"><span class="pre">LoginSerializer.get_token()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.login.html#jwt_allauth.login.serializers.LoginSerializer.token_class"><code class="docutils literal notranslate"><span class="pre">LoginSerializer.token_class</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.login.html#jwt_allauth.login.serializers.LoginSerializer.user"><code class="docutils literal notranslate"><span class="pre">LoginSerializer.user</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.login.html#jwt_allauth.login.serializers.LoginSerializer.username_field"><code class="docutils literal notranslate"><span class="pre">LoginSerializer.username_field</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.login.html#jwt_allauth.login.serializers.LoginSerializer.validate"><code class="docutils literal notranslate"><span class="pre">LoginSerializer.validate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.login.html#module-jwt_allauth.login.views">jwt_allauth.login.views module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.login.html#jwt_allauth.login.views.LoginView"><code class="docutils literal notranslate"><span class="pre">LoginView</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.login.html#jwt_allauth.login.views.LoginView.dispatch"><code class="docutils literal notranslate"><span class="pre">LoginView.dispatch()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.login.html#jwt_allauth.login.views.LoginView.post"><code class="docutils literal notranslate"><span class="pre">LoginView.post()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.login.html#jwt_allauth.login.views.LoginView.serializer_class"><code class="docutils literal notranslate"><span class="pre">LoginView.serializer_class</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.login.html#jwt_allauth.login.views.LoginView.throttle_classes"><code class="docutils literal notranslate"><span class="pre">LoginView.throttle_classes</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jwt_allauth.logout.html">logout</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.logout.html#module-jwt_allauth.logout.serializers">jwt_allauth.logout.serializers module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.serializers.RemoveRefreshTokenSerializer"><code class="docutils literal notranslate"><span class="pre">RemoveRefreshTokenSerializer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.serializers.RemoveRefreshTokenSerializer.user"><code class="docutils literal notranslate"><span class="pre">RemoveRefreshTokenSerializer.user</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.serializers.RemoveRefreshTokenSerializer.validate"><code class="docutils literal notranslate"><span class="pre">RemoveRefreshTokenSerializer.validate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.logout.html#module-jwt_allauth.logout.views">jwt_allauth.logout.views module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutAllView"><code class="docutils literal notranslate"><span class="pre">LogoutAllView</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutAllView.get"><code class="docutils literal notranslate"><span class="pre">LogoutAllView.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutAllView.logout"><code class="docutils literal notranslate"><span class="pre">LogoutAllView.logout()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutAllView.permission_classes"><code class="docutils literal notranslate"><span class="pre">LogoutAllView.permission_classes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutAllView.post"><code class="docutils literal notranslate"><span class="pre">LogoutAllView.post()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutView"><code class="docutils literal notranslate"><span class="pre">LogoutView</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutView.get"><code class="docutils literal notranslate"><span class="pre">LogoutView.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutView.logout"><code class="docutils literal notranslate"><span class="pre">LogoutView.logout()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutView.permission_classes"><code class="docutils literal notranslate"><span class="pre">LogoutView.permission_classes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutView.post"><code class="docutils literal notranslate"><span class="pre">LogoutView.post()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jwt_allauth.password_change.html">password change</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.password_change.html#module-jwt_allauth.password_change.serializers">jwt_allauth.password_change.serializers module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.password_change.html#jwt_allauth.password_change.serializers.PasswordChangeSerializer"><code class="docutils literal notranslate"><span class="pre">PasswordChangeSerializer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_change.html#jwt_allauth.password_change.serializers.PasswordChangeSerializer.save"><code class="docutils literal notranslate"><span class="pre">PasswordChangeSerializer.save()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_change.html#jwt_allauth.password_change.serializers.PasswordChangeSerializer.set_password_form_class"><code class="docutils literal notranslate"><span class="pre">PasswordChangeSerializer.set_password_form_class</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_change.html#jwt_allauth.password_change.serializers.PasswordChangeSerializer.validate"><code class="docutils literal notranslate"><span class="pre">PasswordChangeSerializer.validate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_change.html#jwt_allauth.password_change.serializers.PasswordChangeSerializer.validate_old_password"><code class="docutils literal notranslate"><span class="pre">PasswordChangeSerializer.validate_old_password()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.password_change.html#module-jwt_allauth.password_change.views">jwt_allauth.password_change.views module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.password_change.html#jwt_allauth.password_change.views.PasswordChangeView"><code class="docutils literal notranslate"><span class="pre">PasswordChangeView</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_change.html#jwt_allauth.password_change.views.PasswordChangeView.dispatch"><code class="docutils literal notranslate"><span class="pre">PasswordChangeView.dispatch()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_change.html#jwt_allauth.password_change.views.PasswordChangeView.permission_classes"><code class="docutils literal notranslate"><span class="pre">PasswordChangeView.permission_classes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_change.html#jwt_allauth.password_change.views.PasswordChangeView.post"><code class="docutils literal notranslate"><span class="pre">PasswordChangeView.post()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_change.html#jwt_allauth.password_change.views.PasswordChangeView.serializer_class"><code class="docutils literal notranslate"><span class="pre">PasswordChangeView.serializer_class</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_change.html#jwt_allauth.password_change.views.PasswordChangeView.throttle_classes"><code class="docutils literal notranslate"><span class="pre">PasswordChangeView.throttle_classes</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jwt_allauth.password_reset.html">password reset</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.password_reset.html#module-jwt_allauth.password_reset.serializers">jwt_allauth.password_reset.serializers module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.PasswordResetSerializer"><code class="docutils literal notranslate"><span class="pre">PasswordResetSerializer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.PasswordResetSerializer.get_email_options"><code class="docutils literal notranslate"><span class="pre">PasswordResetSerializer.get_email_options()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.PasswordResetSerializer.password_reset_form_class"><code class="docutils literal notranslate"><span class="pre">PasswordResetSerializer.password_reset_form_class</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.PasswordResetSerializer.save"><code class="docutils literal notranslate"><span class="pre">PasswordResetSerializer.save()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.PasswordResetSerializer.validate_email"><code class="docutils literal notranslate"><span class="pre">PasswordResetSerializer.validate_email()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.SetPasswordSerializer"><code class="docutils literal notranslate"><span class="pre">SetPasswordSerializer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.SetPasswordSerializer.old_password"><code class="docutils literal notranslate"><span class="pre">SetPasswordSerializer.old_password</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.SetPasswordSerializer.validate_old_password"><code class="docutils literal notranslate"><span class="pre">SetPasswordSerializer.validate_old_password()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.password_reset.html#module-jwt_allauth.password_reset.views">jwt_allauth.password_reset.views module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.DefaultPasswordResetView"><code class="docutils literal notranslate"><span class="pre">DefaultPasswordResetView</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.DefaultPasswordResetView.get"><code class="docutils literal notranslate"><span class="pre">DefaultPasswordResetView.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.DefaultPasswordResetView.permission_classes"><code class="docutils literal notranslate"><span class="pre">DefaultPasswordResetView.permission_classes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.DefaultPasswordResetView.template_name"><code class="docutils literal notranslate"><span class="pre">DefaultPasswordResetView.template_name</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetConfirmView"><code class="docutils literal notranslate"><span class="pre">PasswordResetConfirmView</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetConfirmView.form_url"><code class="docutils literal notranslate"><span class="pre">PasswordResetConfirmView.form_url</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetConfirmView.get"><code class="docutils literal notranslate"><span class="pre">PasswordResetConfirmView.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetConfirmView.get_user"><code class="docutils literal notranslate"><span class="pre">PasswordResetConfirmView.get_user()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetView"><code class="docutils literal notranslate"><span class="pre">PasswordResetView</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetView.permission_classes"><code class="docutils literal notranslate"><span class="pre">PasswordResetView.permission_classes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetView.post"><code class="docutils literal notranslate"><span class="pre">PasswordResetView.post()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetView.serializer_class"><code class="docutils literal notranslate"><span class="pre">PasswordResetView.serializer_class</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetView.throttle_classes"><code class="docutils literal notranslate"><span class="pre">PasswordResetView.throttle_classes</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.ResetPasswordView"><code class="docutils literal notranslate"><span class="pre">ResetPasswordView</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.ResetPasswordView.dispatch"><code class="docutils literal notranslate"><span class="pre">ResetPasswordView.dispatch()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.ResetPasswordView.permission_classes"><code class="docutils literal notranslate"><span class="pre">ResetPasswordView.permission_classes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.ResetPasswordView.post"><code class="docutils literal notranslate"><span class="pre">ResetPasswordView.post()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.ResetPasswordView.serializer_class"><code class="docutils literal notranslate"><span class="pre">ResetPasswordView.serializer_class</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.ResetPasswordView.throttle_classes"><code class="docutils literal notranslate"><span class="pre">ResetPasswordView.throttle_classes</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jwt_allauth.registration.html">registration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.registration.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.registration.email_verification.html">email verification</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.email_verification.html#module-jwt_allauth.registration.email_verification.serializers">jwt_allauth.registration.email_verification.serializers module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.email_verification.html#module-jwt_allauth.registration.email_verification.views">jwt_allauth.registration.email_verification.views module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.registration.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.registration.html#module-jwt_allauth.registration.app_settings">jwt_allauth.registration.app_settings module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.app_settings.register_permission_classes"><code class="docutils literal notranslate"><span class="pre">register_permission_classes()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.registration.html#module-jwt_allauth.registration.serializers">jwt_allauth.registration.serializers module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer"><code class="docutils literal notranslate"><span class="pre">RegisterSerializer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.custom_signup"><code class="docutils literal notranslate"><span class="pre">RegisterSerializer.custom_signup()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.get_cleaned_data"><code class="docutils literal notranslate"><span class="pre">RegisterSerializer.get_cleaned_data()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.save"><code class="docutils literal notranslate"><span class="pre">RegisterSerializer.save()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.validate"><code class="docutils literal notranslate"><span class="pre">RegisterSerializer.validate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.validate_email"><code class="docutils literal notranslate"><span class="pre">RegisterSerializer.validate_email()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.validate_first_name"><code class="docutils literal notranslate"><span class="pre">RegisterSerializer.validate_first_name()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.validate_last_name"><code class="docutils literal notranslate"><span class="pre">RegisterSerializer.validate_last_name()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.validate_password1"><code class="docutils literal notranslate"><span class="pre">RegisterSerializer.validate_password1()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.validate_username"><code class="docutils literal notranslate"><span class="pre">RegisterSerializer.validate_username()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.registration.html#module-jwt_allauth.registration.views">jwt_allauth.registration.views module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView"><code class="docutils literal notranslate"><span class="pre">RegisterView</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.create"><code class="docutils literal notranslate"><span class="pre">RegisterView.create()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.dispatch"><code class="docutils literal notranslate"><span class="pre">RegisterView.dispatch()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.get_response_data"><code class="docutils literal notranslate"><span class="pre">RegisterView.get_response_data()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.jwt_token"><code class="docutils literal notranslate"><span class="pre">RegisterView.jwt_token</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.perform_create"><code class="docutils literal notranslate"><span class="pre">RegisterView.perform_create()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.permission_classes"><code class="docutils literal notranslate"><span class="pre">RegisterView.permission_classes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.serializer_class"><code class="docutils literal notranslate"><span class="pre">RegisterView.serializer_class</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.token_model"><code class="docutils literal notranslate"><span class="pre">RegisterView.token_model</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jwt_allauth.token.html">token</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.token.html#module-jwt_allauth.token.tokens">jwt_allauth.token.tokens module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.tokens.GenericToken"><code class="docutils literal notranslate"><span class="pre">GenericToken</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.tokens.GenericToken.check_token"><code class="docutils literal notranslate"><span class="pre">GenericToken.check_token()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.tokens.GenericToken.make_token"><code class="docutils literal notranslate"><span class="pre">GenericToken.make_token()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.tokens.RefreshToken"><code class="docutils literal notranslate"><span class="pre">RefreshToken</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.tokens.RefreshToken.for_user"><code class="docutils literal notranslate"><span class="pre">RefreshToken.for_user()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.tokens.RefreshToken.set_session"><code class="docutils literal notranslate"><span class="pre">RefreshToken.set_session()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.tokens.RefreshToken.set_user_role"><code class="docutils literal notranslate"><span class="pre">RefreshToken.set_user_role()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.token.html#module-jwt_allauth.token.models">jwt_allauth.token.models module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.Meta"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.Meta</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.browser"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.browser</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.browser_version"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.browser_version</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.created"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.created</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.device"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.device</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.device_brand"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.device_brand</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.device_model"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.device_model</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.enabled"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.enabled</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.get_next_by_created"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.get_next_by_created()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.get_previous_by_created"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.get_previous_by_created()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.id"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.ip"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.ip</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.is_bot"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.is_bot</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.is_mobile"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.is_mobile</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.is_pc"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.is_pc</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.is_tablet"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.is_tablet</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.jti"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.jti</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.os"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.os</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.os_version"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.os_version</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.session"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.session</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken"><code class="docutils literal notranslate"><span class="pre">BaseToken</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.Meta"><code class="docutils literal notranslate"><span class="pre">BaseToken.Meta</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.browser"><code class="docutils literal notranslate"><span class="pre">BaseToken.browser</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.browser_version"><code class="docutils literal notranslate"><span class="pre">BaseToken.browser_version</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.created"><code class="docutils literal notranslate"><span class="pre">BaseToken.created</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.device"><code class="docutils literal notranslate"><span class="pre">BaseToken.device</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.device_brand"><code class="docutils literal notranslate"><span class="pre">BaseToken.device_brand</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.device_model"><code class="docutils literal notranslate"><span class="pre">BaseToken.device_model</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.get_next_by_created"><code class="docutils literal notranslate"><span class="pre">BaseToken.get_next_by_created()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.get_previous_by_created"><code class="docutils literal notranslate"><span class="pre">BaseToken.get_previous_by_created()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.id"><code class="docutils literal notranslate"><span class="pre">BaseToken.id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.ip"><code class="docutils literal notranslate"><span class="pre">BaseToken.ip</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.is_bot"><code class="docutils literal notranslate"><span class="pre">BaseToken.is_bot</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.is_mobile"><code class="docutils literal notranslate"><span class="pre">BaseToken.is_mobile</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.is_pc"><code class="docutils literal notranslate"><span class="pre">BaseToken.is_pc</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.is_tablet"><code class="docutils literal notranslate"><span class="pre">BaseToken.is_tablet</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.os"><code class="docutils literal notranslate"><span class="pre">BaseToken.os</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.os_version"><code class="docutils literal notranslate"><span class="pre">BaseToken.os_version</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.DoesNotExist"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.DoesNotExist</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.MultipleObjectsReturned"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.MultipleObjectsReturned</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.browser"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.browser</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.browser_version"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.browser_version</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.created"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.created</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.device"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.device</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.device_brand"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.device_brand</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.device_model"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.device_model</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.get_next_by_created"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.get_next_by_created()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.get_previous_by_created"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.get_previous_by_created()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.id"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.ip"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.ip</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.is_bot"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.is_bot</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.is_mobile"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.is_mobile</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.is_pc"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.is_pc</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.is_tablet"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.is_tablet</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.objects"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.objects</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.os"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.os</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.os_version"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.os_version</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.purpose"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.purpose</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.token"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.token</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.user"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.user</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.user_id"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.user_id</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.DoesNotExist"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.DoesNotExist</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.MultipleObjectsReturned"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.MultipleObjectsReturned</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.browser"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.browser</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.browser_version"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.browser_version</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.created"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.created</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.device"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.device</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.device_brand"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.device_brand</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.device_model"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.device_model</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.enabled"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.enabled</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.get_next_by_created"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.get_next_by_created()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.get_previous_by_created"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.get_previous_by_created()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.id"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.ip"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.ip</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_bot"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.is_bot</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_mobile"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.is_mobile</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_pc"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.is_pc</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_tablet"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.is_tablet</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.jti"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.jti</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.objects"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.objects</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.os"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.os</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.os_version"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.os_version</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.session"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.session</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.user"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.user</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.user_id"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.user_id</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.token.html#module-jwt_allauth.token.serializers">jwt_allauth.token.serializers module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.serializers.GenericTokenModelSerializer"><code class="docutils literal notranslate"><span class="pre">GenericTokenModelSerializer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta"><code class="docutils literal notranslate"><span class="pre">GenericTokenModelSerializer.Meta</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistSerializer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token.html#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistSerializer.Meta</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jwt_allauth.token_refresh.html">token refresh</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.token_refresh.html#module-jwt_allauth.token_refresh.serializers">jwt_allauth.token_refresh.serializers module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.serializers.TokenRefreshSerializer"><code class="docutils literal notranslate"><span class="pre">TokenRefreshSerializer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.serializers.TokenRefreshSerializer.token_class"><code class="docutils literal notranslate"><span class="pre">TokenRefreshSerializer.token_class</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.serializers.TokenRefreshSerializer.validate"><code class="docutils literal notranslate"><span class="pre">TokenRefreshSerializer.validate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.token_refresh.html#module-jwt_allauth.token_refresh.views">jwt_allauth.token_refresh.views module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.views.TokenRefreshView"><code class="docutils literal notranslate"><span class="pre">TokenRefreshView</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.views.TokenRefreshView.post"><code class="docutils literal notranslate"><span class="pre">TokenRefreshView.post()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.views.TokenRefreshView.serializer_class"><code class="docutils literal notranslate"><span class="pre">TokenRefreshView.serializer_class</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.views.TokenRefreshView.throttle_classes"><code class="docutils literal notranslate"><span class="pre">TokenRefreshView.throttle_classes</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jwt_allauth.user_details.html">user details</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.user_details.html#module-jwt_allauth.user_details.serializers">jwt_allauth.user_details.serializers module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.user_details.html#jwt_allauth.user_details.serializers.UserDetailsSerializer"><code class="docutils literal notranslate"><span class="pre">UserDetailsSerializer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.user_details.html#jwt_allauth.user_details.serializers.UserDetailsSerializer.Meta"><code class="docutils literal notranslate"><span class="pre">UserDetailsSerializer.Meta</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.user_details.html#module-jwt_allauth.user_details.views">jwt_allauth.user_details.views module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.user_details.html#jwt_allauth.user_details.views.UserDetailsView"><code class="docutils literal notranslate"><span class="pre">UserDetailsView</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.user_details.html#jwt_allauth.user_details.views.UserDetailsView.get_object"><code class="docutils literal notranslate"><span class="pre">UserDetailsView.get_object()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.user_details.html#jwt_allauth.user_details.views.UserDetailsView.get_queryset"><code class="docutils literal notranslate"><span class="pre">UserDetailsView.get_queryset()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.user_details.html#jwt_allauth.user_details.views.UserDetailsView.http_method_names"><code class="docutils literal notranslate"><span class="pre">UserDetailsView.http_method_names</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.user_details.html#jwt_allauth.user_details.views.UserDetailsView.permission_classes"><code class="docutils literal notranslate"><span class="pre">UserDetailsView.permission_classes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jwt_allauth.user_details.html#jwt_allauth.user_details.views.UserDetailsView.serializer_class"><code class="docutils literal notranslate"><span class="pre">UserDetailsView.serializer_class</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+</section>
+<section id="module-jwt_allauth.adapter">
+<span id="jwt-allauth-adapter-module"></span><h2>jwt_allauth.adapter module<a class="headerlink" href="#module-jwt_allauth.adapter" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.adapter.JWTAllAuthAdapter">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.adapter.</span></span><span class="sig-name descname"><span class="pre">JWTAllAuthAdapter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/adapter.html#JWTAllAuthAdapter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.adapter.JWTAllAuthAdapter" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DefaultAccountAdapter</span></code></p>
+<p>Custom account adapter extending allauth’s DefaultAccountAdapter with JWT-specific email handling.</p>
+<p>Provides enhanced email confirmation functionality with template path customization
+and JWT-related email content handling.</p>
+<p>Key Features:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Email normalization (trimming and lowercasing)</p></li>
+<li><p>Customizable template paths for verification emails</p></li>
+<li><p>Dual template support (HTML/text) with fallback handling</p></li>
+<li><p>Integration with JWT verification workflows</p></li>
+</ul>
+</div></blockquote>
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.adapter.JWTAllAuthAdapter.clean_email">
+<span class="sig-name descname"><span class="pre">clean_email</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">email</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/adapter.html#JWTAllAuthAdapter.clean_email"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.adapter.JWTAllAuthAdapter.clean_email" title="Link to this definition">¶</a></dt>
+<dd><p>Normalize email addresses by trimming whitespace and converting to lowercase.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>email</strong> (<em>str</em>) – Raw email input</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Normalized email address</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.adapter.JWTAllAuthAdapter.render_mail">
+<span class="sig-name descname"><span class="pre">render_mail</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">template_prefix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">email</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subject_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">template_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/adapter.html#JWTAllAuthAdapter.render_mail"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.adapter.JWTAllAuthAdapter.render_mail" title="Link to this definition">¶</a></dt>
+<dd><p>Render email message with support for multiple template formats and custom paths.</p>
+<p>Behavior:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Generates multipart emails when both HTML and text templates exist</p></li>
+<li><p>Uses custom template paths when provided</p></li>
+<li><p>Automatically formats email subject</p></li>
+<li><p>Supports HTML email content as primary when specified</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>template_prefix</strong> (<em>str</em>) – Base template path prefix</p></li>
+<li><p><strong>email</strong> (<em>str</em><em>|</em><em>list</em>) – Recipient email address(es)</p></li>
+<li><p><strong>context</strong> (<em>dict</em>) – Template context variables</p></li>
+<li><p><strong>headers</strong> (<em>dict</em><em>, </em><em>optional</em>) – Custom email headers</p></li>
+<li><p><strong>subject_path</strong> (<em>str</em><em>, </em><em>optional</em>) – Override path for subject template</p></li>
+<li><p><strong>template_path</strong> (<em>str</em><em>, </em><em>optional</em>) – Override path for body template</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Configured email message object</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>EmailMessage</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>TemplateDoesNotExist</strong> – If no valid template can be found</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.adapter.JWTAllAuthAdapter.send_confirmation_mail">
+<span class="sig-name descname"><span class="pre">send_confirmation_mail</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emailconfirmation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">signup</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/adapter.html#JWTAllAuthAdapter.send_confirmation_mail"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.adapter.JWTAllAuthAdapter.send_confirmation_mail" title="Link to this definition">¶</a></dt>
+<dd><p>Generate and send email confirmation message with context customization.</p>
+<p>Context Includes:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>User object</p></li>
+<li><p>Verification code or URL (based on EMAIL_VERIFICATION_BY_CODE_ENABLED)</p></li>
+<li><p>Site-specific information</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>request</strong> (<em>HttpRequest</em>) – Current request object</p></li>
+<li><p><strong>emailconfirmation</strong> (<em>EmailConfirmation</em>) – Email confirmation instance</p></li>
+<li><p><strong>signup</strong> (<em>bool</em>) – Flag indicating if this is a signup confirmation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Confirmation key used in the email</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.adapter.JWTAllAuthAdapter.send_mail">
+<span class="sig-name descname"><span class="pre">send_mail</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">template_prefix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">email</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subject_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">template_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/adapter.html#JWTAllAuthAdapter.send_mail"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.adapter.JWTAllAuthAdapter.send_mail" title="Link to this definition">¶</a></dt>
+<dd><p>Construct and send email using template configuration.</p>
+<p>Enhances Context With:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Current site information</p></li>
+<li><p>Recipient email address</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>template_prefix</strong> (<em>str</em>) – Base path for template lookup</p></li>
+<li><p><strong>email</strong> (<em>str</em><em>|</em><em>list</em>) – Recipient email address(es)</p></li>
+<li><p><strong>context</strong> (<em>dict</em>) – Template context variables</p></li>
+<li><p><strong>subject_path</strong> (<em>str</em><em>, </em><em>optional</em>) – Custom path for subject template</p></li>
+<li><p><strong>template_path</strong> (<em>str</em><em>, </em><em>optional</em>) – Custom path for body template</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-jwt_allauth.exceptions">
+<span id="jwt-allauth-exceptions-module"></span><h2>jwt_allauth.exceptions module<a class="headerlink" href="#module-jwt_allauth.exceptions" title="Link to this heading">¶</a></h2>
+<dl class="py exception">
+<dt class="sig sig-object py" id="jwt_allauth.exceptions.IncorrectCredentials">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.exceptions.</span></span><span class="sig-name descname"><span class="pre">IncorrectCredentials</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">detail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/exceptions.html#IncorrectCredentials"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.exceptions.IncorrectCredentials" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">AuthenticationFailed</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.exceptions.IncorrectCredentials.default_code">
+<span class="sig-name descname"><span class="pre">default_code</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'incorrect_credentials'</span></em><a class="headerlink" href="#jwt_allauth.exceptions.IncorrectCredentials.default_code" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.exceptions.IncorrectCredentials.default_detail">
+<span class="sig-name descname"><span class="pre">default_detail</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Incorrect</span> <span class="pre">credentials'</span></em><a class="headerlink" href="#jwt_allauth.exceptions.IncorrectCredentials.default_detail" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.exceptions.IncorrectCredentials.status_code">
+<span class="sig-name descname"><span class="pre">status_code</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">401</span></em><a class="headerlink" href="#jwt_allauth.exceptions.IncorrectCredentials.status_code" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="jwt_allauth.exceptions.NotVerifiedEmail">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.exceptions.</span></span><span class="sig-name descname"><span class="pre">NotVerifiedEmail</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">detail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/exceptions.html#NotVerifiedEmail"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.exceptions.NotVerifiedEmail" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">AuthenticationFailed</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.exceptions.NotVerifiedEmail.default_code">
+<span class="sig-name descname"><span class="pre">default_code</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'email_not_verified'</span></em><a class="headerlink" href="#jwt_allauth.exceptions.NotVerifiedEmail.default_code" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.exceptions.NotVerifiedEmail.default_detail">
+<span class="sig-name descname"><span class="pre">default_detail</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'User</span> <span class="pre">email</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">verified'</span></em><a class="headerlink" href="#jwt_allauth.exceptions.NotVerifiedEmail.default_detail" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.exceptions.NotVerifiedEmail.status_code">
+<span class="sig-name descname"><span class="pre">status_code</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">401</span></em><a class="headerlink" href="#jwt_allauth.exceptions.NotVerifiedEmail.status_code" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-jwt_allauth.utils">
+<span id="jwt-allauth-utils-module"></span><h2>jwt_allauth.utils module<a class="headerlink" href="#module-jwt_allauth.utils" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="jwt_allauth.utils.allauth_authenticate">
+<span class="sig-prename descclassname"><span class="pre">jwt_allauth.utils.</span></span><span class="sig-name descname"><span class="pre">allauth_authenticate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/utils.html#allauth_authenticate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.utils.allauth_authenticate" title="Link to this definition">¶</a></dt>
+<dd><p>Authenticate user using allauth’s adapter with enhanced verification.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>**kwargs</strong> – Authentication credentials (typically username/email + password)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Authenticated user object</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>User</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#jwt_allauth.exceptions.IncorrectCredentials" title="jwt_allauth.exceptions.IncorrectCredentials"><strong>IncorrectCredentials</strong></a> – If authentication fails</p></li>
+<li><p><a class="reference internal" href="#jwt_allauth.exceptions.NotVerifiedEmail" title="jwt_allauth.exceptions.NotVerifiedEmail"><strong>NotVerifiedEmail</strong></a> – If email is not verified</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jwt_allauth.utils.get_client_ip">
+<span class="sig-prename descclassname"><span class="pre">jwt_allauth.utils.</span></span><span class="sig-name descname"><span class="pre">get_client_ip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/utils.html#get_client_ip"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.utils.get_client_ip" title="Link to this definition">¶</a></dt>
+<dd><p>Extract client IP address from request metadata.</p>
+<p>Priority:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>X-Forwarded-For header (first entry if multiple)</p></li>
+<li><p>REMOTE_ADDR meta value</p></li>
+</ol>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> (<em>HttpRequest</em>) – Django request object</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Client IP address or None if not found</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jwt_allauth.utils.get_template_path">
+<span class="sig-prename descclassname"><span class="pre">jwt_allauth.utils.</span></span><span class="sig-name descname"><span class="pre">get_template_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/utils.html#get_template_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.utils.get_template_path" title="Link to this definition">¶</a></dt>
+<dd><p>Get template path from settings using TEMPLATE_PATHS configuration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>constant</strong> (<em>str</em>) – Key to look up in TEMPLATE_PATHS setting</p></li>
+<li><p><strong>default</strong> (<em>str</em>) – Default path if not found in settings</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Configured template path or default value</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jwt_allauth.utils.get_user_agent">
+<span class="sig-prename descclassname"><span class="pre">jwt_allauth.utils.</span></span><span class="sig-name descname"><span class="pre">get_user_agent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/utils.html#get_user_agent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.utils.get_user_agent" title="Link to this definition">¶</a></dt>
+<dd><p>Decorator that adds user agent and IP information to the request object.</p>
+<p>Stores:
+- user_agent: Parsed user agent details
+- ip: Client IP address</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>f</strong> (<em>function</em>) – View method to decorate</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Decorated view method</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>function</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jwt_allauth.utils.import_callable">
+<span class="sig-prename descclassname"><span class="pre">jwt_allauth.utils.</span></span><span class="sig-name descname"><span class="pre">import_callable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_or_callable</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/utils.html#import_callable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.utils.import_callable" title="Link to this definition">¶</a></dt>
+<dd><p>Convert a Python path string to a callable object or return the input if already callable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path_or_callable</strong> (<em>str</em><em>|</em><em>callable</em>) – Either a Python path string (module.attribute)
+or an already callable object</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The resolved callable object</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>callable</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AssertionError</strong> – If input is string but not valid Python path</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jwt_allauth.utils.is_email_verified">
+<span class="sig-prename descclassname"><span class="pre">jwt_allauth.utils.</span></span><span class="sig-name descname"><span class="pre">is_email_verified</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raise_exception</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/utils.html#is_email_verified"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.utils.is_email_verified" title="Link to this definition">¶</a></dt>
+<dd><p>Check if user has a verified email address.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>user</strong> (<em>User</em>) – User object to check</p></li>
+<li><p><strong>raise_exception</strong> (<em>bool</em>) – Whether to raise NotVerifiedEmail if unverified</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if verified, False otherwise</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#jwt_allauth.exceptions.NotVerifiedEmail" title="jwt_allauth.exceptions.NotVerifiedEmail"><strong>NotVerifiedEmail</strong></a> – If raise_exception=True and email is unverified</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jwt_allauth.utils.user_agent_dict">
+<span class="sig-prename descclassname"><span class="pre">jwt_allauth.utils.</span></span><span class="sig-name descname"><span class="pre">user_agent_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/utils.html#user_agent_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.utils.user_agent_dict" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a detailed dictionary of user agent information.</p>
+<p>Includes:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Browser details (name, version)</p></li>
+<li><p>OS details (name, version)</p></li>
+<li><p>Device information (family, brand, model)</p></li>
+<li><p>Network information (IP address)</p></li>
+<li><p>Device type flags (mobile, tablet, PC, bot)</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> (<em>HttpRequest</em>) – Django request object</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Structured user agent details. Empty dict if no request.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-jwt_allauth.test">
+<span id="jwt-allauth-test-module"></span><h2>jwt_allauth.test module<a class="headerlink" href="#module-jwt_allauth.test" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.test.</span></span><span class="sig-name descname"><span class="pre">JAClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">token</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">staff_token</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Client</span></code></p>
+<p>A custom Django test client for handling JWT authenticated requests.</p>
+<p>Provides enhanced HTTP methods to automatically include JWT tokens in requests.
+Supports both regular user and staff user authentication through separate tokens.</p>
+<p>All standard HTTP methods (post, get, patch, put, delete) are extended with:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Regular auth versions (auth_* methods) using default user token</p></li>
+<li><p>Staff auth versions (staff_* methods) using staff user token</p></li>
+<li><p>Optional direct token injection via access_token parameter</p></li>
+</ul>
+</div></blockquote>
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.auth_delete">
+<span class="sig-name descname"><span class="pre">auth_delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.auth_delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.auth_delete" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.auth_get">
+<span class="sig-name descname"><span class="pre">auth_get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.auth_get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.auth_get" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.auth_patch">
+<span class="sig-name descname"><span class="pre">auth_patch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.auth_patch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.auth_patch" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.auth_post">
+<span class="sig-name descname"><span class="pre">auth_post</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.auth_post"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.auth_post" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.auth_put">
+<span class="sig-name descname"><span class="pre">auth_put</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.auth_put"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.auth_put" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.content_type">
+<span class="sig-name descname"><span class="pre">content_type</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'application/json'</span></em><a class="headerlink" href="#jwt_allauth.test.JAClient.content_type" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.delete">
+<span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">access_token</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.delete" title="Link to this definition">¶</a></dt>
+<dd><p>Send a DELETE request to the server.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">access_token</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.get" title="Link to this definition">¶</a></dt>
+<dd><p>Request a response from the server using GET.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.patch">
+<span class="sig-name descname"><span class="pre">patch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">access_token</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.patch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.patch" title="Link to this definition">¶</a></dt>
+<dd><p>Send a resource to the server using PATCH.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.post">
+<span class="sig-name descname"><span class="pre">post</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">access_token</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.post"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.post" title="Link to this definition">¶</a></dt>
+<dd><p>Request a response from the server using POST.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.put">
+<span class="sig-name descname"><span class="pre">put</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">access_token</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.put"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.put" title="Link to this definition">¶</a></dt>
+<dd><p>Send a resource to the server using PUT.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.staff_delete">
+<span class="sig-name descname"><span class="pre">staff_delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.staff_delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.staff_delete" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.staff_get">
+<span class="sig-name descname"><span class="pre">staff_get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.staff_get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.staff_get" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.staff_patch">
+<span class="sig-name descname"><span class="pre">staff_patch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.staff_patch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.staff_patch" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.staff_post">
+<span class="sig-name descname"><span class="pre">staff_post</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.staff_post"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.staff_post" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.staff_put">
+<span class="sig-name descname"><span class="pre">staff_put</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.staff_put"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.staff_put" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JAClient.update_kwargs">
+<span class="sig-name descname"><span class="pre">update_kwargs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">access_token</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_auth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">staff_auth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JAClient.update_kwargs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JAClient.update_kwargs" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.test.</span></span><span class="sig-name descname"><span class="pre">JATestCase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">methodName</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'runTest'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JATestCase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JATestCase" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">TestCase</span></code></p>
+<p>Base test case for JWT-authenticated endpoint testing.</p>
+<p>Provides pre-configured user accounts and JWT tokens for testing:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Regular user with verified email</p></li>
+<li><p>Staff user with verified email</p></li>
+<li><p>Ready-to-use test client with authentication support</p></li>
+</ul>
+</div></blockquote>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.EMAIL">
+<span class="sig-name descname"><span class="pre">EMAIL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'test&#64;mail.com'</span></em><a class="headerlink" href="#jwt_allauth.test.JATestCase.EMAIL" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.FIRST_NAME">
+<span class="sig-name descname"><span class="pre">FIRST_NAME</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'name'</span></em><a class="headerlink" href="#jwt_allauth.test.JATestCase.FIRST_NAME" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.LAST_NAME">
+<span class="sig-name descname"><span class="pre">LAST_NAME</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'surname'</span></em><a class="headerlink" href="#jwt_allauth.test.JATestCase.LAST_NAME" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.LOGIN_PAYLOAD">
+<span class="sig-name descname"><span class="pre">LOGIN_PAYLOAD</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'email':</span> <span class="pre">'test&#64;mail.com',</span> <span class="pre">'password':</span> <span class="pre">'Test-Passw0rd'}</span></em><a class="headerlink" href="#jwt_allauth.test.JATestCase.LOGIN_PAYLOAD" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.PASS">
+<span class="sig-name descname"><span class="pre">PASS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Test-Passw0rd'</span></em><a class="headerlink" href="#jwt_allauth.test.JATestCase.PASS" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.STAFF_EMAIL">
+<span class="sig-name descname"><span class="pre">STAFF_EMAIL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'test&#64;staff.com'</span></em><a class="headerlink" href="#jwt_allauth.test.JATestCase.STAFF_EMAIL" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.STAFF_FIRST_NAME">
+<span class="sig-name descname"><span class="pre">STAFF_FIRST_NAME</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'staffname'</span></em><a class="headerlink" href="#jwt_allauth.test.JATestCase.STAFF_FIRST_NAME" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.STAFF_LAST_NAME">
+<span class="sig-name descname"><span class="pre">STAFF_LAST_NAME</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'staffsurname'</span></em><a class="headerlink" href="#jwt_allauth.test.JATestCase.STAFF_LAST_NAME" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.STAFF_PASS">
+<span class="sig-name descname"><span class="pre">STAFF_PASS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Staff-Passw0rd'</span></em><a class="headerlink" href="#jwt_allauth.test.JATestCase.STAFF_PASS" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.STAFF_USER">
+<span class="sig-name descname"><span class="pre">STAFF_USER</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jwt_allauth.test.JATestCase.STAFF_USER" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.USER">
+<span class="sig-name descname"><span class="pre">USER</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jwt_allauth.test.JATestCase.USER" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.ja_client">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ja_client</span></span><a class="headerlink" href="#jwt_allauth.test.JATestCase.ja_client" title="Link to this definition">¶</a></dt>
+<dd><p>Pre-configured test client with authentication tokens.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.test.JATestCase.setUp">
+<span class="sig-name descname"><span class="pre">setUp</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/test.html#JATestCase.setUp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.test.JATestCase.setUp" title="Link to this definition">¶</a></dt>
+<dd><p>Configures test environment with regular and staff users, including:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>User account creation</p></li>
+<li><p>Email verification setup</p></li>
+<li><p>JWT token generation</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-jwt_allauth.permissions">
+<span id="jwt-allauth-permissions-module"></span><h2>jwt_allauth.permissions module<a class="headerlink" href="#module-jwt_allauth.permissions" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.permissions.BasePermission">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.permissions.</span></span><span class="sig-name descname"><span class="pre">BasePermission</span></span><a class="reference internal" href="_modules/jwt_allauth/permissions.html#BasePermission"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.permissions.BasePermission" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BasePermission</span></code></p>
+<p>Custom base permission class for role-based access control using JWT claims.</p>
+<p>Extends DRF’s BasePermission to check for roles in the JWT payload.
+<strong>Automatically grants access to staff and superusers</strong> in addition to specified roles.</p>
+<p>Behavior:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Checks JWT payload for ‘role’ claim</p></li>
+<li><p>Allows access if role is in accepted_roles, STAFF_CODE, or SUPER_USER_CODE</p></li>
+<li><p>Requires request.auth to contain decoded JWT payload</p></li>
+<li><p>Staff and superusers (STAFF_CODE/SUPER_USER_CODE) always have access</p></li>
+</ul>
+</div></blockquote>
+<dl class="simple">
+<dt>Class Attributes:</dt><dd><dl class="simple">
+<dt>accepted_roles (list): Required list of role codes that are allowed access.</dt><dd><p>Must be initialized in subclasses.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If accepted_roles is not properly initialized as a list</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.permissions.BasePermission.accepted_roles">
+<span class="sig-name descname"><span class="pre">accepted_roles</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jwt_allauth.permissions.BasePermission.accepted_roles" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.permissions.BasePermission.has_permission">
+<span class="sig-name descname"><span class="pre">has_permission</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">view</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/permissions.html#BasePermission.has_permission"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.permissions.BasePermission.has_permission" title="Link to this definition">¶</a></dt>
+<dd><p>Determine if the request should be permitted based on JWT roles.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>request</strong> (<em>Request</em>) – DRF request object containing JWT in auth attribute</p></li>
+<li><p><strong>view</strong> (<em>View</em>) – DRF view being accessed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if authorized, False otherwise</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If accepted_roles is not a list</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.permissions.BasePermissionStaffExcluded">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.permissions.</span></span><span class="sig-name descname"><span class="pre">BasePermissionStaffExcluded</span></span><a class="reference internal" href="_modules/jwt_allauth/permissions.html#BasePermissionStaffExcluded"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.permissions.BasePermissionStaffExcluded" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BasePermission</span></code></p>
+<p>Custom base permission class for role-based access control using JWT claims.</p>
+<p>Extends DRF’s BasePermission to check for roles in the JWT payload.</p>
+<p>Behavior:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Checks JWT payload for ‘role’ claim</p></li>
+<li><p>Allows access if role is in accepted_roles, STAFF_CODE, or SUPER_USER_CODE</p></li>
+<li><p>Requires request.auth to contain decoded JWT payload</p></li>
+</ul>
+</div></blockquote>
+<dl class="simple">
+<dt>Class Attributes:</dt><dd><dl class="simple">
+<dt>accepted_roles (list): Required list of role codes that are allowed access.</dt><dd><p>Must be initialized in subclasses.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If accepted_roles is not properly initialized as a list</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.permissions.BasePermissionStaffExcluded.accepted_roles">
+<span class="sig-name descname"><span class="pre">accepted_roles</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jwt_allauth.permissions.BasePermissionStaffExcluded.accepted_roles" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.permissions.BasePermissionStaffExcluded.has_permission">
+<span class="sig-name descname"><span class="pre">has_permission</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">view</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/permissions.html#BasePermissionStaffExcluded.has_permission"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.permissions.BasePermissionStaffExcluded.has_permission" title="Link to this definition">¶</a></dt>
+<dd><p>Determine if the request should be permitted based on JWT roles.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>request</strong> (<em>Request</em>) – DRF request object containing JWT in auth attribute</p></li>
+<li><p><strong>view</strong> (<em>View</em>) – DRF view being accessed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if authorized, False otherwise</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If accepted_roles is not a list</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-jwt_allauth.apps">
+<span id="jwt-allauth-apps-module"></span><h2>jwt_allauth.apps module<a class="headerlink" href="#module-jwt_allauth.apps" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.apps.JWTAllauthAppConfig">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.apps.</span></span><span class="sig-name descname"><span class="pre">JWTAllauthAppConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">app_module</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/apps.html#JWTAllauthAppConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.apps.JWTAllauthAppConfig" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">AppConfig</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.apps.JWTAllauthAppConfig.default_auto_field">
+<span class="sig-name descname"><span class="pre">default_auto_field</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'django.db.models.BigAutoField'</span></em><a class="headerlink" href="#jwt_allauth.apps.JWTAllauthAppConfig.default_auto_field" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.apps.JWTAllauthAppConfig.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'jwt_allauth'</span></em><a class="headerlink" href="#jwt_allauth.apps.JWTAllauthAppConfig.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.apps.JWTAllauthAppConfig.ready">
+<span class="sig-name descname"><span class="pre">ready</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/apps.html#JWTAllauthAppConfig.ready"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.apps.JWTAllauthAppConfig.ready" title="Link to this definition">¶</a></dt>
+<dd><p>Override this method in subclasses to run code when Django starts.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.apps.JWTAllauthAppConfig.verbose_name">
+<span class="sig-name descname"><span class="pre">verbose_name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'JWT</span> <span class="pre">Allauth'</span></em><a class="headerlink" href="#jwt_allauth.apps.JWTAllauthAppConfig.verbose_name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="jwt_allauth.login.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">login</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="test.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Test utils</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Fernando Castellanos
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">JWT Allauth modules</a><ul>
+<li><a class="reference internal" href="#modules">Modules</a></li>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-jwt_allauth.adapter">jwt_allauth.adapter module</a><ul>
+<li><a class="reference internal" href="#jwt_allauth.adapter.JWTAllAuthAdapter"><code class="docutils literal notranslate"><span class="pre">JWTAllAuthAdapter</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.adapter.JWTAllAuthAdapter.clean_email"><code class="docutils literal notranslate"><span class="pre">JWTAllAuthAdapter.clean_email()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.adapter.JWTAllAuthAdapter.render_mail"><code class="docutils literal notranslate"><span class="pre">JWTAllAuthAdapter.render_mail()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.adapter.JWTAllAuthAdapter.send_confirmation_mail"><code class="docutils literal notranslate"><span class="pre">JWTAllAuthAdapter.send_confirmation_mail()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.adapter.JWTAllAuthAdapter.send_mail"><code class="docutils literal notranslate"><span class="pre">JWTAllAuthAdapter.send_mail()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-jwt_allauth.exceptions">jwt_allauth.exceptions module</a><ul>
+<li><a class="reference internal" href="#jwt_allauth.exceptions.IncorrectCredentials"><code class="docutils literal notranslate"><span class="pre">IncorrectCredentials</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.exceptions.IncorrectCredentials.default_code"><code class="docutils literal notranslate"><span class="pre">IncorrectCredentials.default_code</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.exceptions.IncorrectCredentials.default_detail"><code class="docutils literal notranslate"><span class="pre">IncorrectCredentials.default_detail</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.exceptions.IncorrectCredentials.status_code"><code class="docutils literal notranslate"><span class="pre">IncorrectCredentials.status_code</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#jwt_allauth.exceptions.NotVerifiedEmail"><code class="docutils literal notranslate"><span class="pre">NotVerifiedEmail</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.exceptions.NotVerifiedEmail.default_code"><code class="docutils literal notranslate"><span class="pre">NotVerifiedEmail.default_code</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.exceptions.NotVerifiedEmail.default_detail"><code class="docutils literal notranslate"><span class="pre">NotVerifiedEmail.default_detail</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.exceptions.NotVerifiedEmail.status_code"><code class="docutils literal notranslate"><span class="pre">NotVerifiedEmail.status_code</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-jwt_allauth.utils">jwt_allauth.utils module</a><ul>
+<li><a class="reference internal" href="#jwt_allauth.utils.allauth_authenticate"><code class="docutils literal notranslate"><span class="pre">allauth_authenticate()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.utils.get_client_ip"><code class="docutils literal notranslate"><span class="pre">get_client_ip()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.utils.get_template_path"><code class="docutils literal notranslate"><span class="pre">get_template_path()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.utils.get_user_agent"><code class="docutils literal notranslate"><span class="pre">get_user_agent()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.utils.import_callable"><code class="docutils literal notranslate"><span class="pre">import_callable()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.utils.is_email_verified"><code class="docutils literal notranslate"><span class="pre">is_email_verified()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.utils.user_agent_dict"><code class="docutils literal notranslate"><span class="pre">user_agent_dict()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-jwt_allauth.test">jwt_allauth.test module</a><ul>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient"><code class="docutils literal notranslate"><span class="pre">JAClient</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.auth_delete"><code class="docutils literal notranslate"><span class="pre">JAClient.auth_delete()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.auth_get"><code class="docutils literal notranslate"><span class="pre">JAClient.auth_get()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.auth_patch"><code class="docutils literal notranslate"><span class="pre">JAClient.auth_patch()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.auth_post"><code class="docutils literal notranslate"><span class="pre">JAClient.auth_post()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.auth_put"><code class="docutils literal notranslate"><span class="pre">JAClient.auth_put()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.content_type"><code class="docutils literal notranslate"><span class="pre">JAClient.content_type</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.delete"><code class="docutils literal notranslate"><span class="pre">JAClient.delete()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.get"><code class="docutils literal notranslate"><span class="pre">JAClient.get()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.patch"><code class="docutils literal notranslate"><span class="pre">JAClient.patch()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.post"><code class="docutils literal notranslate"><span class="pre">JAClient.post()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.put"><code class="docutils literal notranslate"><span class="pre">JAClient.put()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.staff_delete"><code class="docutils literal notranslate"><span class="pre">JAClient.staff_delete()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.staff_get"><code class="docutils literal notranslate"><span class="pre">JAClient.staff_get()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.staff_patch"><code class="docutils literal notranslate"><span class="pre">JAClient.staff_patch()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.staff_post"><code class="docutils literal notranslate"><span class="pre">JAClient.staff_post()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.staff_put"><code class="docutils literal notranslate"><span class="pre">JAClient.staff_put()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JAClient.update_kwargs"><code class="docutils literal notranslate"><span class="pre">JAClient.update_kwargs()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase"><code class="docutils literal notranslate"><span class="pre">JATestCase</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.EMAIL"><code class="docutils literal notranslate"><span class="pre">JATestCase.EMAIL</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.FIRST_NAME"><code class="docutils literal notranslate"><span class="pre">JATestCase.FIRST_NAME</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.LAST_NAME"><code class="docutils literal notranslate"><span class="pre">JATestCase.LAST_NAME</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.LOGIN_PAYLOAD"><code class="docutils literal notranslate"><span class="pre">JATestCase.LOGIN_PAYLOAD</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.PASS"><code class="docutils literal notranslate"><span class="pre">JATestCase.PASS</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.STAFF_EMAIL"><code class="docutils literal notranslate"><span class="pre">JATestCase.STAFF_EMAIL</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.STAFF_FIRST_NAME"><code class="docutils literal notranslate"><span class="pre">JATestCase.STAFF_FIRST_NAME</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.STAFF_LAST_NAME"><code class="docutils literal notranslate"><span class="pre">JATestCase.STAFF_LAST_NAME</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.STAFF_PASS"><code class="docutils literal notranslate"><span class="pre">JATestCase.STAFF_PASS</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.STAFF_USER"><code class="docutils literal notranslate"><span class="pre">JATestCase.STAFF_USER</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.USER"><code class="docutils literal notranslate"><span class="pre">JATestCase.USER</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.ja_client"><code class="docutils literal notranslate"><span class="pre">JATestCase.ja_client</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.test.JATestCase.setUp"><code class="docutils literal notranslate"><span class="pre">JATestCase.setUp()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-jwt_allauth.permissions">jwt_allauth.permissions module</a><ul>
+<li><a class="reference internal" href="#jwt_allauth.permissions.BasePermission"><code class="docutils literal notranslate"><span class="pre">BasePermission</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.permissions.BasePermission.accepted_roles"><code class="docutils literal notranslate"><span class="pre">BasePermission.accepted_roles</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.permissions.BasePermission.has_permission"><code class="docutils literal notranslate"><span class="pre">BasePermission.has_permission()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#jwt_allauth.permissions.BasePermissionStaffExcluded"><code class="docutils literal notranslate"><span class="pre">BasePermissionStaffExcluded</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.permissions.BasePermissionStaffExcluded.accepted_roles"><code class="docutils literal notranslate"><span class="pre">BasePermissionStaffExcluded.accepted_roles</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.permissions.BasePermissionStaffExcluded.has_permission"><code class="docutils literal notranslate"><span class="pre">BasePermissionStaffExcluded.has_permission()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-jwt_allauth.apps">jwt_allauth.apps module</a><ul>
+<li><a class="reference internal" href="#jwt_allauth.apps.JWTAllauthAppConfig"><code class="docutils literal notranslate"><span class="pre">JWTAllauthAppConfig</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.apps.JWTAllauthAppConfig.default_auto_field"><code class="docutils literal notranslate"><span class="pre">JWTAllauthAppConfig.default_auto_field</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.apps.JWTAllauthAppConfig.name"><code class="docutils literal notranslate"><span class="pre">JWTAllauthAppConfig.name</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.apps.JWTAllauthAppConfig.ready"><code class="docutils literal notranslate"><span class="pre">JWTAllauthAppConfig.ready()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.apps.JWTAllauthAppConfig.verbose_name"><code class="docutils literal notranslate"><span class="pre">JWTAllauthAppConfig.verbose_name</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>

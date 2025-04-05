@@ -1,0 +1,1216 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="token refresh" href="jwt_allauth.token_refresh.html" /><link rel="prev" title="email verification" href="jwt_allauth.registration.email_verification.html" />
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2024.08.06 -->
+        <title>token - JWT Allauth 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">JWT Allauth 1.0.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  
+  <span class="sidebar-brand-text">JWT Allauth 1.0.0 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_endpoints.html">API endpoints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="email_verification.html">Email verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="password_reset.html">Password Reset</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="configuration.html">Configuration</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Configuration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="configuration.settings_py.html">settings.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.serializers.html">Serializers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.user_model.html">User Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.refresh_token.html">Refresh token</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="permissions.html">View Permissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="test.html">Test utils</a></li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="jwt_allauth.html">JWT Allauth modules</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of JWT Allauth modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.login.html">login</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.logout.html">logout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.password_change.html">password change</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.password_reset.html">password reset</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="jwt_allauth.registration.html">registration</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of registration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.registration.email_verification.html">email verification</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">token</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.token_refresh.html">token refresh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.user_details.html">user details</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Authors</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/jwt_allauth.token.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="token">
+<h1>token<a class="headerlink" href="#token" title="Link to this heading">¶</a></h1>
+<section id="module-jwt_allauth.token.tokens">
+<span id="jwt-allauth-token-tokens-module"></span><h2>jwt_allauth.token.tokens module<a class="headerlink" href="#module-jwt_allauth.token.tokens" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.token.tokens.GenericToken">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.token.tokens.</span></span><span class="sig-name descname"><span class="pre">GenericToken</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">purpose</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/tokens.html#GenericToken"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.tokens.GenericToken" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">PasswordResetTokenGenerator</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.tokens.GenericToken.check_token">
+<span class="sig-name descname"><span class="pre">check_token</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/tokens.html#GenericToken.check_token"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.tokens.GenericToken.check_token" title="Link to this definition">¶</a></dt>
+<dd><p>Check that a password reset token is correct for a given user.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.tokens.GenericToken.make_token">
+<span class="sig-name descname"><span class="pre">make_token</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/tokens.html#GenericToken.make_token"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.tokens.GenericToken.make_token" title="Link to this definition">¶</a></dt>
+<dd><p>Return a token that can be used once to do a password reset
+for the given user.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.token.tokens.RefreshToken">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.token.tokens.</span></span><span class="sig-name descname"><span class="pre">RefreshToken</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">token</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Token</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verify</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/tokens.html#RefreshToken"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.tokens.RefreshToken" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">RefreshToken</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.tokens.RefreshToken.for_user">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">for_user</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/tokens.html#RefreshToken.for_user"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.tokens.RefreshToken.for_user" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#jwt_allauth.token.tokens.RefreshToken" title="jwt_allauth.token.tokens.RefreshToken">RefreshToken</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.tokens.RefreshToken.set_session">
+<span class="sig-name descname"><span class="pre">set_session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/tokens.html#RefreshToken.set_session"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.tokens.RefreshToken.set_session" title="Link to this definition">¶</a></dt>
+<dd><p>Unique identifier of the session associated to the refresh token.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.tokens.RefreshToken.set_user_role">
+<span class="sig-name descname"><span class="pre">set_user_role</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/tokens.html#RefreshToken.set_user_role"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.tokens.RefreshToken.set_user_role" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-jwt_allauth.token.models">
+<span id="jwt-allauth-token-models-module"></span><h2>jwt_allauth.token.models module<a class="headerlink" href="#module-jwt_allauth.token.models" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.token.models.</span></span><span class="sig-name descname"><span class="pre">AbstractRefreshToken</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/models.html#AbstractRefreshToken"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#jwt_allauth.token.models.BaseToken" title="jwt_allauth.token.models.BaseToken"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseToken</span></code></a></p>
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.Meta">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Meta</span></span><a class="reference internal" href="_modules/jwt_allauth/token/models.html#AbstractRefreshToken.Meta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.Meta" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.Meta.abstract">
+<span class="sig-name descname"><span class="pre">abstract</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.Meta.abstract" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.Meta.verbose_name">
+<span class="sig-name descname"><span class="pre">verbose_name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'refresh</span> <span class="pre">token'</span></em><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.Meta.verbose_name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.Meta.verbose_name_plural">
+<span class="sig-name descname"><span class="pre">verbose_name_plural</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'refresh</span> <span class="pre">tokens'</span></em><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.Meta.verbose_name_plural" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.browser">
+<span class="sig-name descname"><span class="pre">browser</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.browser" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.browser_version">
+<span class="sig-name descname"><span class="pre">browser_version</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.browser_version" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.created">
+<span class="sig-name descname"><span class="pre">created</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.created" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.device">
+<span class="sig-name descname"><span class="pre">device</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.device" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.device_brand">
+<span class="sig-name descname"><span class="pre">device_brand</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.device_brand" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.device_model">
+<span class="sig-name descname"><span class="pre">device_model</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.device_model" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.enabled">
+<span class="sig-name descname"><span class="pre">enabled</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.enabled" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.get_next_by_created">
+<span class="sig-name descname"><span class="pre">get_next_by_created</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field=&lt;django.db.models.fields.DateTimeField:</span> <span class="pre">created&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_next=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.get_next_by_created" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.get_previous_by_created">
+<span class="sig-name descname"><span class="pre">get_previous_by_created</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field=&lt;django.db.models.fields.DateTimeField:</span> <span class="pre">created&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_next=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.get_previous_by_created" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.id">
+<span class="sig-name descname"><span class="pre">id</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.id" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.ip">
+<span class="sig-name descname"><span class="pre">ip</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.ip" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.is_bot">
+<span class="sig-name descname"><span class="pre">is_bot</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.is_bot" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.is_mobile">
+<span class="sig-name descname"><span class="pre">is_mobile</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.is_mobile" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.is_pc">
+<span class="sig-name descname"><span class="pre">is_pc</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.is_pc" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.is_tablet">
+<span class="sig-name descname"><span class="pre">is_tablet</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.is_tablet" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.jti">
+<span class="sig-name descname"><span class="pre">jti</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.jti" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.os">
+<span class="sig-name descname"><span class="pre">os</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.os" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.os_version">
+<span class="sig-name descname"><span class="pre">os_version</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.os_version" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.AbstractRefreshToken.session">
+<span class="sig-name descname"><span class="pre">session</span></span><a class="headerlink" href="#jwt_allauth.token.models.AbstractRefreshToken.session" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.token.models.</span></span><span class="sig-name descname"><span class="pre">BaseToken</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/models.html#BaseToken"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.models.BaseToken" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></p>
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.Meta">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Meta</span></span><a class="reference internal" href="_modules/jwt_allauth/token/models.html#BaseToken.Meta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.Meta" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.Meta.abstract">
+<span class="sig-name descname"><span class="pre">abstract</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.Meta.abstract" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.Meta.verbose_name">
+<span class="sig-name descname"><span class="pre">verbose_name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'refresh</span> <span class="pre">token'</span></em><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.Meta.verbose_name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.Meta.verbose_name_plural">
+<span class="sig-name descname"><span class="pre">verbose_name_plural</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'refresh</span> <span class="pre">tokens'</span></em><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.Meta.verbose_name_plural" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.browser">
+<span class="sig-name descname"><span class="pre">browser</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.browser" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.browser_version">
+<span class="sig-name descname"><span class="pre">browser_version</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.browser_version" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.created">
+<span class="sig-name descname"><span class="pre">created</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.created" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.device">
+<span class="sig-name descname"><span class="pre">device</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.device" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.device_brand">
+<span class="sig-name descname"><span class="pre">device_brand</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.device_brand" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.device_model">
+<span class="sig-name descname"><span class="pre">device_model</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.device_model" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.get_next_by_created">
+<span class="sig-name descname"><span class="pre">get_next_by_created</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field=&lt;django.db.models.fields.DateTimeField:</span> <span class="pre">created&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_next=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.get_next_by_created" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.get_previous_by_created">
+<span class="sig-name descname"><span class="pre">get_previous_by_created</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field=&lt;django.db.models.fields.DateTimeField:</span> <span class="pre">created&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_next=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.get_previous_by_created" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.id">
+<span class="sig-name descname"><span class="pre">id</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.id" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.ip">
+<span class="sig-name descname"><span class="pre">ip</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.ip" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.is_bot">
+<span class="sig-name descname"><span class="pre">is_bot</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.is_bot" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.is_mobile">
+<span class="sig-name descname"><span class="pre">is_mobile</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.is_mobile" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.is_pc">
+<span class="sig-name descname"><span class="pre">is_pc</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.is_pc" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.is_tablet">
+<span class="sig-name descname"><span class="pre">is_tablet</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.is_tablet" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.os">
+<span class="sig-name descname"><span class="pre">os</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.os" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.BaseToken.os_version">
+<span class="sig-name descname"><span class="pre">os_version</span></span><a class="headerlink" href="#jwt_allauth.token.models.BaseToken.os_version" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.token.models.</span></span><span class="sig-name descname"><span class="pre">GenericTokenModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">created</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ip</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_mobile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_tablet</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_pc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_bot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">browser</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">browser_version</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">os</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">os_version</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device_brand</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">purpose</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/models.html#GenericTokenModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#jwt_allauth.token.models.BaseToken" title="jwt_allauth.token.models.BaseToken"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseToken</span></code></a></p>
+<dl class="py exception">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.DoesNotExist">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DoesNotExist</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.DoesNotExist" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ObjectDoesNotExist</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.MultipleObjectsReturned">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MultipleObjectsReturned</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.MultipleObjectsReturned" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MultipleObjectsReturned</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.browser">
+<span class="sig-name descname"><span class="pre">browser</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.browser" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.browser_version">
+<span class="sig-name descname"><span class="pre">browser_version</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.browser_version" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.created">
+<span class="sig-name descname"><span class="pre">created</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.created" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.device">
+<span class="sig-name descname"><span class="pre">device</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.device" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.device_brand">
+<span class="sig-name descname"><span class="pre">device_brand</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.device_brand" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.device_model">
+<span class="sig-name descname"><span class="pre">device_model</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.device_model" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.get_next_by_created">
+<span class="sig-name descname"><span class="pre">get_next_by_created</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field=&lt;django.db.models.fields.DateTimeField:</span> <span class="pre">created&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_next=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.get_next_by_created" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.get_previous_by_created">
+<span class="sig-name descname"><span class="pre">get_previous_by_created</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field=&lt;django.db.models.fields.DateTimeField:</span> <span class="pre">created&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_next=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.get_previous_by_created" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.id" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.ip">
+<span class="sig-name descname"><span class="pre">ip</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.ip" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.is_bot">
+<span class="sig-name descname"><span class="pre">is_bot</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.is_bot" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.is_mobile">
+<span class="sig-name descname"><span class="pre">is_mobile</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.is_mobile" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.is_pc">
+<span class="sig-name descname"><span class="pre">is_pc</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.is_pc" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.is_tablet">
+<span class="sig-name descname"><span class="pre">is_tablet</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.is_tablet" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.objects">
+<span class="sig-name descname"><span class="pre">objects</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;django.db.models.manager.Manager</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.objects" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.os">
+<span class="sig-name descname"><span class="pre">os</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.os" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.os_version">
+<span class="sig-name descname"><span class="pre">os_version</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.os_version" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.purpose">
+<span class="sig-name descname"><span class="pre">purpose</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.purpose" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.token">
+<span class="sig-name descname"><span class="pre">token</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.token" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.user">
+<span class="sig-name descname"><span class="pre">user</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.user" title="Link to this definition">¶</a></dt>
+<dd><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Child</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">parent</span> <span class="o">=</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="n">Parent</span><span class="p">,</span> <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;children&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Child.parent</span></code> is a <code class="docutils literal notranslate"><span class="pre">ForwardManyToOneDescriptor</span></code> instance.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.GenericTokenModel.user_id">
+<span class="sig-name descname"><span class="pre">user_id</span></span><a class="headerlink" href="#jwt_allauth.token.models.GenericTokenModel.user_id" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.token.models.</span></span><span class="sig-name descname"><span class="pre">RefreshTokenWhitelistModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">created</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ip</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_mobile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_tablet</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_pc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_bot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">browser</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">browser_version</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">os</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">os_version</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device_brand</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jti</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">session</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/models.html#RefreshTokenWhitelistModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken" title="jwt_allauth.token.models.AbstractRefreshToken"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractRefreshToken</span></code></a></p>
+<dl class="py exception">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.DoesNotExist">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DoesNotExist</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.DoesNotExist" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ObjectDoesNotExist</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.MultipleObjectsReturned">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MultipleObjectsReturned</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.MultipleObjectsReturned" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MultipleObjectsReturned</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.browser">
+<span class="sig-name descname"><span class="pre">browser</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.browser" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.browser_version">
+<span class="sig-name descname"><span class="pre">browser_version</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.browser_version" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.created">
+<span class="sig-name descname"><span class="pre">created</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.created" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.device">
+<span class="sig-name descname"><span class="pre">device</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.device" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.device_brand">
+<span class="sig-name descname"><span class="pre">device_brand</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.device_brand" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.device_model">
+<span class="sig-name descname"><span class="pre">device_model</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.device_model" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.enabled">
+<span class="sig-name descname"><span class="pre">enabled</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.enabled" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.get_next_by_created">
+<span class="sig-name descname"><span class="pre">get_next_by_created</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field=&lt;django.db.models.fields.DateTimeField:</span> <span class="pre">created&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_next=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.get_next_by_created" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.get_previous_by_created">
+<span class="sig-name descname"><span class="pre">get_previous_by_created</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field=&lt;django.db.models.fields.DateTimeField:</span> <span class="pre">created&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_next=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.get_previous_by_created" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.id" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.ip">
+<span class="sig-name descname"><span class="pre">ip</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.ip" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.is_bot">
+<span class="sig-name descname"><span class="pre">is_bot</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_bot" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.is_mobile">
+<span class="sig-name descname"><span class="pre">is_mobile</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_mobile" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.is_pc">
+<span class="sig-name descname"><span class="pre">is_pc</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_pc" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.is_tablet">
+<span class="sig-name descname"><span class="pre">is_tablet</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_tablet" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.jti">
+<span class="sig-name descname"><span class="pre">jti</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.jti" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.objects">
+<span class="sig-name descname"><span class="pre">objects</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;django.db.models.manager.Manager</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.objects" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.os">
+<span class="sig-name descname"><span class="pre">os</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.os" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.os_version">
+<span class="sig-name descname"><span class="pre">os_version</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.os_version" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.session">
+<span class="sig-name descname"><span class="pre">session</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.session" title="Link to this definition">¶</a></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.user">
+<span class="sig-name descname"><span class="pre">user</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.user" title="Link to this definition">¶</a></dt>
+<dd><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Child</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">parent</span> <span class="o">=</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="n">Parent</span><span class="p">,</span> <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;children&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Child.parent</span></code> is a <code class="docutils literal notranslate"><span class="pre">ForwardManyToOneDescriptor</span></code> instance.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.models.RefreshTokenWhitelistModel.user_id">
+<span class="sig-name descname"><span class="pre">user_id</span></span><a class="headerlink" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.user_id" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-jwt_allauth.token.serializers">
+<span id="jwt-allauth-token-serializers-module"></span><h2>jwt_allauth.token.serializers module<a class="headerlink" href="#module-jwt_allauth.token.serializers" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.token.serializers.GenericTokenModelSerializer">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.token.serializers.</span></span><span class="sig-name descname"><span class="pre">GenericTokenModelSerializer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/serializers.html#GenericTokenModelSerializer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.serializers.GenericTokenModelSerializer" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ModelSerializer</span></code></p>
+<p>User model w/o password</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Meta</span></span><a class="reference internal" href="_modules/jwt_allauth/token/serializers.html#GenericTokenModelSerializer.Meta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta.exclude">
+<span class="sig-name descname"><span class="pre">exclude</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('id',)</span></em><a class="headerlink" href="#jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta.exclude" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta.model" title="Link to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel" title="jwt_allauth.token.models.GenericTokenModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GenericTokenModel</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jwt_allauth.token.serializers.</span></span><span class="sig-name descname"><span class="pre">RefreshTokenWhitelistSerializer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jwt_allauth/token/serializers.html#RefreshTokenWhitelistSerializer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ModelSerializer</span></code></p>
+<p>User model w/o password</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Meta</span></span><a class="reference internal" href="_modules/jwt_allauth/token/serializers.html#RefreshTokenWhitelistSerializer.Meta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta.exclude">
+<span class="sig-name descname"><span class="pre">exclude</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('id',)</span></em><a class="headerlink" href="#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta.exclude" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta.model" title="Link to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel" title="jwt_allauth.token.models.RefreshTokenWhitelistModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="jwt_allauth.token_refresh.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">token refresh</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="jwt_allauth.registration.email_verification.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">email verification</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Fernando Castellanos
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">token</a><ul>
+<li><a class="reference internal" href="#module-jwt_allauth.token.tokens">jwt_allauth.token.tokens module</a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.tokens.GenericToken"><code class="docutils literal notranslate"><span class="pre">GenericToken</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.tokens.GenericToken.check_token"><code class="docutils literal notranslate"><span class="pre">GenericToken.check_token()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.tokens.GenericToken.make_token"><code class="docutils literal notranslate"><span class="pre">GenericToken.make_token()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#jwt_allauth.token.tokens.RefreshToken"><code class="docutils literal notranslate"><span class="pre">RefreshToken</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.tokens.RefreshToken.for_user"><code class="docutils literal notranslate"><span class="pre">RefreshToken.for_user()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.tokens.RefreshToken.set_session"><code class="docutils literal notranslate"><span class="pre">RefreshToken.set_session()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.tokens.RefreshToken.set_user_role"><code class="docutils literal notranslate"><span class="pre">RefreshToken.set_user_role()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-jwt_allauth.token.models">jwt_allauth.token.models module</a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.Meta"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.Meta</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.Meta.abstract"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.Meta.abstract</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.Meta.verbose_name"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.Meta.verbose_name</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.Meta.verbose_name_plural"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.Meta.verbose_name_plural</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.browser"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.browser</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.browser_version"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.browser_version</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.created"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.created</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.device"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.device</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.device_brand"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.device_brand</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.device_model"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.device_model</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.enabled"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.enabled</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.get_next_by_created"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.get_next_by_created()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.get_previous_by_created"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.get_previous_by_created()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.id"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.id</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.ip"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.ip</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.is_bot"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.is_bot</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.is_mobile"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.is_mobile</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.is_pc"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.is_pc</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.is_tablet"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.is_tablet</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.jti"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.jti</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.os"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.os</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.os_version"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.os_version</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.AbstractRefreshToken.session"><code class="docutils literal notranslate"><span class="pre">AbstractRefreshToken.session</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken"><code class="docutils literal notranslate"><span class="pre">BaseToken</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.Meta"><code class="docutils literal notranslate"><span class="pre">BaseToken.Meta</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.Meta.abstract"><code class="docutils literal notranslate"><span class="pre">BaseToken.Meta.abstract</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.Meta.verbose_name"><code class="docutils literal notranslate"><span class="pre">BaseToken.Meta.verbose_name</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.Meta.verbose_name_plural"><code class="docutils literal notranslate"><span class="pre">BaseToken.Meta.verbose_name_plural</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.browser"><code class="docutils literal notranslate"><span class="pre">BaseToken.browser</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.browser_version"><code class="docutils literal notranslate"><span class="pre">BaseToken.browser_version</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.created"><code class="docutils literal notranslate"><span class="pre">BaseToken.created</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.device"><code class="docutils literal notranslate"><span class="pre">BaseToken.device</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.device_brand"><code class="docutils literal notranslate"><span class="pre">BaseToken.device_brand</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.device_model"><code class="docutils literal notranslate"><span class="pre">BaseToken.device_model</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.get_next_by_created"><code class="docutils literal notranslate"><span class="pre">BaseToken.get_next_by_created()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.get_previous_by_created"><code class="docutils literal notranslate"><span class="pre">BaseToken.get_previous_by_created()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.id"><code class="docutils literal notranslate"><span class="pre">BaseToken.id</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.ip"><code class="docutils literal notranslate"><span class="pre">BaseToken.ip</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.is_bot"><code class="docutils literal notranslate"><span class="pre">BaseToken.is_bot</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.is_mobile"><code class="docutils literal notranslate"><span class="pre">BaseToken.is_mobile</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.is_pc"><code class="docutils literal notranslate"><span class="pre">BaseToken.is_pc</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.is_tablet"><code class="docutils literal notranslate"><span class="pre">BaseToken.is_tablet</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.os"><code class="docutils literal notranslate"><span class="pre">BaseToken.os</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.BaseToken.os_version"><code class="docutils literal notranslate"><span class="pre">BaseToken.os_version</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.DoesNotExist"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.DoesNotExist</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.MultipleObjectsReturned"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.MultipleObjectsReturned</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.browser"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.browser</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.browser_version"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.browser_version</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.created"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.created</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.device"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.device</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.device_brand"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.device_brand</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.device_model"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.device_model</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.get_next_by_created"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.get_next_by_created()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.get_previous_by_created"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.get_previous_by_created()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.id"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.id</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.ip"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.ip</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.is_bot"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.is_bot</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.is_mobile"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.is_mobile</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.is_pc"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.is_pc</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.is_tablet"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.is_tablet</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.objects"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.objects</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.os"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.os</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.os_version"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.os_version</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.purpose"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.purpose</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.token"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.token</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.user"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.user</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.GenericTokenModel.user_id"><code class="docutils literal notranslate"><span class="pre">GenericTokenModel.user_id</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.DoesNotExist"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.DoesNotExist</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.MultipleObjectsReturned"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.MultipleObjectsReturned</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.browser"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.browser</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.browser_version"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.browser_version</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.created"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.created</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.device"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.device</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.device_brand"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.device_brand</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.device_model"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.device_model</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.enabled"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.enabled</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.get_next_by_created"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.get_next_by_created()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.get_previous_by_created"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.get_previous_by_created()</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.id"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.id</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.ip"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.ip</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_bot"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.is_bot</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_mobile"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.is_mobile</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_pc"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.is_pc</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_tablet"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.is_tablet</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.jti"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.jti</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.objects"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.objects</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.os"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.os</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.os_version"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.os_version</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.session"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.session</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.user"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.user</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.models.RefreshTokenWhitelistModel.user_id"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistModel.user_id</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-jwt_allauth.token.serializers">jwt_allauth.token.serializers module</a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.serializers.GenericTokenModelSerializer"><code class="docutils literal notranslate"><span class="pre">GenericTokenModelSerializer</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta"><code class="docutils literal notranslate"><span class="pre">GenericTokenModelSerializer.Meta</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta.exclude"><code class="docutils literal notranslate"><span class="pre">GenericTokenModelSerializer.Meta.exclude</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta.model"><code class="docutils literal notranslate"><span class="pre">GenericTokenModelSerializer.Meta.model</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistSerializer</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistSerializer.Meta</span></code></a><ul>
+<li><a class="reference internal" href="#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta.exclude"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistSerializer.Meta.exclude</span></code></a></li>
+<li><a class="reference internal" href="#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta.model"><code class="docutils literal notranslate"><span class="pre">RefreshTokenWhitelistSerializer.Meta.model</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>

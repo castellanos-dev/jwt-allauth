@@ -1,0 +1,1390 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="#" /><link rel="search" title="Search" href="search.html" />
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2024.08.06 --><title>Index - JWT Allauth 1.0.0 documentation</title>
+<link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">JWT Allauth 1.0.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  
+  <span class="sidebar-brand-text">JWT Allauth 1.0.0 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_endpoints.html">API endpoints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="email_verification.html">Email verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="password_reset.html">Password Reset</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="configuration.html">Configuration</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Configuration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="configuration.settings_py.html">settings.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.serializers.html">Serializers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.user_model.html">User Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.refresh_token.html">Refresh token</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="permissions.html">View Permissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="test.html">Test utils</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="jwt_allauth.html">JWT Allauth modules</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of JWT Allauth modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.login.html">login</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.logout.html">logout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.password_change.html">password change</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.password_reset.html">password reset</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="jwt_allauth.registration.html">registration</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of registration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="jwt_allauth.registration.email_verification.html">email verification</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.token.html">token</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.token_refresh.html">token refresh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jwt_allauth.user_details.html">user details</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Authors</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          
+<section class="genindex-section">
+  <h1 id="index">Index</h1>
+  <div class="genindex-jumpbox"><a href="#A"><strong>A</strong></a> | <a href="#B"><strong>B</strong></a> | <a href="#C"><strong>C</strong></a> | <a href="#D"><strong>D</strong></a> | <a href="#E"><strong>E</strong></a> | <a href="#F"><strong>F</strong></a> | <a href="#G"><strong>G</strong></a> | <a href="#H"><strong>H</strong></a> | <a href="#I"><strong>I</strong></a> | <a href="#J"><strong>J</strong></a> | <a href="#L"><strong>L</strong></a> | <a href="#M"><strong>M</strong></a> | <a href="#N"><strong>N</strong></a> | <a href="#O"><strong>O</strong></a> | <a href="#P"><strong>P</strong></a> | <a href="#R"><strong>R</strong></a> | <a href="#S"><strong>S</strong></a> | <a href="#T"><strong>T</strong></a> | <a href="#U"><strong>U</strong></a> | <a href="#V"><strong>V</strong></a></div>
+</section>
+<section id="A" class="genindex-section">
+  <h2>A</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.Meta.abstract">abstract (jwt_allauth.token.models.AbstractRefreshToken.Meta attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.Meta.abstract">(jwt_allauth.token.models.BaseToken.Meta attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken">AbstractRefreshToken (class in jwt_allauth.token.models)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.Meta">AbstractRefreshToken.Meta (class in jwt_allauth.token.models)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.permissions.BasePermission.accepted_roles">accepted_roles (jwt_allauth.permissions.BasePermission attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.html#jwt_allauth.permissions.BasePermissionStaffExcluded.accepted_roles">(jwt_allauth.permissions.BasePermissionStaffExcluded attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.utils.allauth_authenticate">allauth_authenticate() (in module jwt_allauth.utils)</a>
+</li>
+        <li><a href="jwt_allauth.registration.email_verification.html#jwt_allauth.registration.email_verification.views.VerifyEmailView.allowed_methods">allowed_methods (jwt_allauth.registration.email_verification.views.VerifyEmailView attribute)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.auth_delete">auth_delete() (jwt_allauth.test.JAClient method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.auth_get">auth_get() (jwt_allauth.test.JAClient method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.auth_patch">auth_patch() (jwt_allauth.test.JAClient method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.auth_post">auth_post() (jwt_allauth.test.JAClient method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.auth_put">auth_put() (jwt_allauth.test.JAClient method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="B" class="genindex-section">
+  <h2>B</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.permissions.BasePermission">BasePermission (class in jwt_allauth.permissions)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.permissions.BasePermissionStaffExcluded">BasePermissionStaffExcluded (class in jwt_allauth.permissions)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken">BaseToken (class in jwt_allauth.token.models)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.Meta">BaseToken.Meta (class in jwt_allauth.token.models)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.browser">browser (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.browser">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.browser">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.browser">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.browser_version">browser_version (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.browser_version">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.browser_version">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.browser_version">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="C" class="genindex-section">
+  <h2>C</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.tokens.GenericToken.check_token">check_token() (jwt_allauth.token.tokens.GenericToken method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.adapter.JWTAllAuthAdapter.clean_email">clean_email() (jwt_allauth.adapter.JWTAllAuthAdapter method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.content_type">content_type (jwt_allauth.test.JAClient attribute)</a>
+</li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.create">create() (jwt_allauth.registration.views.RegisterView method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.created">created (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.created">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.created">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.created">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.custom_signup">custom_signup() (jwt_allauth.registration.serializers.RegisterSerializer method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="D" class="genindex-section">
+  <h2>D</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.apps.JWTAllauthAppConfig.default_auto_field">default_auto_field (jwt_allauth.apps.JWTAllauthAppConfig attribute)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.exceptions.IncorrectCredentials.default_code">default_code (jwt_allauth.exceptions.IncorrectCredentials attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.html#jwt_allauth.exceptions.NotVerifiedEmail.default_code">(jwt_allauth.exceptions.NotVerifiedEmail attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.html#jwt_allauth.exceptions.IncorrectCredentials.default_detail">default_detail (jwt_allauth.exceptions.IncorrectCredentials attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.html#jwt_allauth.exceptions.NotVerifiedEmail.default_detail">(jwt_allauth.exceptions.NotVerifiedEmail attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.DefaultPasswordResetView">DefaultPasswordResetView (class in jwt_allauth.password_reset.views)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.delete">delete() (jwt_allauth.test.JAClient method)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.device">device (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.device">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.device">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.device">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.device_brand">device_brand (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.device_brand">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.device_brand">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.device_brand">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.device_model">device_model (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.device_model">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.device_model">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.device_model">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.login.html#jwt_allauth.login.views.LoginView.dispatch">dispatch() (jwt_allauth.login.views.LoginView method)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.password_change.html#jwt_allauth.password_change.views.PasswordChangeView.dispatch">(jwt_allauth.password_change.views.PasswordChangeView method)</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.ResetPasswordView.dispatch">(jwt_allauth.password_reset.views.ResetPasswordView method)</a>
+</li>
+          <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.dispatch">(jwt_allauth.registration.views.RegisterView method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="E" class="genindex-section">
+  <h2>E</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.EMAIL">EMAIL (jwt_allauth.test.JATestCase attribute)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.enabled">enabled (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.enabled">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta.exclude">exclude (jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta.exclude">(jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="F" class="genindex-section">
+  <h2>F</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.user_details.html#jwt_allauth.user_details.serializers.UserDetailsSerializer.Meta.fields">fields (jwt_allauth.user_details.serializers.UserDetailsSerializer.Meta attribute)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.FIRST_NAME">FIRST_NAME (jwt_allauth.test.JATestCase attribute)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.tokens.RefreshToken.for_user">for_user() (jwt_allauth.token.tokens.RefreshToken class method)</a>
+</li>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetConfirmView.form_url">form_url (jwt_allauth.password_reset.views.PasswordResetConfirmView attribute)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="G" class="genindex-section">
+  <h2>G</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.tokens.GenericToken">GenericToken (class in jwt_allauth.token.tokens)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel">GenericTokenModel (class in jwt_allauth.token.models)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.DoesNotExist">GenericTokenModel.DoesNotExist</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.MultipleObjectsReturned">GenericTokenModel.MultipleObjectsReturned</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.serializers.GenericTokenModelSerializer">GenericTokenModelSerializer (class in jwt_allauth.token.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta">GenericTokenModelSerializer.Meta (class in jwt_allauth.token.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutAllView.get">get() (jwt_allauth.logout.views.LogoutAllView method)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutView.get">(jwt_allauth.logout.views.LogoutView method)</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.DefaultPasswordResetView.get">(jwt_allauth.password_reset.views.DefaultPasswordResetView method)</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetConfirmView.get">(jwt_allauth.password_reset.views.PasswordResetConfirmView method)</a>
+</li>
+          <li><a href="jwt_allauth.registration.email_verification.html#jwt_allauth.registration.email_verification.views.VerifyEmailView.get">(jwt_allauth.registration.email_verification.views.VerifyEmailView method)</a>
+</li>
+          <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.get">(jwt_allauth.test.JAClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.get_cleaned_data">get_cleaned_data() (jwt_allauth.registration.serializers.RegisterSerializer method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.utils.get_client_ip">get_client_ip() (in module jwt_allauth.utils)</a>
+</li>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.PasswordResetSerializer.get_email_options">get_email_options() (jwt_allauth.password_reset.serializers.PasswordResetSerializer method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.get_next_by_created">get_next_by_created() (jwt_allauth.token.models.AbstractRefreshToken method)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.get_next_by_created">(jwt_allauth.token.models.BaseToken method)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.get_next_by_created">(jwt_allauth.token.models.GenericTokenModel method)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.get_next_by_created">(jwt_allauth.token.models.RefreshTokenWhitelistModel method)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.user_details.html#jwt_allauth.user_details.views.UserDetailsView.get_object">get_object() (jwt_allauth.user_details.views.UserDetailsView method)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.get_previous_by_created">get_previous_by_created() (jwt_allauth.token.models.AbstractRefreshToken method)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.get_previous_by_created">(jwt_allauth.token.models.BaseToken method)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.get_previous_by_created">(jwt_allauth.token.models.GenericTokenModel method)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.get_previous_by_created">(jwt_allauth.token.models.RefreshTokenWhitelistModel method)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.user_details.html#jwt_allauth.user_details.views.UserDetailsView.get_queryset">get_queryset() (jwt_allauth.user_details.views.UserDetailsView method)</a>
+</li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.get_response_data">get_response_data() (jwt_allauth.registration.views.RegisterView static method)</a>
+</li>
+        <li><a href="jwt_allauth.registration.email_verification.html#jwt_allauth.registration.email_verification.views.VerifyEmailView.get_serializer">get_serializer() (jwt_allauth.registration.email_verification.views.VerifyEmailView static method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.utils.get_template_path">get_template_path() (in module jwt_allauth.utils)</a>
+</li>
+        <li><a href="jwt_allauth.login.html#jwt_allauth.login.serializers.LoginSerializer.get_token">get_token() (jwt_allauth.login.serializers.LoginSerializer class method)</a>
+</li>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetConfirmView.get_user">get_user() (jwt_allauth.password_reset.views.PasswordResetConfirmView static method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.utils.get_user_agent">get_user_agent() (in module jwt_allauth.utils)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="H" class="genindex-section">
+  <h2>H</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.permissions.BasePermission.has_permission">has_permission() (jwt_allauth.permissions.BasePermission method)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.html#jwt_allauth.permissions.BasePermissionStaffExcluded.has_permission">(jwt_allauth.permissions.BasePermissionStaffExcluded method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.user_details.html#jwt_allauth.user_details.views.UserDetailsView.http_method_names">http_method_names (jwt_allauth.user_details.views.UserDetailsView attribute)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="I" class="genindex-section">
+  <h2>I</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.id">id (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.id">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.id">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.id">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.html#jwt_allauth.utils.import_callable">import_callable() (in module jwt_allauth.utils)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.exceptions.IncorrectCredentials">IncorrectCredentials</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.ip">ip (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.ip">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.ip">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.ip">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.is_bot">is_bot (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.is_bot">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.is_bot">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_bot">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.utils.is_email_verified">is_email_verified() (in module jwt_allauth.utils)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.is_mobile">is_mobile (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.is_mobile">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.is_mobile">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_mobile">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.is_pc">is_pc (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.is_pc">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.is_pc">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_pc">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.is_tablet">is_tablet (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.is_tablet">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.is_tablet">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.is_tablet">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="J" class="genindex-section">
+  <h2>J</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.ja_client">ja_client (jwt_allauth.test.JATestCase property)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient">JAClient (class in jwt_allauth.test)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase">JATestCase (class in jwt_allauth.test)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.jti">jti (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.jti">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.adapter
+
+        <ul>
+          <li><a href="jwt_allauth.html#module-jwt_allauth.adapter">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.apps
+
+        <ul>
+          <li><a href="jwt_allauth.html#module-jwt_allauth.apps">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.exceptions
+
+        <ul>
+          <li><a href="jwt_allauth.html#module-jwt_allauth.exceptions">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.login.serializers
+
+        <ul>
+          <li><a href="jwt_allauth.login.html#module-jwt_allauth.login.serializers">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.login.views
+
+        <ul>
+          <li><a href="jwt_allauth.login.html#module-jwt_allauth.login.views">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.logout.serializers
+
+        <ul>
+          <li><a href="jwt_allauth.logout.html#module-jwt_allauth.logout.serializers">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.logout.views
+
+        <ul>
+          <li><a href="jwt_allauth.logout.html#module-jwt_allauth.logout.views">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.password_change.serializers
+
+        <ul>
+          <li><a href="jwt_allauth.password_change.html#module-jwt_allauth.password_change.serializers">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.password_change.views
+
+        <ul>
+          <li><a href="jwt_allauth.password_change.html#module-jwt_allauth.password_change.views">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.password_reset.serializers
+
+        <ul>
+          <li><a href="jwt_allauth.password_reset.html#module-jwt_allauth.password_reset.serializers">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.password_reset.views
+
+        <ul>
+          <li><a href="jwt_allauth.password_reset.html#module-jwt_allauth.password_reset.views">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.permissions
+
+        <ul>
+          <li><a href="jwt_allauth.html#module-jwt_allauth.permissions">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.registration.app_settings
+
+        <ul>
+          <li><a href="jwt_allauth.registration.html#module-jwt_allauth.registration.app_settings">module</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li>
+    jwt_allauth.registration.email_verification.serializers
+
+        <ul>
+          <li><a href="jwt_allauth.registration.email_verification.html#module-jwt_allauth.registration.email_verification.serializers">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.registration.email_verification.views
+
+        <ul>
+          <li><a href="jwt_allauth.registration.email_verification.html#module-jwt_allauth.registration.email_verification.views">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.registration.serializers
+
+        <ul>
+          <li><a href="jwt_allauth.registration.html#module-jwt_allauth.registration.serializers">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.registration.views
+
+        <ul>
+          <li><a href="jwt_allauth.registration.html#module-jwt_allauth.registration.views">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.test
+
+        <ul>
+          <li><a href="jwt_allauth.html#module-jwt_allauth.test">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.token.models
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#module-jwt_allauth.token.models">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.token.serializers
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#module-jwt_allauth.token.serializers">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.token.tokens
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#module-jwt_allauth.token.tokens">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.token_refresh.serializers
+
+        <ul>
+          <li><a href="jwt_allauth.token_refresh.html#module-jwt_allauth.token_refresh.serializers">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.token_refresh.views
+
+        <ul>
+          <li><a href="jwt_allauth.token_refresh.html#module-jwt_allauth.token_refresh.views">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.user_details.serializers
+
+        <ul>
+          <li><a href="jwt_allauth.user_details.html#module-jwt_allauth.user_details.serializers">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.user_details.views
+
+        <ul>
+          <li><a href="jwt_allauth.user_details.html#module-jwt_allauth.user_details.views">module</a>
+</li>
+        </ul></li>
+        <li>
+    jwt_allauth.utils
+
+        <ul>
+          <li><a href="jwt_allauth.html#module-jwt_allauth.utils">module</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.jwt_token">jwt_token (jwt_allauth.registration.views.RegisterView attribute)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.adapter.JWTAllAuthAdapter">JWTAllAuthAdapter (class in jwt_allauth.adapter)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.apps.JWTAllauthAppConfig">JWTAllauthAppConfig (class in jwt_allauth.apps)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="L" class="genindex-section">
+  <h2>L</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.LAST_NAME">LAST_NAME (jwt_allauth.test.JATestCase attribute)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.LOGIN_PAYLOAD">LOGIN_PAYLOAD (jwt_allauth.test.JATestCase attribute)</a>
+</li>
+        <li><a href="jwt_allauth.login.html#jwt_allauth.login.serializers.LoginSerializer">LoginSerializer (class in jwt_allauth.login.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.login.html#jwt_allauth.login.views.LoginView">LoginView (class in jwt_allauth.login.views)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutAllView.logout">logout() (jwt_allauth.logout.views.LogoutAllView static method)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutView.logout">(jwt_allauth.logout.views.LogoutView static method)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutAllView">LogoutAllView (class in jwt_allauth.logout.views)</a>
+</li>
+        <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutView">LogoutView (class in jwt_allauth.logout.views)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="M" class="genindex-section">
+  <h2>M</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.tokens.GenericToken.make_token">make_token() (jwt_allauth.token.tokens.GenericToken method)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta.model">model (jwt_allauth.token.serializers.GenericTokenModelSerializer.Meta attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta.model">(jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta attribute)</a>
+</li>
+          <li><a href="jwt_allauth.user_details.html#jwt_allauth.user_details.serializers.UserDetailsSerializer.Meta.model">(jwt_allauth.user_details.serializers.UserDetailsSerializer.Meta attribute)</a>
+</li>
+        </ul></li>
+        <li>
+    module
+
+        <ul>
+          <li><a href="jwt_allauth.html#module-jwt_allauth.adapter">jwt_allauth.adapter</a>
+</li>
+          <li><a href="jwt_allauth.html#module-jwt_allauth.apps">jwt_allauth.apps</a>
+</li>
+          <li><a href="jwt_allauth.html#module-jwt_allauth.exceptions">jwt_allauth.exceptions</a>
+</li>
+          <li><a href="jwt_allauth.login.html#module-jwt_allauth.login.serializers">jwt_allauth.login.serializers</a>
+</li>
+          <li><a href="jwt_allauth.login.html#module-jwt_allauth.login.views">jwt_allauth.login.views</a>
+</li>
+          <li><a href="jwt_allauth.logout.html#module-jwt_allauth.logout.serializers">jwt_allauth.logout.serializers</a>
+</li>
+          <li><a href="jwt_allauth.logout.html#module-jwt_allauth.logout.views">jwt_allauth.logout.views</a>
+</li>
+          <li><a href="jwt_allauth.password_change.html#module-jwt_allauth.password_change.serializers">jwt_allauth.password_change.serializers</a>
+</li>
+          <li><a href="jwt_allauth.password_change.html#module-jwt_allauth.password_change.views">jwt_allauth.password_change.views</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#module-jwt_allauth.password_reset.serializers">jwt_allauth.password_reset.serializers</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#module-jwt_allauth.password_reset.views">jwt_allauth.password_reset.views</a>
+</li>
+          <li><a href="jwt_allauth.html#module-jwt_allauth.permissions">jwt_allauth.permissions</a>
+</li>
+          <li><a href="jwt_allauth.registration.html#module-jwt_allauth.registration.app_settings">jwt_allauth.registration.app_settings</a>
+</li>
+          <li><a href="jwt_allauth.registration.email_verification.html#module-jwt_allauth.registration.email_verification.serializers">jwt_allauth.registration.email_verification.serializers</a>
+</li>
+          <li><a href="jwt_allauth.registration.email_verification.html#module-jwt_allauth.registration.email_verification.views">jwt_allauth.registration.email_verification.views</a>
+</li>
+          <li><a href="jwt_allauth.registration.html#module-jwt_allauth.registration.serializers">jwt_allauth.registration.serializers</a>
+</li>
+          <li><a href="jwt_allauth.registration.html#module-jwt_allauth.registration.views">jwt_allauth.registration.views</a>
+</li>
+          <li><a href="jwt_allauth.html#module-jwt_allauth.test">jwt_allauth.test</a>
+</li>
+          <li><a href="jwt_allauth.token.html#module-jwt_allauth.token.models">jwt_allauth.token.models</a>
+</li>
+          <li><a href="jwt_allauth.token.html#module-jwt_allauth.token.serializers">jwt_allauth.token.serializers</a>
+</li>
+          <li><a href="jwt_allauth.token.html#module-jwt_allauth.token.tokens">jwt_allauth.token.tokens</a>
+</li>
+          <li><a href="jwt_allauth.token_refresh.html#module-jwt_allauth.token_refresh.serializers">jwt_allauth.token_refresh.serializers</a>
+</li>
+          <li><a href="jwt_allauth.token_refresh.html#module-jwt_allauth.token_refresh.views">jwt_allauth.token_refresh.views</a>
+</li>
+          <li><a href="jwt_allauth.user_details.html#module-jwt_allauth.user_details.serializers">jwt_allauth.user_details.serializers</a>
+</li>
+          <li><a href="jwt_allauth.user_details.html#module-jwt_allauth.user_details.views">jwt_allauth.user_details.views</a>
+</li>
+          <li><a href="jwt_allauth.html#module-jwt_allauth.utils">jwt_allauth.utils</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="N" class="genindex-section">
+  <h2>N</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.apps.JWTAllauthAppConfig.name">name (jwt_allauth.apps.JWTAllauthAppConfig attribute)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.exceptions.NotVerifiedEmail">NotVerifiedEmail</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="O" class="genindex-section">
+  <h2>O</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.objects">objects (jwt_allauth.token.models.GenericTokenModel attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.objects">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.SetPasswordSerializer.old_password">old_password (jwt_allauth.password_reset.serializers.SetPasswordSerializer attribute)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.os">os (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.os">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.os">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.os">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.os_version">os_version (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.os_version">(jwt_allauth.token.models.BaseToken attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.os_version">(jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.os_version">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="P" class="genindex-section">
+  <h2>P</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.PASS">PASS (jwt_allauth.test.JATestCase attribute)</a>
+</li>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.PasswordResetSerializer.password_reset_form_class">password_reset_form_class (jwt_allauth.password_reset.serializers.PasswordResetSerializer attribute)</a>
+</li>
+        <li><a href="jwt_allauth.password_change.html#jwt_allauth.password_change.serializers.PasswordChangeSerializer">PasswordChangeSerializer (class in jwt_allauth.password_change.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.password_change.html#jwt_allauth.password_change.views.PasswordChangeView">PasswordChangeView (class in jwt_allauth.password_change.views)</a>
+</li>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetConfirmView">PasswordResetConfirmView (class in jwt_allauth.password_reset.views)</a>
+</li>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.PasswordResetSerializer">PasswordResetSerializer (class in jwt_allauth.password_reset.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetView">PasswordResetView (class in jwt_allauth.password_reset.views)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.patch">patch() (jwt_allauth.test.JAClient method)</a>
+</li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.perform_create">perform_create() (jwt_allauth.registration.views.RegisterView method)</a>
+</li>
+        <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutAllView.permission_classes">permission_classes (jwt_allauth.logout.views.LogoutAllView attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutView.permission_classes">(jwt_allauth.logout.views.LogoutView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.password_change.html#jwt_allauth.password_change.views.PasswordChangeView.permission_classes">(jwt_allauth.password_change.views.PasswordChangeView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.DefaultPasswordResetView.permission_classes">(jwt_allauth.password_reset.views.DefaultPasswordResetView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetView.permission_classes">(jwt_allauth.password_reset.views.PasswordResetView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.ResetPasswordView.permission_classes">(jwt_allauth.password_reset.views.ResetPasswordView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.registration.email_verification.html#jwt_allauth.registration.email_verification.views.VerifyEmailView.permission_classes">(jwt_allauth.registration.email_verification.views.VerifyEmailView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.permission_classes">(jwt_allauth.registration.views.RegisterView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.user_details.html#jwt_allauth.user_details.views.UserDetailsView.permission_classes">(jwt_allauth.user_details.views.UserDetailsView attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.login.html#jwt_allauth.login.views.LoginView.post">post() (jwt_allauth.login.views.LoginView method)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutAllView.post">(jwt_allauth.logout.views.LogoutAllView method)</a>
+</li>
+          <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.views.LogoutView.post">(jwt_allauth.logout.views.LogoutView method)</a>
+</li>
+          <li><a href="jwt_allauth.password_change.html#jwt_allauth.password_change.views.PasswordChangeView.post">(jwt_allauth.password_change.views.PasswordChangeView method)</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetView.post">(jwt_allauth.password_reset.views.PasswordResetView method)</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.ResetPasswordView.post">(jwt_allauth.password_reset.views.ResetPasswordView method)</a>
+</li>
+          <li><a href="jwt_allauth.registration.email_verification.html#jwt_allauth.registration.email_verification.views.VerifyEmailView.post">(jwt_allauth.registration.email_verification.views.VerifyEmailView method)</a>
+</li>
+          <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.post">(jwt_allauth.test.JAClient method)</a>
+</li>
+          <li><a href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.views.TokenRefreshView.post">(jwt_allauth.token_refresh.views.TokenRefreshView method)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.purpose">purpose (jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.put">put() (jwt_allauth.test.JAClient method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="R" class="genindex-section">
+  <h2>R</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.user_details.html#jwt_allauth.user_details.serializers.UserDetailsSerializer.Meta.read_only_fields">read_only_fields (jwt_allauth.user_details.serializers.UserDetailsSerializer.Meta attribute)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.apps.JWTAllauthAppConfig.ready">ready() (jwt_allauth.apps.JWTAllauthAppConfig method)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.tokens.RefreshToken">RefreshToken (class in jwt_allauth.token.tokens)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel">RefreshTokenWhitelistModel (class in jwt_allauth.token.models)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.DoesNotExist">RefreshTokenWhitelistModel.DoesNotExist</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.MultipleObjectsReturned">RefreshTokenWhitelistModel.MultipleObjectsReturned</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer">RefreshTokenWhitelistSerializer (class in jwt_allauth.token.serializers)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.serializers.RefreshTokenWhitelistSerializer.Meta">RefreshTokenWhitelistSerializer.Meta (class in jwt_allauth.token.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.app_settings.register_permission_classes">register_permission_classes() (in module jwt_allauth.registration.app_settings)</a>
+</li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer">RegisterSerializer (class in jwt_allauth.registration.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView">RegisterView (class in jwt_allauth.registration.views)</a>
+</li>
+        <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.serializers.RemoveRefreshTokenSerializer">RemoveRefreshTokenSerializer (class in jwt_allauth.logout.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.adapter.JWTAllAuthAdapter.render_mail">render_mail() (jwt_allauth.adapter.JWTAllAuthAdapter method)</a>
+</li>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.ResetPasswordView">ResetPasswordView (class in jwt_allauth.password_reset.views)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="S" class="genindex-section">
+  <h2>S</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.password_change.html#jwt_allauth.password_change.serializers.PasswordChangeSerializer.save">save() (jwt_allauth.password_change.serializers.PasswordChangeSerializer method)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.PasswordResetSerializer.save">(jwt_allauth.password_reset.serializers.PasswordResetSerializer method)</a>
+</li>
+          <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.save">(jwt_allauth.registration.serializers.RegisterSerializer method)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.html#jwt_allauth.adapter.JWTAllAuthAdapter.send_confirmation_mail">send_confirmation_mail() (jwt_allauth.adapter.JWTAllAuthAdapter method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.adapter.JWTAllAuthAdapter.send_mail">send_mail() (jwt_allauth.adapter.JWTAllAuthAdapter method)</a>
+</li>
+        <li><a href="jwt_allauth.login.html#jwt_allauth.login.views.LoginView.serializer_class">serializer_class (jwt_allauth.login.views.LoginView attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.password_change.html#jwt_allauth.password_change.views.PasswordChangeView.serializer_class">(jwt_allauth.password_change.views.PasswordChangeView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetView.serializer_class">(jwt_allauth.password_reset.views.PasswordResetView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.ResetPasswordView.serializer_class">(jwt_allauth.password_reset.views.ResetPasswordView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.serializer_class">(jwt_allauth.registration.views.RegisterView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.views.TokenRefreshView.serializer_class">(jwt_allauth.token_refresh.views.TokenRefreshView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.user_details.html#jwt_allauth.user_details.views.UserDetailsView.serializer_class">(jwt_allauth.user_details.views.UserDetailsView attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.session">session (jwt_allauth.token.models.AbstractRefreshToken attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.session">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.password_change.html#jwt_allauth.password_change.serializers.PasswordChangeSerializer.set_password_form_class">set_password_form_class (jwt_allauth.password_change.serializers.PasswordChangeSerializer attribute)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.tokens.RefreshToken.set_session">set_session() (jwt_allauth.token.tokens.RefreshToken method)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.tokens.RefreshToken.set_user_role">set_user_role() (jwt_allauth.token.tokens.RefreshToken method)</a>
+</li>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.SetPasswordSerializer">SetPasswordSerializer (class in jwt_allauth.password_reset.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.setUp">setUp() (jwt_allauth.test.JATestCase method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.staff_delete">staff_delete() (jwt_allauth.test.JAClient method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.STAFF_EMAIL">STAFF_EMAIL (jwt_allauth.test.JATestCase attribute)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.STAFF_FIRST_NAME">STAFF_FIRST_NAME (jwt_allauth.test.JATestCase attribute)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.staff_get">staff_get() (jwt_allauth.test.JAClient method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.STAFF_LAST_NAME">STAFF_LAST_NAME (jwt_allauth.test.JATestCase attribute)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.STAFF_PASS">STAFF_PASS (jwt_allauth.test.JATestCase attribute)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.staff_patch">staff_patch() (jwt_allauth.test.JAClient method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.staff_post">staff_post() (jwt_allauth.test.JAClient method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.staff_put">staff_put() (jwt_allauth.test.JAClient method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.STAFF_USER">STAFF_USER (jwt_allauth.test.JATestCase attribute)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.exceptions.IncorrectCredentials.status_code">status_code (jwt_allauth.exceptions.IncorrectCredentials attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.html#jwt_allauth.exceptions.NotVerifiedEmail.status_code">(jwt_allauth.exceptions.NotVerifiedEmail attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="T" class="genindex-section">
+  <h2>T</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.DefaultPasswordResetView.template_name">template_name (jwt_allauth.password_reset.views.DefaultPasswordResetView attribute)</a>
+</li>
+        <li><a href="jwt_allauth.login.html#jwt_allauth.login.views.LoginView.throttle_classes">throttle_classes (jwt_allauth.login.views.LoginView attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.password_change.html#jwt_allauth.password_change.views.PasswordChangeView.throttle_classes">(jwt_allauth.password_change.views.PasswordChangeView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.PasswordResetView.throttle_classes">(jwt_allauth.password_reset.views.PasswordResetView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.views.ResetPasswordView.throttle_classes">(jwt_allauth.password_reset.views.ResetPasswordView attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.views.TokenRefreshView.throttle_classes">(jwt_allauth.token_refresh.views.TokenRefreshView attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.token">token (jwt_allauth.token.models.GenericTokenModel attribute)</a>
+</li>
+        <li><a href="jwt_allauth.login.html#jwt_allauth.login.serializers.LoginSerializer.token_class">token_class (jwt_allauth.login.serializers.LoginSerializer attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.serializers.TokenRefreshSerializer.token_class">(jwt_allauth.token_refresh.serializers.TokenRefreshSerializer attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.views.RegisterView.token_model">token_model (jwt_allauth.registration.views.RegisterView attribute)</a>
+</li>
+        <li><a href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.serializers.TokenRefreshSerializer">TokenRefreshSerializer (class in jwt_allauth.token_refresh.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.views.TokenRefreshView">TokenRefreshView (class in jwt_allauth.token_refresh.views)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="U" class="genindex-section">
+  <h2>U</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JAClient.update_kwargs">update_kwargs() (jwt_allauth.test.JAClient method)</a>
+</li>
+        <li><a href="jwt_allauth.login.html#jwt_allauth.login.serializers.LoginSerializer.user">user (jwt_allauth.login.serializers.LoginSerializer attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.serializers.RemoveRefreshTokenSerializer.user">(jwt_allauth.logout.serializers.RemoveRefreshTokenSerializer attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.html#jwt_allauth.test.JATestCase.USER">USER (jwt_allauth.test.JATestCase attribute)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.user">user (jwt_allauth.token.models.GenericTokenModel attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.user">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.html#jwt_allauth.utils.user_agent_dict">user_agent_dict() (in module jwt_allauth.utils)</a>
+</li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.GenericTokenModel.user_id">user_id (jwt_allauth.token.models.GenericTokenModel attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.RefreshTokenWhitelistModel.user_id">(jwt_allauth.token.models.RefreshTokenWhitelistModel attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.user_details.html#jwt_allauth.user_details.serializers.UserDetailsSerializer">UserDetailsSerializer (class in jwt_allauth.user_details.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.user_details.html#jwt_allauth.user_details.serializers.UserDetailsSerializer.Meta">UserDetailsSerializer.Meta (class in jwt_allauth.user_details.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.user_details.html#jwt_allauth.user_details.views.UserDetailsView">UserDetailsView (class in jwt_allauth.user_details.views)</a>
+</li>
+        <li><a href="jwt_allauth.login.html#jwt_allauth.login.serializers.LoginSerializer.username_field">username_field (jwt_allauth.login.serializers.LoginSerializer attribute)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="V" class="genindex-section">
+  <h2>V</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.login.html#jwt_allauth.login.serializers.LoginSerializer.validate">validate() (jwt_allauth.login.serializers.LoginSerializer method)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.logout.html#jwt_allauth.logout.serializers.RemoveRefreshTokenSerializer.validate">(jwt_allauth.logout.serializers.RemoveRefreshTokenSerializer method)</a>
+</li>
+          <li><a href="jwt_allauth.password_change.html#jwt_allauth.password_change.serializers.PasswordChangeSerializer.validate">(jwt_allauth.password_change.serializers.PasswordChangeSerializer method)</a>
+</li>
+          <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.validate">(jwt_allauth.registration.serializers.RegisterSerializer method)</a>
+</li>
+          <li><a href="jwt_allauth.token_refresh.html#jwt_allauth.token_refresh.serializers.TokenRefreshSerializer.validate">(jwt_allauth.token_refresh.serializers.TokenRefreshSerializer method)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.PasswordResetSerializer.validate_email">validate_email() (jwt_allauth.password_reset.serializers.PasswordResetSerializer method)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.validate_email">(jwt_allauth.registration.serializers.RegisterSerializer method)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.validate_first_name">validate_first_name() (jwt_allauth.registration.serializers.RegisterSerializer method)</a>
+</li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.validate_last_name">validate_last_name() (jwt_allauth.registration.serializers.RegisterSerializer method)</a>
+</li>
+        <li><a href="jwt_allauth.password_change.html#jwt_allauth.password_change.serializers.PasswordChangeSerializer.validate_old_password">validate_old_password() (jwt_allauth.password_change.serializers.PasswordChangeSerializer method)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.password_reset.html#jwt_allauth.password_reset.serializers.SetPasswordSerializer.validate_old_password">(jwt_allauth.password_reset.serializers.SetPasswordSerializer method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.validate_password1">validate_password1() (jwt_allauth.registration.serializers.RegisterSerializer method)</a>
+</li>
+        <li><a href="jwt_allauth.registration.html#jwt_allauth.registration.serializers.RegisterSerializer.validate_username">validate_username() (jwt_allauth.registration.serializers.RegisterSerializer method)</a>
+</li>
+        <li><a href="jwt_allauth.html#jwt_allauth.apps.JWTAllauthAppConfig.verbose_name">verbose_name (jwt_allauth.apps.JWTAllauthAppConfig attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.Meta.verbose_name">(jwt_allauth.token.models.AbstractRefreshToken.Meta attribute)</a>
+</li>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.Meta.verbose_name">(jwt_allauth.token.models.BaseToken.Meta attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.AbstractRefreshToken.Meta.verbose_name_plural">verbose_name_plural (jwt_allauth.token.models.AbstractRefreshToken.Meta attribute)</a>
+
+        <ul>
+          <li><a href="jwt_allauth.token.html#jwt_allauth.token.models.BaseToken.Meta.verbose_name_plural">(jwt_allauth.token.models.BaseToken.Meta attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="jwt_allauth.registration.email_verification.html#jwt_allauth.registration.email_verification.serializers.VerifyEmailSerializer">VerifyEmailSerializer (class in jwt_allauth.registration.email_verification.serializers)</a>
+</li>
+        <li><a href="jwt_allauth.registration.email_verification.html#jwt_allauth.registration.email_verification.views.VerifyEmailView">VerifyEmailView (class in jwt_allauth.registration.email_verification.views)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Fernando Castellanos
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>
