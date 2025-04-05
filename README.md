@@ -100,5 +100,5 @@ Example:
 
 
 Acknowledgements
-________________
+----------------
 This project began as a fork of django-rest-auth. Thanks to the authors for their great work.

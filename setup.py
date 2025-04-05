@@ -22,6 +22,7 @@ setup(
         include=["jwt_allauth", "jwt_allauth.*"]
     ),
     long_description=long_description,
+    long_description_content_type="text/markdown",
     keywords='django rest auth registration rest-framework django-registration api allauth jwt whitelist',
     zip_safe=False,
     install_requires=[
