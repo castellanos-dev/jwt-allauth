@@ -7,7 +7,7 @@ from rest_framework import serializers
 
 from jwt_allauth.constants import PASS_RESET
 from jwt_allauth.password_change.serializers import PasswordChangeSerializer
-from jwt_allauth.token.tokens import GenericToken
+from jwt_allauth.tokens.tokens import GenericToken
 from jwt_allauth.utils import get_template_path
 
 

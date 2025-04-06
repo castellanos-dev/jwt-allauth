@@ -15,10 +15,10 @@ from rest_framework.generics import CreateAPIView  #, ListAPIView, GenericAPIVie
 from rest_framework.response import Response
 
 # from jwt_allauth.login.views import LoginView
-from jwt_allauth.token.models import TokenModel
+from jwt_allauth.tokens.models import TokenModel
 from jwt_allauth.registration.app_settings import register_permission_classes
 from jwt_allauth.app_settings import RegisterSerializer
-from jwt_allauth.token.app_settings import RefreshToken
+from jwt_allauth.tokens.app_settings import RefreshToken
 # from jwt_allauth.registration.serializers import (
 #     SocialLoginSerializer, SocialAccountSerializer, SocialConnectSerializer)
 from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m

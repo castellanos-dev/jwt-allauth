@@ -1,10 +1,9 @@
 import time
 
 from django.contrib.auth import get_user_model
-from django.test import override_settings
 
-from jwt_allauth.token.models import RefreshTokenWhitelistModel
-from jwt_allauth.token.tokens import RefreshToken
+from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
+from jwt_allauth.tokens.tokens import RefreshToken
 from .mixins import TestsMixin
 
 

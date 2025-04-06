@@ -1,7 +1,7 @@
 from django.test import override_settings
 
-from jwt_allauth.token.app_settings import RefreshToken
-from jwt_allauth.token.models import RefreshTokenWhitelistModel
+from jwt_allauth.tokens.app_settings import RefreshToken
+from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from .mixins import TestsMixin
 
 

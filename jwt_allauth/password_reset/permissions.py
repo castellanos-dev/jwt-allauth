@@ -3,7 +3,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 
 from jwt_allauth.constants import PASS_RESET_ACCESS, PASS_RESET_COOKIE, FOR_USER, ONE_TIME_PERMISSION
 from jwt_allauth.password_reset.models import SetPasswordTokenUser
-from jwt_allauth.token.app_settings import RefreshToken
+from jwt_allauth.tokens.app_settings import RefreshToken
 
 
 class ResetPasswordPermission(DefaultBasePermission):

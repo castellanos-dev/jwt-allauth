@@ -7,8 +7,8 @@ from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken as DefaultRefreshToken
 
 from jwt_allauth.roles import STAFF_CODE, SUPER_USER_CODE
-from jwt_allauth.token.models import GenericTokenModel
-from jwt_allauth.token.serializers import RefreshTokenWhitelistSerializer, GenericTokenModelSerializer
+from jwt_allauth.tokens.models import GenericTokenModel
+from jwt_allauth.tokens.serializers import RefreshTokenWhitelistSerializer, GenericTokenModelSerializer
 from jwt_allauth.utils import user_agent_dict
 
 

@@ -6,7 +6,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
 from jwt_allauth.constants import EMAIL_VERIFIED_REDIRECT
-from jwt_allauth.token.models import RefreshTokenWhitelistModel
+from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from jwt_allauth.registration.email_verification.serializers import VerifyEmailSerializer
 
 

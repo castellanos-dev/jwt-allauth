@@ -1,11 +1,10 @@
 from unittest.mock import patch
 
-from django.test import override_settings
 from django.urls import reverse
 
 from jwt_allauth.permissions import BasePermission
 from jwt_allauth.roles import STAFF_CODE, SUPER_USER_CODE
-from jwt_allauth.token.tokens import RefreshToken
+from jwt_allauth.tokens.tokens import RefreshToken
 from .mixins import TestsMixin
 
 

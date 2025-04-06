@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 
 from jwt_allauth.logout.serializers import RemoveRefreshTokenSerializer
-from jwt_allauth.token.models import RefreshTokenWhitelistModel
+from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 
 
 class LogoutView(APIView):
