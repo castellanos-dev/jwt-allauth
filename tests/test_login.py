@@ -1,5 +1,3 @@
-from django.test import override_settings
-
 from .mixins import TestsMixin
 
 

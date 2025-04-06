@@ -1,6 +1,5 @@
 from unittest.mock import patch
 
-from django.test import override_settings
 from django.urls import reverse
 
 from jwt_allauth.permissions import BasePermission

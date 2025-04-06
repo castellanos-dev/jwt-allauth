@@ -1,5 +1,4 @@
 from django.contrib.auth import get_user_model
-from django.test import override_settings
 
 from .mixins import TestsMixin
 
