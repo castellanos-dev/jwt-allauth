@@ -82,6 +82,10 @@ class JWTAllauthAppConfig(AppConfig):
                     'rest_framework_simplejwt.authentication.JWTStatelessUserAuthentication',
                 )
             }
+        elif 'DEFAULT_AUTHENTICATION_CLASSES' not in settings.REST_FRAMEWORK:
+            settings.REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = (
+                'rest_framework_simplejwt.authentication.JWTStatelessUserAuthentication',
+            )
 
         if not hasattr(settings, 'AUTHENTICATION_BACKENDS'):
             settings.AUTHENTICATION_BACKENDS = (
