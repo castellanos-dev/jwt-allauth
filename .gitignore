@@ -109,3 +109,4 @@ venv.bak/
 */migrations/*
 
 .idea/*
+/docs/build/
