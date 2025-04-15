@@ -12,7 +12,7 @@ f.close()
 
 setup(
     name='django-jwt-allauth',
-    version='1.0.1',
+    version='1.0.2',
     author='Fernando Castellanos',
     author_email='fcastellanos.dev@gmail.com',
     url='http://github.com/castellanos-dev/django-jwt-allauth',

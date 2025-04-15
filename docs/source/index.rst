@@ -86,6 +86,7 @@ Contents
    :caption: Contents:
 
    modules
+   release_notes
 
 Acknowledgements
 ----------------

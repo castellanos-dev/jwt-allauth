@@ -6,9 +6,11 @@
 import os
 import sys
 
+# Add the project root directory to the Python path
+sys.path.insert(0, os.path.abspath('../../'))
+
+# Configure Django settings
 os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.settings'
-# test_dir = os.path.join(os.path.dirname(__file__), 'tests')
-# sys.path.insert(0, test_dir)
 
 import django
 # from django.test.utils import get_runner
@@ -21,15 +23,13 @@ if hasattr(django, 'setup'):
 # import os
 # import sys
 
-sys.path.insert(0, os.path.abspath('../../'))
-
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'JWT Allauth'
 copyright = '2025, Fernando Castellanos'
 author = 'Fernando Castellanos'
-release = '1.0.1'
+release = '1.0.2'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

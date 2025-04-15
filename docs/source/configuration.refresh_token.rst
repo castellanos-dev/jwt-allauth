@@ -11,13 +11,13 @@ compromised or outdated refresh tokens can be promptly invalidated when necessar
 
 The following constant should be included in the settings.py file:
 
-    - ``JWT_ALLAUTH_REFRESH_TOKEN`` - refresh token class (default: ``jwt_allauth.token.tokens.RefreshToken``).
+    - ``JWT_ALLAUTH_REFRESH_TOKEN`` - refresh token class (default: ``jwt_allauth.tokens.tokens.RefreshToken``).
 
 Example:
 
 .. code-block:: python
 
-    from jwt_allauth.token.tokens import RefreshToken as DefaultRefreshToken
+    from jwt_allauth.tokens.tokens import RefreshToken as DefaultRefreshToken
 
     class RefreshToken(DefaultRefreshToken):
 
