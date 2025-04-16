@@ -1,26 +1,26 @@
 token
 =====
 
-jwt\_allauth.token.tokens module
---------------------------------
+jwt\_allauth.tokens.tokens module
+---------------------------------
 
-.. automodule:: jwt_allauth.token.tokens
+.. automodule:: jwt_allauth.tokens.tokens
    :members:
    :show-inheritance:
    :undoc-members:
 
-jwt\_allauth.token.models module
---------------------------------
+jwt\_allauth.tokens.models module
+---------------------------------
 
-.. automodule:: jwt_allauth.token.models
+.. automodule:: jwt_allauth.tokens.models
    :members:
    :show-inheritance:
    :undoc-members:
 
-jwt\_allauth.token.serializers module
--------------------------------------
+jwt\_allauth.tokens.serializers module
+--------------------------------------
 
-.. automodule:: jwt_allauth.token.serializers
+.. automodule:: jwt_allauth.tokens.serializers
    :members:
    :show-inheritance:
    :undoc-members:

@@ -18,6 +18,18 @@ Features
 - **Effortless setup**: Get your project up and running with a single command.
 
 
+Why whitelisting?
+-----------------
+
+The refresh token whitelist tracks devices **authorized by the user**, stored in the database to verify refresh tokens during access token renewal requests.
+
+This system empowers users to **revoke access** to stolen/lost devices or log out of all sessions simultaneously. Refresh tokens are regenerated upon each use, ensuring active session tracking. If a refresh token is reused, the system invalidates both tokens and terminates the session tied to the compromised device.
+
+Refresh token auto-renewal enables extended active sessions without repeated logins—ideal for **mobile apps**, where users shouldn’t need to reauthenticate every time they open the app.
+
+Access tokens provide short-lived authentication credentials (via JWT), enabling stateless API access. This approach **minimizes database load** by eliminating per-request database queries.
+
+
 Quick Start
 -----------
 
@@ -39,18 +51,6 @@ This will create a new Django project called `myproject` with JWT Allauth pre-co
 Available options:
 - `--email=True` - Enables email configuration in the project
 - `--template=PATH` - Uses a custom template directory for project creation
-
-
-Why whitelisting?
------------------
-
-The refresh token whitelist tracks devices **authorized by the user**, stored in the database to verify refresh tokens during access token renewal requests.
-
-This system empowers users to **revoke access** to stolen/lost devices or log out of all sessions simultaneously. Refresh tokens are regenerated upon each use, ensuring active session tracking. If a refresh token is reused, the system invalidates both tokens and terminates the session tied to the compromised device.
-
-Refresh token auto-renewal enables extended active sessions without repeated logins—ideal for **mobile apps**, where users shouldn’t need to reauthenticate every time they open the app.
-
-Access tokens provide short-lived authentication credentials (via JWT), enabling stateless API access. This approach **minimizes database load** by eliminating per-request database queries.
 
 
 Email verification

@@ -23,12 +23,7 @@ class RefreshToken(DefaultRefreshToken):
         self.payload['session'] = id_
 
     def set_user_role(self, user):
-        if user.is_staff:
-            self.payload['role'] = STAFF_CODE
-        elif user.is_superuser:
-            self.payload['role'] = SUPER_USER_CODE
-        else:
-            self.payload['role'] = user.role
+        self.payload['role'] = user.role
 
     @classmethod
     def for_user(cls, user, request=None, enabled=True):

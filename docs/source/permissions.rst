@@ -13,12 +13,6 @@ The default role codes are:
 
 New users are assigned the default role value of 0.
 
-.. note::
-
-    The staff and superuser roles are determined by the user model's ``is_staff`` and ``is_superuser`` attributes.
-    While the database stores their role value as 0, the tokens dynamically override this to 1000 (staff) or 900
-    (superuser). For other roles, the token directly reflects the user model's stored integer value.
-
 Usage example
 """""""""""""
 
