@@ -9,6 +9,19 @@ directly in the tokens, this approach reduces reliance on frequent database quer
 Importantly, the refresh token whitelist mechanism ensures this strategy maintains robust security standards, as
 compromised or outdated refresh tokens can be promptly invalidated when necessary.
 
+Due to the stateless nature of JWT authentication, the user object in the request only contains the user ID. If you need
+the complete user object in your view methods, you should use the :func:`~jwt_allauth.utils.load_user` decorator:
+
+.. code-block:: python
+
+    from jwt_allauth.utils import load_user
+
+    class MyView(APIView):
+        @load_user
+        def get(self, request):
+            # request.user is now the complete user object
+            return Response({"username": request.user.username})
+
 The following constant should be included in the settings.py file:
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN`` - refresh token class (default: ``jwt_allauth.tokens.tokens.RefreshToken``).

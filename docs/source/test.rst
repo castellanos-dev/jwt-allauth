@@ -23,6 +23,8 @@ JWT allauth provides a custom :class:`~jwt_allauth.test.JATestCase` that simplif
         * ``JATestCase.STAFF_USER`` automatic authentication through the ``staff_get``, ``staff_post``,
           ``staff_patch`` and ``staff_put`` methods.
 
+    * :meth:`~jwt_allauth.test.JATestCase.authenticate` method to generate a new access token for a given user.
+
 Usage example
 """""""""""""
 
@@ -39,3 +41,9 @@ Usage example
             resp = self.ja_client.auth_patch(reverse("rest_user_details"), data=payload)
             self.assertEqual(resp.status_code, 200)
             self.assertEqual(resp.data["first_name"], payload["first_name"])
+
+        def test_authenticate_custom_user(self):
+            custom_user = User.objects.create(username="custom")
+            self.authenticate(custom_user)  # Updates self.ACCESS with new token
+            resp = self.ja_client.get(reverse("some_endpoint"))
+            self.assertEqual(resp.status_code, 200)

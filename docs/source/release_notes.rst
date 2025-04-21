@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 1.0.2
+Version 1.0.3
 -------------
 
 Released: April 16, 2025
