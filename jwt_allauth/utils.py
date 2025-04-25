@@ -8,6 +8,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.conf import settings
 
 from django_user_agents.utils import get_user_agent as get_user_agent_django
+from rest_framework_simplejwt.exceptions import InvalidToken
 from six import string_types
 
 from jwt_allauth.constants import TEMPLATE_PATHS
@@ -197,7 +198,10 @@ def load_user(f):
             pass
     """
     def wrapper(self, *args, **kwargs):
-        self.request.user = get_user_model().objects.get(id=self.request.user.id)
+        try:
+            self.request.user = get_user_model().objects.get(id=self.request.user.id)
+        except get_user_model().DoesNotExist:
+            raise InvalidToken()
         res = f(self, *args, **kwargs)
         return res
     return wrapper
