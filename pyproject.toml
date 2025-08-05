@@ -1,0 +1,74 @@
+[build-system]
+requires = [
+    "setuptools>=61.0",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-jwt-allauth"
+version = "1.0.3"
+authors = [
+    {name = "Fernando Castellanos", email = "fcastellanos.dev@gmail.com"},
+]
+description = "Powerful JWT-allauth authentication for Django REST Framework that keeps the device session alive by renewing and whitelisting the refresh token."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Framework :: Django",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+keywords = [
+    "django",
+    "rest",
+    "auth",
+    "registration",
+    "rest-framework",
+    "django-registration",
+    "api",
+    "allauth",
+    "jwt",
+    "whitelist"
+]
+dependencies = [
+    "Django>=4.2.16,<=5.2.4",
+    "djangorestframework>=3.15.2,<=3.16.0",
+    "six>=1.9.0",
+    "django-allauth>=65.5.0,<=65.10.0",
+    "djangorestframework-simplejwt>=5.3.1,<=5.5.1",
+    "django-user-agents>=0.4.0",
+]
+
+[project.optional-dependencies]
+test = ["responses>=0.5.0"]
+
+[project.urls]
+Homepage = "https://github.com/castellanos-dev/jwt-allauth"
+Repository = "https://github.com/castellanos-dev/jwt-allauth"
+Documentation = "https://jwt-allauth.readthedocs.io/"
+
+[project.scripts]
+jwt-allauth = "jwt_allauth.bin.jwt_allauth:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+exclude = ["tests*", "jwt_allauth.migrations*"]
+include = ["jwt_allauth*"]
+
+[tool.setuptools.package-data]
+jwt_allauth = [
+    "templates/**/*.html",
+    "templates/**/*.txt",
+    "locale/**/*.po",
+]

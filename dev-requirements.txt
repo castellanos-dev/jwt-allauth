@@ -10,3 +10,9 @@ requests-oauthlib
 sphinx
 furo
 django
+
+# Modern build tools that support PEP 625
+build>=0.10.0
+wheel>=0.40.0
+setuptools>=61.0
+twine>=4.0.0
