@@ -13,6 +13,7 @@ New Features
 - Added ``JWT_ALLAUTH_COLLECT_USER_AGENT`` setting to control user agent data collection during token refresh.
 - Added support for refresh tokens via HTTP cookies with the new ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` setting.
 - Enhanced token refresh security by moving user agent data collection from request payload to server-side context.
+- Compatibility with ``django-allauth`` 65.10.0, ``djangorestframework-simplejwt`` 5.5.1, and ``djangorestframework``  3.16.0.
 
 Bug Fixes
 ~~~~~~~~~

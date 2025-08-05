@@ -197,7 +197,7 @@ class TokenTests(TestsMixin):
         self.assertEqual(refresh_response.status_code, 200)
         new_token = RefreshToken(refresh_response.cookies[REFRESH_TOKEN_COOKIE].value)
 
-        self.assertEqual(new_token.payload['user_id'], self.USER.id)
+        self.assertEqual(str(new_token.payload['user_id']), str(self.USER.id))
         self.assertTrue(new_token.payload['exp'] > datetime.now().timestamp())
         self.assertTrue(new_token.payload['iat'] < datetime.now().timestamp())
 
