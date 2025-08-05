@@ -151,3 +151,6 @@ class JATestCase(TestCase):
         Pre-configured test client with authentication tokens.
         """
         return JAClient(self.ACCESS, self.STAFF_ACCESS)
+
+    def authenticate(self, user):
+        self.ACCESS = str(RefreshToken.for_user(user).access_token)

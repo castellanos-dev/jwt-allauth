@@ -2,11 +2,13 @@ from importlib import import_module
 
 from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress
+from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
 from django.conf import settings
 
 from django_user_agents.utils import get_user_agent as get_user_agent_django
+from rest_framework_simplejwt.exceptions import InvalidToken
 from six import string_types
 
 from jwt_allauth.constants import TEMPLATE_PATHS
@@ -73,8 +75,12 @@ def get_user_agent(f):
         function: Decorated view method
     """
     def user_agent(self, request, *args, **kwargs):
-        request.user_agent = get_user_agent_django(request)
-        request.ip = get_client_ip(request)
+        if getattr(settings, 'JWT_ALLAUTH_COLLECT_USER_AGENT', False):
+            request.user_agent = get_user_agent_django(request)
+            request.ip = get_client_ip(request)
+        else:
+            request.user_agent = None
+            request.ip = None
         return f(self, request, *args, **kwargs)
 
     return user_agent
@@ -99,6 +105,8 @@ def user_agent_dict(request):
         dict: Structured user agent details. Empty dict if no request.
     """
     if request is None:
+        return {}
+    if request.user_agent is None:
         return {}
     return {
         'browser': request.user_agent.browser.family,
@@ -178,3 +186,28 @@ def allauth_authenticate(**kwargs):
         raise IncorrectCredentials()
     is_email_verified(user, raise_exception=True)
     return user
+
+
+def load_user(f):
+    """
+    Decorator that loads the complete user object from the database for stateless JWT authentication.
+    This is necessary because JWT tokens only contain the user ID, and the full user object
+    might be needed in the view methods.
+
+    Usage:
+
+    .. code-block:: python
+
+        @load_user
+        def my_view_method(self, *args, **kwargs):
+            # self.request.user will be the complete user object
+            pass
+    """
+    def wrapper(self, *args, **kwargs):
+        try:
+            self.request.user = get_user_model().objects.get(id=self.request.user.id)
+        except get_user_model().DoesNotExist:
+            raise InvalidToken()
+        res = f(self, *args, **kwargs)
+        return res
+    return wrapper

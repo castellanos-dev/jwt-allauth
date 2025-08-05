@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from django.urls import reverse
 
+from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
 from jwt_allauth.permissions import BasePermission
 from jwt_allauth.roles import STAFF_CODE, SUPER_USER_CODE
 from jwt_allauth.tokens.tokens import RefreshToken
@@ -32,21 +33,39 @@ class LoginTests(TestsMixin):
         self.USER.save()
 
         # Generate new token
-        resp = self.post(reverse("rest_login"), data=self.LOGIN_PAYLOAD, status_code=200)
-        access_token = RefreshToken.access_token_class(resp["access"])
+        login_response = self.client.post(
+            reverse("rest_login"),
+            data=self.LOGIN_PAYLOAD,
+            format='json'
+        )
+        self.assertEqual(login_response.status_code, 200)
+        login_data = login_response.json()
+        access_token = RefreshToken.access_token_class(login_data["access"])
         self.assertIn("role", access_token.payload)
         self.assertEqual(access_token.payload["role"], STAFF_CODE)
-        refresh_token = RefreshToken(resp["refresh"])
+
+        # Get refresh token from cookie
+        refresh_token_str = login_response.cookies[REFRESH_TOKEN_COOKIE].value
+        refresh_token = RefreshToken(refresh_token_str)
         self.assertIn("role", refresh_token.payload)
         self.assertEqual(refresh_token.payload["role"], STAFF_CODE)
 
-        # Token refreshed
-        resp = self.post(reverse("token_refresh"), data={"refresh": resp["refresh"]}, status_code=200)
-        access_token = RefreshToken.access_token_class(resp["access"])
+        # Token refreshed - set cookie manually for refresh
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = refresh_token_str
+        refresh_response = self.client.post(
+            reverse("token_refresh"),
+            data={},
+            format='json'
+        )
+        self.assertEqual(refresh_response.status_code, 200)
+        refresh_data = refresh_response.json()
+        access_token = RefreshToken.access_token_class(refresh_data["access"])
         self.assertIn("role", access_token.payload)
         self.assertEqual(access_token.payload["role"], STAFF_CODE)
-        self.assertIn("refresh", resp)
-        refresh_token = RefreshToken(resp["refresh"])
+
+        # Get new refresh token from cookie
+        new_refresh_token_str = refresh_response.cookies[REFRESH_TOKEN_COOKIE].value
+        refresh_token = RefreshToken(new_refresh_token_str)
         self.assertIn("role", refresh_token.payload)
         self.assertEqual(refresh_token.payload["role"], STAFF_CODE)
 
@@ -57,21 +76,39 @@ class LoginTests(TestsMixin):
         self.USER.save()
 
         # Generate new token
-        resp = self.post(reverse("rest_login"), data=self.LOGIN_PAYLOAD, status_code=200)
-        access_token = RefreshToken.access_token_class(resp["access"])
+        login_response = self.client.post(
+            reverse("rest_login"),
+            data=self.LOGIN_PAYLOAD,
+            format='json'
+        )
+        self.assertEqual(login_response.status_code, 200)
+        login_data = login_response.json()
+        access_token = RefreshToken.access_token_class(login_data["access"])
         self.assertIn("role", access_token.payload)
         self.assertEqual(access_token.payload["role"], STAFF_CODE)
-        refresh_token = RefreshToken(resp["refresh"])
+
+        # Get refresh token from cookie
+        refresh_token_str = login_response.cookies[REFRESH_TOKEN_COOKIE].value
+        refresh_token = RefreshToken(refresh_token_str)
         self.assertIn("role", refresh_token.payload)
         self.assertEqual(refresh_token.payload["role"], STAFF_CODE)
 
-        # Token refreshed
-        resp = self.post(reverse("token_refresh"), data={"refresh": resp["refresh"]}, status_code=200)
-        access_token = RefreshToken.access_token_class(resp["access"])
+        # Token refreshed - set cookie manually for refresh
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = refresh_token_str
+        refresh_response = self.client.post(
+            reverse("token_refresh"),
+            data={},
+            format='json'
+        )
+        self.assertEqual(refresh_response.status_code, 200)
+        refresh_data = refresh_response.json()
+        access_token = RefreshToken.access_token_class(refresh_data["access"])
         self.assertIn("role", access_token.payload)
         self.assertEqual(access_token.payload["role"], STAFF_CODE)
-        self.assertIn("refresh", resp)
-        refresh_token = RefreshToken(resp["refresh"])
+
+        # Get new refresh token from cookie
+        new_refresh_token_str = refresh_response.cookies[REFRESH_TOKEN_COOKIE].value
+        refresh_token = RefreshToken(new_refresh_token_str)
         self.assertIn("role", refresh_token.payload)
         self.assertEqual(refresh_token.payload["role"], STAFF_CODE)
 
@@ -81,21 +118,39 @@ class LoginTests(TestsMixin):
         self.USER.save()
 
         # Generate new token
-        resp = self.post(reverse("rest_login"), data=self.LOGIN_PAYLOAD, status_code=200)
-        access_token = RefreshToken.access_token_class(resp["access"])
+        login_response = self.client.post(
+            reverse("rest_login"),
+            data=self.LOGIN_PAYLOAD,
+            format='json'
+        )
+        self.assertEqual(login_response.status_code, 200)
+        login_data = login_response.json()
+        access_token = RefreshToken.access_token_class(login_data["access"])
         self.assertIn("role", access_token.payload)
         self.assertEqual(access_token.payload["role"], SUPER_USER_CODE)
-        refresh_token = RefreshToken(resp["refresh"])
+
+        # Get refresh token from cookie
+        refresh_token_str = login_response.cookies[REFRESH_TOKEN_COOKIE].value
+        refresh_token = RefreshToken(refresh_token_str)
         self.assertIn("role", refresh_token.payload)
         self.assertEqual(refresh_token.payload["role"], SUPER_USER_CODE)
 
-        # Token refreshed
-        resp = self.post(reverse("token_refresh"), data={"refresh": resp["refresh"]}, status_code=200)
-        access_token = RefreshToken.access_token_class(resp["access"])
+        # Token refreshed - set cookie manually for refresh
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = refresh_token_str
+        refresh_response = self.client.post(
+            reverse("token_refresh"),
+            data={},
+            format='json'
+        )
+        self.assertEqual(refresh_response.status_code, 200)
+        refresh_data = refresh_response.json()
+        access_token = RefreshToken.access_token_class(refresh_data["access"])
         self.assertIn("role", access_token.payload)
         self.assertEqual(access_token.payload["role"], SUPER_USER_CODE)
-        self.assertIn("refresh", resp)
-        refresh_token = RefreshToken(resp["refresh"])
+
+        # Get new refresh token from cookie
+        new_refresh_token_str = refresh_response.cookies[REFRESH_TOKEN_COOKIE].value
+        refresh_token = RefreshToken(new_refresh_token_str)
         self.assertIn("role", refresh_token.payload)
         self.assertEqual(refresh_token.payload["role"], SUPER_USER_CODE)
 
@@ -104,21 +159,39 @@ class LoginTests(TestsMixin):
         self.USER.save()
 
         # Generate new token
-        resp = self.post(reverse("rest_login"), data=self.LOGIN_PAYLOAD, status_code=200)
-        access_token = RefreshToken.access_token_class(resp["access"])
+        login_response = self.client.post(
+            reverse("rest_login"),
+            data=self.LOGIN_PAYLOAD,
+            format='json'
+        )
+        self.assertEqual(login_response.status_code, 200)
+        login_data = login_response.json()
+        access_token = RefreshToken.access_token_class(login_data["access"])
         self.assertIn("role", access_token.payload)
         self.assertEqual(access_token.payload["role"], 300)
-        refresh_token = RefreshToken(resp["refresh"])
+
+        # Get refresh token from cookie
+        refresh_token_str = login_response.cookies[REFRESH_TOKEN_COOKIE].value
+        refresh_token = RefreshToken(refresh_token_str)
         self.assertIn("role", refresh_token.payload)
         self.assertEqual(refresh_token.payload["role"], 300)
 
-        # Token refreshed
-        resp = self.post(reverse("token_refresh"), data={"refresh": resp["refresh"]}, status_code=200)
-        access_token = RefreshToken.access_token_class(resp["access"])
+        # Token refreshed - set cookie manually for refresh
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = refresh_token_str
+        refresh_response = self.client.post(
+            reverse("token_refresh"),
+            data={},
+            format='json'
+        )
+        self.assertEqual(refresh_response.status_code, 200)
+        refresh_data = refresh_response.json()
+        access_token = RefreshToken.access_token_class(refresh_data["access"])
         self.assertIn("role", access_token.payload)
         self.assertEqual(access_token.payload["role"], 300)
-        self.assertIn("refresh", resp)
-        refresh_token = RefreshToken(resp["refresh"])
+
+        # Get new refresh token from cookie
+        new_refresh_token_str = refresh_response.cookies[REFRESH_TOKEN_COOKIE].value
+        refresh_token = RefreshToken(new_refresh_token_str)
         self.assertIn("role", refresh_token.payload)
         self.assertEqual(refresh_token.payload["role"], 300)
 

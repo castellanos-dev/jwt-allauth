@@ -9,3 +9,5 @@ PASS_RESET_COOKIE = 'password_reset_access_token'
 
 FOR_USER = 'for_user'
 ONE_TIME_PERMISSION = 'one_time_permission'
+
+REFRESH_TOKEN_COOKIE = 'refresh_token'

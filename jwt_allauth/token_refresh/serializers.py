@@ -13,18 +13,6 @@ class TokenRefreshSerializer(serializers.Serializer):
     refresh = serializers.CharField()
     access = serializers.CharField(read_only=True)
     token_class = RefreshToken
-    ip = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    is_mobile = serializers.BooleanField(required=False, allow_null=True)
-    is_tablet = serializers.BooleanField(required=False, allow_null=True)
-    is_pc = serializers.BooleanField(required=False, allow_null=True)
-    is_bot = serializers.BooleanField(required=False, allow_null=True)
-    browser = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    browser_version = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    os = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    os_version = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    device = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    device_brand = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    device_model = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, str]:
         refresh = self.token_class(attrs["refresh"])
@@ -50,11 +38,12 @@ class TokenRefreshSerializer(serializers.Serializer):
 
         del attrs["refresh"]
 
+        # Get user agent data from context instead of request data
         serializer_data = {
             'jti': refresh.payload['jti'],
             'user': refresh.payload['user_id'],
             'session': refresh.payload['session'],
-            **attrs
+            **self.context  # Use context data here
         }
 
         refresh_serializer = RefreshTokenWhitelistSerializer(data=serializer_data)

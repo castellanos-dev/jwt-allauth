@@ -29,7 +29,7 @@ if hasattr(django, 'setup'):
 project = 'JWT Allauth'
 copyright = '2025, Fernando Castellanos'
 author = 'Fernando Castellanos'
-release = '1.0.2'
+release = '1.0.3'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

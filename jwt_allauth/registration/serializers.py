@@ -30,6 +30,8 @@ class RegisterSerializer(serializers.Serializer):
     first_name = serializers.CharField(required=True, write_only=True, max_length=100)
     last_name = serializers.CharField(required=True, write_only=True, max_length=100)
 
+    _has_phone_field = False
+
     def validate_username(self, username):
         username = get_adapter().clean_username(username)
         return username

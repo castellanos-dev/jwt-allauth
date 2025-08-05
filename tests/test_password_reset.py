@@ -12,7 +12,10 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework_simplejwt.exceptions import TokenError
 
-from jwt_allauth.constants import PASS_RESET, PASS_RESET_ACCESS, PASS_RESET_COOKIE, FOR_USER, ONE_TIME_PERMISSION
+from jwt_allauth.constants import (
+    PASS_RESET, PASS_RESET_ACCESS, PASS_RESET_COOKIE, FOR_USER, ONE_TIME_PERMISSION,
+    REFRESH_TOKEN_COOKIE
+)
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.tokens import GenericToken
@@ -347,3 +350,53 @@ class PasswordResetTests(TestsMixin):
 
         new_session_count = RefreshTokenWhitelistModel.objects.filter(user=self.USER).count()
         self.assertTrue(new_session_count >= session_count)
+
+    def test_password_reset_complete_refresh_token_as_cookie_default(self):
+        """Test that refresh token is sent as cookie by default after password reset"""
+        refresh_token = RefreshToken()
+        refresh_token[FOR_USER] = self.USER.id
+        refresh_token[ONE_TIME_PERMISSION] = PASS_RESET_ACCESS
+        access_token = refresh_token.access_token
+        GenericTokenModel.objects.create(
+            token=access_token["jti"], purpose=PASS_RESET_ACCESS, user=self.USER
+        )
+
+        self.client.cookies.load({PASS_RESET_COOKIE: str(access_token)})
+        data = {"new_password1": "P@sw0rd-set", "new_password2": "P@sw0rd-set"}
+        response = self.client.post(
+            reverse("rest_password_reset_set_new"), data=data, content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        response_data = response.json()
+        self.assertIn('access', response_data)
+        self.assertNotIn('refresh', response_data)  # Should not be in JSON response
+
+        # Check that cookie was set
+        self.assertIn(REFRESH_TOKEN_COOKIE, response.cookies)
+        self.assertTrue(response.cookies[REFRESH_TOKEN_COOKIE]['httponly'])
+
+    @override_settings(JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False)
+    def test_password_reset_complete_refresh_token_in_payload(self):
+        """Test that refresh token is sent in payload when configured after password reset"""
+        refresh_token = RefreshToken()
+        refresh_token[FOR_USER] = self.USER.id
+        refresh_token[ONE_TIME_PERMISSION] = PASS_RESET_ACCESS
+        access_token = refresh_token.access_token
+        GenericTokenModel.objects.create(
+            token=access_token["jti"], purpose=PASS_RESET_ACCESS, user=self.USER
+        )
+
+        self.client.cookies.load({PASS_RESET_COOKIE: str(access_token)})
+        data = {"new_password1": "P@sw0rd-set", "new_password2": "P@sw0rd-set"}
+        response = self.client.post(
+            reverse("rest_password_reset_set_new"), data=data, content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        response_data = response.json()
+        self.assertIn('access', response_data)
+        self.assertIn('refresh', response_data)  # Should be in JSON response
+
+        # Check that cookie was NOT set
+        self.assertNotIn(REFRESH_TOKEN_COOKIE, response.cookies)

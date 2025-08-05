@@ -12,7 +12,7 @@ f.close()
 
 setup(
     name='django-jwt-allauth',
-    version='1.0.2',
+    version='1.0.3',
     author='Fernando Castellanos',
     author_email='fcastellanos.dev@gmail.com',
     url='http://github.com/castellanos-dev/django-jwt-allauth',
@@ -31,11 +31,11 @@ setup(
     keywords='django rest auth registration rest-framework django-registration api allauth jwt whitelist',
     zip_safe=False,
     install_requires=[
-        'Django>=4.2.16',
-        'djangorestframework>=3.15.2',
+        'Django>=4.2.16,<=5.2.4',
+        'djangorestframework>=3.15.2,<=3.16.0',
         'six>=1.9.0',
-        'django-allauth>=65.5.0',
-        'djangorestframework-simplejwt>=5.3.1',
+        'django-allauth>=65.5.0,<=65.10.0',
+        'djangorestframework-simplejwt>=5.3.1,<=5.5.1',
         'django-user-agents>=0.4.0',
     ],
     extras_require={

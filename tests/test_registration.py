@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import override_settings
 from rest_framework import status
+from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
 
 from .mixins import TestsMixin
 
@@ -35,7 +36,15 @@ class RegistrationTests(TestsMixin):
     def _login(self):
         resp = self.post(self.login_url, data=self.REGISTRATION_LOGIN_DATA, status_code=status.HTTP_200_OK)
         self.assertIn('access', resp.keys())
-        self.assertIn('refresh', resp.keys())
+        self.assertNotIn('refresh', resp.keys())
+        # Check that cookie was set
+        response = self.client.post(
+            self.login_url,
+            data=self.LOGIN_PAYLOAD,
+            format='json'
+        )
+        self.assertIn(REFRESH_TOKEN_COOKIE, response.cookies)
+        self.assertTrue(response.cookies[REFRESH_TOKEN_COOKIE]['httponly'])
         self.token = resp['access']
 
     def test_registration_no_payload(self):
