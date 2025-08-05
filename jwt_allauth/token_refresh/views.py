@@ -18,8 +18,8 @@ class TokenRefreshView(DefaultTokenRefreshView):
         input_data = {}
         if 'refresh' in request.data:
             input_data['refresh'] = request.data['refresh']
-        data = {**input_data, **user_agent_dict(self.request)}
-        serializer = self.get_serializer(data=data)
+        context = user_agent_dict(self.request)
+        serializer = self.get_serializer(data=input_data, context=context)
 
         try:
             serializer.is_valid(raise_exception=True)

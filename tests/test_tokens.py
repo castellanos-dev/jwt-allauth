@@ -161,3 +161,72 @@ class TokenTests(TestsMixin):
         self.assertEqual(new_token.payload['user_id'], self.USER.id)
         self.assertTrue(new_token.payload['exp'] > datetime.now().timestamp())
         self.assertTrue(new_token.payload['iat'] < datetime.now().timestamp())
+
+    def test_user_agent_storage(self):
+        """Verify user agent information is stored correctly"""
+        # Set custom headers to simulate different user agent
+        headers = {
+            'HTTP_USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36',
+            'HTTP_X_FORWARDED_FOR': '192.168.1.100'
+        }
+        
+        payload = {'refresh': str(self.TOKEN)}
+        resp = self.post(self.refresh_url, data=payload, status_code=200, **headers)
+        new_token = RefreshToken(resp['refresh'])
+
+        # Retrieve the token entry from database
+        token_entry = RefreshTokenWhitelistModel.objects.get(jti=new_token.payload['jti'])
+
+        # Verify IP address storage
+        self.assertEqual(token_entry.ip, '192.168.1.100')
+        
+        # Verify device information
+        self.assertEqual(token_entry.browser, 'Chrome')
+        self.assertEqual(token_entry.browser_version, '91.0.4472')
+        self.assertEqual(token_entry.os, 'Mac OS X')
+        self.assertEqual(token_entry.os_version, '10.15.7')
+        self.assertEqual(token_entry.device, 'Mac')
+        self.assertEqual(token_entry.device_brand, 'Apple')
+        self.assertEqual(token_entry.device_model, 'Mac')
+        self.assertTrue(token_entry.is_pc)
+        self.assertFalse(token_entry.is_mobile)
+        self.assertFalse(token_entry.is_tablet)
+        self.assertFalse(token_entry.is_bot)
+
+    def test_user_agent_automatic_collection(self):
+        """Verify user agent info is collected automatically and can't be sent in request"""
+        # Set custom headers to simulate a specific user agent
+        headers = {
+            'HTTP_USER_AGENT': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'HTTP_X_FORWARDED_FOR': '192.168.1.200'
+        }
+        
+        # Attempt to send user agent data in request body (should be ignored)
+        payload = {
+            'refresh': str(self.TOKEN),
+            'ip': 'malicious-ip',
+            'browser': 'MaliciousBrowser',
+            'os': 'MaliciousOS',
+            'device': 'MaliciousDevice'
+        }
+        
+        resp = self.post(self.refresh_url, data=payload, status_code=200, **headers)
+        new_token = RefreshToken(resp['refresh'])
+        
+        # Retrieve the token entry from database
+        token_entry = RefreshTokenWhitelistModel.objects.get(jti=new_token.payload['jti'])
+        
+        # Verify that the actual headers were used, not the payload values
+        self.assertEqual(token_entry.ip, '192.168.1.200')
+        self.assertEqual(token_entry.browser, 'Chrome')
+        self.assertEqual(token_entry.browser_version, '91.0.4472')
+        self.assertEqual(token_entry.os, 'Windows')
+        self.assertEqual(token_entry.os_version, '10')
+        self.assertEqual(token_entry.device, 'Other')
+        self.assertTrue(token_entry.is_pc)
+        
+        # Verify malicious values from payload were ignored
+        self.assertNotEqual(token_entry.ip, 'malicious-ip')
+        self.assertNotEqual(token_entry.browser, 'MaliciousBrowser')
+        self.assertNotEqual(token_entry.os, 'MaliciousOS')
+        self.assertNotEqual(token_entry.device, 'MaliciousDevice')
