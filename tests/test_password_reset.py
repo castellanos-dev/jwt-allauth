@@ -12,7 +12,10 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework_simplejwt.exceptions import TokenError
 
-from jwt_allauth.constants import PASS_RESET, PASS_RESET_ACCESS, PASS_RESET_COOKIE, FOR_USER, ONE_TIME_PERMISSION, REFRESH_TOKEN_COOKIE
+from jwt_allauth.constants import (
+    PASS_RESET, PASS_RESET_ACCESS, PASS_RESET_COOKIE, FOR_USER, ONE_TIME_PERMISSION,
+    REFRESH_TOKEN_COOKIE
+)
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.tokens import GenericToken
