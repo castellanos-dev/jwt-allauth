@@ -10,6 +10,7 @@ New Features
 ~~~~~~~~~~~~
 
 - New :func:`~jwt_allauth.utils.load_user` decorator that loads the complete user object from the database for stateless JWT authentication.
+- Added ``JWT_ALLAUTH_COLLECT_USER_AGENT`` setting to control user agent data collection during token refresh.
 
 Bug Fixes
 ~~~~~~~~~

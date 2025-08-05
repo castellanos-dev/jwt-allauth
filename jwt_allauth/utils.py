@@ -75,8 +75,12 @@ def get_user_agent(f):
         function: Decorated view method
     """
     def user_agent(self, request, *args, **kwargs):
-        request.user_agent = get_user_agent_django(request)
-        request.ip = get_client_ip(request)
+        if getattr(settings, 'JWT_ALLAUTH_COLLECT_USER_AGENT', False):
+            request.user_agent = get_user_agent_django(request)
+            request.ip = get_client_ip(request)
+        else:
+            request.user_agent = None
+            request.ip = None
         return f(self, request, *args, **kwargs)
 
     return user_agent
@@ -101,6 +105,8 @@ def user_agent_dict(request):
         dict: Structured user agent details. Empty dict if no request.
     """
     if request is None:
+        return {}
+    if request.user_agent is None:
         return {}
     return {
         'browser': request.user_agent.browser.family,
