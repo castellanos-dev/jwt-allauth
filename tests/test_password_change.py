@@ -1,5 +1,6 @@
 from django.test import override_settings
 
+from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from .mixins import TestsMixin
@@ -121,9 +122,15 @@ class PasswordChangeTests(TestsMixin):
     def test_refresh_jwt_tokens_invalidated_after_password_change(self):
         old_token = str(self.TOKEN)
 
-        resp = self.post(self.login_url, data=self.LOGIN_PAYLOAD, status_code=200)
-        self.token = resp['access']
-        current_token = str(resp['refresh'])
+        login_response = self.client.post(
+            self.login_url,
+            data=self.LOGIN_PAYLOAD,
+            format='json'
+        )
+        self.assertEqual(login_response.status_code, 200)
+        login_data = login_response.json()
+        self.token = login_data['access']
+        current_token = login_response.cookies[REFRESH_TOKEN_COOKIE].value
 
         new_password_payload = {
             "old_password": self.PASS,
@@ -132,22 +139,29 @@ class PasswordChangeTests(TestsMixin):
         }
         self.post(self.password_change_url, data=new_password_payload, status_code=200)
 
-        # check other sessions
-        payload = {'refresh': old_token}
-        resp = self.post(self.refresh_url, data=payload, status_code=401)
-        self.assertEqual(resp['code'], u'token_not_valid')
+        # check other sessions - use override setting to test with payload
+        with override_settings(JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False):
+            payload = {'refresh': old_token}
+            resp = self.post(self.refresh_url, data=payload, status_code=401)
+            self.assertEqual(resp['code'], u'token_not_valid')
 
-        # check current session is alive
-        payload = {'refresh': current_token}
-        self.post(self.refresh_url, data=payload, status_code=200)
+        # check current session is alive - set cookie manually
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = current_token
+        self.post(self.refresh_url, data={}, status_code=200)
 
     @override_settings(LOGOUT_ON_PASSWORD_CHANGE=False)
     def test_refresh_jwt_tokens_valid_after_password_change(self):
         old_token = str(self.TOKEN)
 
-        resp = self.post(self.login_url, data=self.LOGIN_PAYLOAD, status_code=200)
-        self.token = resp['access']
-        current_token = str(resp['refresh'])
+        login_response = self.client.post(
+            self.login_url,
+            data=self.LOGIN_PAYLOAD,
+            format='json'
+        )
+        self.assertEqual(login_response.status_code, 200)
+        login_data = login_response.json()
+        self.token = login_data['access']
+        current_token = login_response.cookies[REFRESH_TOKEN_COOKIE].value
 
         new_password_payload = {
             "old_password": self.PASS,
@@ -156,13 +170,14 @@ class PasswordChangeTests(TestsMixin):
         }
         self.post(self.password_change_url, data=new_password_payload, status_code=200)
 
-        # check other sessions
-        payload = {'refresh': old_token}
-        self.post(self.refresh_url, data=payload, status_code=200)
+        # check other sessions - use override setting to test with payload
+        with override_settings(JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False):
+            payload = {'refresh': old_token}
+            self.post(self.refresh_url, data=payload, status_code=200)
 
-        # check current session is alive
-        payload = {'refresh': current_token}
-        self.post(self.refresh_url, data=payload, status_code=200)
+        # check current session is alive - set cookie manually
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = current_token
+        self.post(self.refresh_url, data={}, status_code=200)
 
     def test_excessively_long_password(self):
         self.token = self.ACCESS

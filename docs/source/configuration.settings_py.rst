@@ -15,6 +15,10 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``JWT_REFRESH_TOKEN_LIFETIME`` - refresh token lifetime (default: ``timedelta(days=90)``).
 
+    - ``JWT_ALLAUTH_COLLECT_USER_AGENT`` - whether to collect user agent and IP information (default: ``False``).
+
+    - ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` - whether to send refresh tokens as HTTP-only cookies instead of in the JSON response payload (default: ``True``).
+
 - Redirection URLs
 
     - ``EMAIL_VERIFIED_REDIRECT`` - the url path to be redirected once the email verified can be configured through.

@@ -1,4 +1,6 @@
+from django.test import override_settings
 from .mixins import TestsMixin
+from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
 
 
 class LoginTests(TestsMixin):
@@ -79,9 +81,18 @@ class LoginTests(TestsMixin):
         self.assertEqual(resp['code'], u'incorrect_credentials')
 
     def test_correct_login_with_email(self):
-        json_resp = self.post(self.login_url, data=self.LOGIN_PAYLOAD, status_code=200)
-        self.assertIn('refresh', json_resp.keys())
+        response = self.client.post(
+            self.login_url,
+            data=self.LOGIN_PAYLOAD,
+            format='json'
+        )
+        self.assertEqual(response.status_code, 200)
+        json_resp = response.json()
+
+        # With default configuration, refresh token should be in cookie, not in JSON response
+        self.assertNotIn('refresh', json_resp.keys())
         self.assertIn('access', json_resp.keys())
+        self.assertIn(REFRESH_TOKEN_COOKIE, response.cookies)
 
         # test authenticated API with no token
         resp = self.get(self.user_url, status_code=401)
@@ -135,3 +146,33 @@ class LoginTests(TestsMixin):
             format='json'
         )
         self.assertEqual(response['Content-Type'], 'application/json')
+
+    def test_login_refresh_token_as_cookie_default(self):
+        """Test that refresh token is sent as cookie by default"""
+        json_resp = self.post(self.login_url, data=self.LOGIN_PAYLOAD, status_code=200)
+        self.assertIn('access', json_resp.keys())
+        self.assertNotIn('refresh', json_resp.keys())  # Should not be in JSON response
+
+        # Check that cookie was set
+        response = self.client.post(
+            self.login_url,
+            data=self.LOGIN_PAYLOAD,
+            format='json'
+        )
+        self.assertIn(REFRESH_TOKEN_COOKIE, response.cookies)
+        self.assertTrue(response.cookies[REFRESH_TOKEN_COOKIE]['httponly'])
+
+    @override_settings(JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False)
+    def test_login_refresh_token_in_payload(self):
+        """Test that refresh token is sent in payload when configured"""
+        json_resp = self.post(self.login_url, data=self.LOGIN_PAYLOAD, status_code=200)
+        self.assertIn('access', json_resp.keys())
+        self.assertIn('refresh', json_resp.keys())  # Should be in JSON response
+
+        # Check that cookie was NOT set
+        response = self.client.post(
+            self.login_url,
+            data=self.LOGIN_PAYLOAD,
+            format='json'
+        )
+        self.assertNotIn(REFRESH_TOKEN_COOKIE, response.cookies)

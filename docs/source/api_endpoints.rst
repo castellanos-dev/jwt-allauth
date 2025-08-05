@@ -9,7 +9,7 @@ Authentication
     - email
     - password
 
-  Returns: access, refresh
+  Returns: access, refresh (in cookie by default)
 
   Reverse name: rest_login
 
@@ -17,9 +17,9 @@ Authentication
 
 - **/refresh/** (POST)
 
-    - refresh
+    - refresh (from cookie by default)
 
-  Returns: access, refresh
+  Returns: access, refresh (in cookie by default)
 
   Reverse name: token_refresh
 
@@ -35,7 +35,7 @@ Authentication
 
     - email
 
-  Returns: access, refresh
+  Returns: access, refresh (in cookie by default)
 
   Reverse name: rest_password_reset
 
@@ -119,3 +119,8 @@ Registration
   Reverse name: jwt_allauth_email_verified
 
 .. note:: Disabled if ``EMAIL_VERIFIED_REDIRECT`` is defined or ``EMAIL_VERIFICATION = False``.
+
+Refresh Token Configuration
+---------------------------
+
+.. note:: By default, refresh tokens are sent as secure HTTP-only cookies for enhanced security. This protects against XSS attacks by making tokens inaccessible to JavaScript. You can configure this behavior using the ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` setting. When set to ``False``, refresh tokens will be included in the JSON response payload instead.

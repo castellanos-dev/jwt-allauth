@@ -6,11 +6,11 @@
 Welcome to JWT Allauth
 ======================
 
-JWT Allauth delivers **SIMPLE** authentication for the Django REST module, based on robust frameworks configured in 
-an **efficient** and stateless way through **JWT** access/refresh token architecture. The token whitelisting system 
+JWT Allauth delivers **SIMPLE** authentication for the Django REST module, based on robust frameworks configured in
+an **efficient** and stateless way through **JWT** access/refresh token architecture. The token whitelisting system
 ensures granular control over user sessions while maintaining minimal database overhead.
 
-With **JWT Allauth**, gain peace of mind through enterprise-grade security while dedicating your energy to building 
+With **JWT Allauth**, gain peace of mind through enterprise-grade security while dedicating your energy to building
 your app's unique value proposition.
 
 
@@ -19,7 +19,7 @@ Features
 
 - **Low database load**: Designed to minimize database queries through stateless JWT token authentication.
 - Token whitelisting system: Implements a refresh token whitelist tied to specific device sessions.
-- **Enhanced security**: Enables revoking access to specific devices or all devices simultaneously.
+- **Enhanced security**: Enables revoking access to specific devices or all devices simultaneously. Refresh tokens can be sent as secure HTTP-only cookies by default, protecting against XSS attacks.
 - Automatic token renewal: Active sessions for extended periods without reauthentication, ideal for **mobile apps**.
 - Email verification: Includes a full **REST email verification** system during user registration.
 - Comprehensive user management: Features password recovery, email-based authentication, and session logout.
@@ -32,14 +32,14 @@ Why whitelisting?
 The refresh token whitelist tracks devices **authorized by the user**, stored in the database to verify refresh tokens
 during access token renewal requests.
 
-This system empowers users to **revoke access** to stolen/lost devices or log out of all sessions simultaneously. 
-Refresh tokens are regenerated upon each use, ensuring active session tracking. If a refresh token is reused, the 
+This system empowers users to **revoke access** to stolen/lost devices or log out of all sessions simultaneously.
+Refresh tokens are regenerated upon each use, ensuring active session tracking. If a refresh token is reused, the
 system invalidates both tokens and terminates the session tied to the compromised device.
 
-Refresh token auto-renewal enables extended active sessions without repeated logins—ideal for **mobile apps**, where 
+Refresh token auto-renewal enables extended active sessions without repeated logins—ideal for **mobile apps**, where
 users shouldn't need to reauthenticate every time they open the app.
 
-Access tokens provide short-lived authentication credentials (via JWT), enabling stateless API access. This 
+Access tokens provide short-lived authentication credentials (via JWT), enabling stateless API access. This
 approach **minimizes database load** by eliminating per-request database queries.
 
 

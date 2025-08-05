@@ -134,7 +134,6 @@ class TestsMixin(TransactionTestCase):
     def _login(self):
         resp = self.post(self.login_url, data=self.LOGIN_PAYLOAD, status_code=status.HTTP_200_OK)
         self.assertIn('access', resp.keys())
-        self.assertIn('refresh', resp.keys())
         self.token = resp['access']
 
     def _logout(self):
