@@ -13,6 +13,9 @@ from django.conf import settings
 
 
 def runtests():
+    # Disable migrations for our app during tests to avoid requiring migration files
+    existing_migration_modules = getattr(settings, 'MIGRATION_MODULES', {}) or {}
+    settings.MIGRATION_MODULES = {**existing_migration_modules, 'jwt_allauth': None}
     TestRunner = get_runner(settings)
     test_runner = TestRunner(verbosity=1, interactive=True)
     if hasattr(django, 'setup'):

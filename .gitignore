@@ -107,7 +107,8 @@ venv.bak/
 .mypy_cache/
 
 # migrations
-*/migrations/*
+**/migrations/*
+!**/migrations/__init__.py
 
 .idea/*
 .idea/
