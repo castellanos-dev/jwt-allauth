@@ -2,8 +2,6 @@ from django.urls import path, include
 from django.conf import settings
 from django.views.generic import TemplateView
 
-from jwt_allauth.constants import PASSWORD_RESET_REDIRECT
-
 from jwt_allauth.login.views import LoginView
 from jwt_allauth.logout.views import LogoutView, LogoutAllView
 from jwt_allauth.password_change.views import PasswordChangeView

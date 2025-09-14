@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 1.1.0
+-------------
+
+Released: TBD
+
+Bug Fixes
+~~~~~~~~~
+
+- Fixed a bug that caused migrations not to run correctly in some situations.
+
 Version 1.0.3
 -------------
 
