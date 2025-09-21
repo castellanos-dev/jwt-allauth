@@ -1,0 +1,13 @@
+src_dir: jwt_allauth
+docs_dir: docs
+test_dirs:
+- tests
+summaries_dir: summaries
+test:
+  framework: script
+  command: python runtests.py
+  description: Tests use Django's test framework with unittest base. Tests are organized
+    in /tests directory with test_*.py naming pattern. Most test classes inherit from
+    TestsMixin which provides Django test client utilities. Tests cover various JWT
+    authentication endpoints including login, logout, registration, password reset,
+    and token management. Uses Django test settings and fixtures for database setup.
