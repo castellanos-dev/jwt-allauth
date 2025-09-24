@@ -1,0 +1,22 @@
+location: roles
+purpose: Defines role-based access control constants for user permission levels
+dependencies:
+  internal: []
+  external: []
+structure:
+  classes: []
+  functions: []
+  globals:
+  - name: STAFF_CODE
+    value: '1000'
+    purpose: Permission level code for staff users with elevated access
+  - name: SUPER_USER_CODE
+    value: '900'
+    purpose: Permission level code for super users with administrative privileges
+  - name: USER_CODE
+    value: '0'
+    purpose: Permission level code for regular users with basic access
+examples:
+- language: python
+  code: "# Check user permissions\nif user.permission_level >= STAFF_CODE:\n    #\
+    \ Grant staff access\n    pass"
