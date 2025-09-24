@@ -1,0 +1,113 @@
+location: jwt_allauth.registration.views
+purpose: Provides user registration functionality with JWT token generation and email
+  verification support
+dependencies:
+  internal:
+  - path: registration/app_settings.py
+    reason: Import register_permission_classes for view permissions
+  - path: app_settings.py
+    reason: Import RegisterSerializer for user registration
+  - path: tokens/app_settings.py
+    reason: Import RefreshToken for JWT token generation
+  - path: tokens/models.py
+    reason: Import TokenModel for token handling
+  - path: utils.py
+    reason: Import get_user_agent and sensitive_post_parameters_m decorators
+  external:
+  - name: allauth
+    version: null
+    purpose: User registration and email verification functionality
+  - name: django
+    version: null
+    purpose: Web framework and settings management
+  - name: django-rest-framework
+    version: null
+    purpose: API view implementation and response handling
+structure:
+  classes:
+  - name: RegisterView
+    responsibility: Handle user registration requests, create users, generate JWT
+      tokens, and manage email verification flow
+    attributes:
+    - name: serializer_class
+      type: RegisterSerializer
+    - name: permission_classes
+      type: List[Permission]
+    - name: token_model
+      type: TokenModel
+    - name: jwt_token
+      type: RefreshToken
+    methods:
+    - name: dispatch
+      signature: dispatch(*args, **kwargs)
+      description: Wrapper method that applies sensitive post parameter masking before
+        calling parent dispatch
+      parameters:
+      - name: args
+        type: Any
+      - name: kwargs
+        type: Any
+      returns:
+        type: HttpResponse
+        description: HTTP response from parent dispatch
+      raises: []
+    - name: get_response_data
+      signature: get_response_data(token)
+      description: Generate appropriate response data based on email verification
+        setting
+      parameters:
+      - name: token
+        type: RefreshToken
+      returns:
+        type: Dict
+        description: Response data containing tokens or verification message
+      raises: []
+    - name: create
+      signature: create(request, *args, **kwargs)
+      description: Handle POST request for user registration, validate data, create
+        user, and return tokens
+      parameters:
+      - name: request
+        type: Request
+      - name: args
+        type: Any
+      - name: kwargs
+        type: Any
+      returns:
+        type: Response
+        description: HTTP response with registration result
+      raises:
+      - exception: ValidationError
+        description: When serializer validation fails
+    - name: perform_create
+      signature: perform_create(serializer)
+      description: Save user through serializer, generate JWT tokens, and complete
+        signup process
+      parameters:
+      - name: serializer
+        type: RegisterSerializer
+      returns:
+        type: RefreshToken
+        description: Generated JWT refresh token
+      raises: []
+  functions: []
+  globals:
+  - name: logger
+    value: logging.getLogger(__name__)
+    purpose: Module-level logger for registration events
+examples:
+- language: python
+  code: '# User registration with email verification
+
+    response = RegisterView.as_view()(request)
+
+    # Returns tokens or verification message based on EMAIL_VERIFICATION setting'
+- language: python
+  code: '# Test registration with valid data
+
+    serializer = RegisterSerializer(data={''email'': ''user@example.com'', ''password'':
+    ''secure''})
+
+    view = RegisterView()
+
+    token = view.perform_create(serializer)'

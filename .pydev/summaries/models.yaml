@@ -1,0 +1,93 @@
+location: jwt_allauth.models
+purpose: Defines custom User model with role-based authentication system extending
+  Django's AbstractUser, enforcing role constraints for staff and superuser permissions
+dependencies:
+  internal:
+  - path: roles.py
+    reason: Imports STAFF_CODE and SUPER_USER_CODE constants for role validation
+  external:
+  - name: django
+    version: '>=3.0'
+    purpose: Core framework for models, authentication, and database operations
+structure:
+  classes:
+  - name: UserManager
+    responsibility: Custom user manager that enforces role assignments during user
+      creation, particularly for staff and superuser accounts
+    attributes: []
+    methods:
+    - name: create_superuser
+      signature: create_superuser(username, email=None, password=None, **extra_fields)
+      description: Creates a superuser with enforced STAFF_CODE role, validates role
+        consistency
+      parameters:
+      - name: username
+        type: str
+      - name: email
+        type: str
+        optional: true
+      - name: password
+        type: str
+        optional: true
+      - name: extra_fields
+        type: dict
+      returns:
+        type: JAUser
+        description: Newly created superuser instance
+      raises:
+      - exception: ValueError
+        description: When role is not STAFF_CODE for superuser creation
+    - name: create_user
+      signature: create_user(username, email=None, password=None, **extra_fields)
+      description: Creates regular user with automatic role assignment based on staff/superuser
+        flags
+      parameters:
+      - name: username
+        type: str
+      - name: email
+        type: str
+        optional: true
+      - name: password
+        type: str
+        optional: true
+      - name: extra_fields
+        type: dict
+      returns:
+        type: JAUser
+        description: Newly created user instance
+      raises: []
+  - name: JAUser
+    responsibility: Custom user model extending Django's AbstractUser with role-based
+      permission system and database constraints
+    attributes:
+    - name: role
+      type: PositiveSmallIntegerField
+    - name: groups
+      type: ManyToManyField(Group)
+    - name: user_permissions
+      type: ManyToManyField(Permission)
+    methods: []
+    meta:
+      constraints:
+      - name: staff_role_equal_to_STAFF_CODE
+        condition: Staff users must have role=STAFF_CODE
+      - name: superuser_role_equal_to_SUPER_USER_CODE
+        condition: Non-staff superusers must have role=SUPER_USER_CODE
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# Create a regular user
+
+    user = JAUser.objects.create_user(''john'', ''john@example.com'', ''password'')
+
+
+    # Create a staff user
+
+    staff = JAUser.objects.create_user(''admin'', ''admin@example.com'', ''password'',
+    is_staff=True)
+
+
+    # Create a superuser
+
+    superuser = JAUser.objects.create_superuser(''root'', ''root@example.com'', ''password'')'

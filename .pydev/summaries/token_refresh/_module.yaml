@@ -1,0 +1,62 @@
+location: jwt_allauth.token_refresh
+purpose: Handles JWT token refresh operations with security validations including
+  whitelist checking, session management, and configurable token storage (cookie vs
+  request body)
+structure:
+  tree:
+  - token_refresh/
+  - '├── serializers.py # Validates refresh tokens, generates new tokens, manages
+    token whitelist'
+  - '└── views.py # Handles token refresh requests with configurable token storage'
+relationships:
+  dependencies:
+    internal:
+    - path: jwt_allauth.tokens.app_settings.py
+      reason: Uses RefreshToken class for token operations
+    - path: jwt_allauth.tokens.models.py
+      reason: Uses RefreshTokenWhitelistModel for token validation
+    - path: jwt_allauth.tokens.serializers.py
+      reason: Uses RefreshTokenWhitelistSerializer for saving refreshed tokens
+    - path: jwt_allauth.utils.py
+      reason: Uses is_email_verified for user validation
+    - path: jwt_allauth.constants.py
+      reason: Uses REFRESH_TOKEN_COOKIE constant for cookie name
+    external:
+    - name: django
+      version: '>=3.0'
+      purpose: Settings configuration and request handling
+    - name: djangorestframework
+      version: '>=3.0'
+      purpose: API view framework, request/response handling
+    - name: djangorestframework-simplejwt
+      version: '>=5.0'
+      purpose: Base token refresh view and JWT token handling
+interfaces:
+  classes:
+  - name: jwt_allauth.token_refresh.serializers.TokenRefreshSerializer
+    description: Validates refresh tokens, generates new access/refresh tokens, and
+      manages token whitelist
+    methods:
+    - name: validate
+      signature: 'validate(attrs: Dict[str, Any]) -> Dict[str, str]'
+      description: Validates refresh token against whitelist, generates new tokens,
+        updates whitelist
+  - name: jwt_allauth.token_refresh.views.TokenRefreshView
+    description: Handle JWT token refresh requests with configurable token storage
+      (cookie vs request body)
+    methods:
+    - name: post
+      signature: 'post(request: Request, *args, **kwargs) -> Response'
+      description: Process token refresh request, extract refresh token from cookie
+        or body, validate tokens, return new access token
+  functions: []
+workflows:
+- 'Token refresh validation: Validate refresh token against whitelist and user email
+  verification'
+- 'Token generation: Create new access and refresh tokens after successful validation'
+- 'Token storage: Store refresh token in HTTP-only cookie or return in response body
+  based on configuration'
+- 'Whitelist management: Update token whitelist with new refresh token after successful
+  refresh'
+notes: Supports both cookie-based and body-based refresh token storage via JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE
+  setting

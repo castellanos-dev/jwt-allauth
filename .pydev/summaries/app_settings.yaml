@@ -1,0 +1,43 @@
+location: jwt_allauth.app_settings
+purpose: Central configuration module for JWT Allauth that provides customizable serializer
+  imports with fallback defaults
+dependencies:
+  internal:
+  - path: jwt_allauth.login.serializers
+    reason: Provides default LoginSerializer implementation
+  - path: jwt_allauth.password_change.serializers
+    reason: Provides default PasswordChangeSerializer implementation
+  - path: jwt_allauth.password_reset.serializers
+    reason: Provides default PasswordResetSerializer implementation
+  - path: jwt_allauth.registration.serializers
+    reason: Provides default RegisterSerializer implementation
+  - path: jwt_allauth.user_details.serializers
+    reason: Provides default UserDetailsSerializer implementation
+  - path: jwt_allauth.utils
+    reason: Provides import_callable utility function for dynamic serializer loading
+  external:
+  - name: django
+    version: '>=3.2'
+    purpose: Uses Django settings system for configuration management
+structure:
+  globals:
+  - name: UserDetailsSerializer
+    value: Dynamic import
+    purpose: Customizable user details serializer with fallback to default
+  - name: LoginSerializer
+    value: Dynamic import
+    purpose: Customizable login serializer with fallback to default
+  - name: PasswordResetSerializer
+    value: Dynamic import
+    purpose: Customizable password reset serializer with fallback to default
+  - name: PasswordChangeSerializer
+    value: Dynamic import
+    purpose: Customizable password change serializer with fallback to default
+  - name: RegisterSerializer
+    value: Dynamic import
+    purpose: Customizable registration serializer with fallback to default
+examples:
+- language: python
+  code: "# In Django settings.py\nJWT_ALLAUTH_SERIALIZERS = {\n    'USER_DETAILS_SERIALIZER':\
+    \ 'myapp.serializers.CustomUserDetailsSerializer',\n    'LOGIN_SERIALIZER': 'myapp.serializers.CustomLoginSerializer'\n\
+    }"

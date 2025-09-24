@@ -1,0 +1,55 @@
+location: jwt_allauth.logout.serializers
+purpose: Provides serializer for JWT refresh token logout functionality, handling
+  token validation and removal from whitelist
+dependencies:
+  internal:
+  - path: jwt_allauth.tokens.app_settings
+    reason: Uses RefreshToken class for JWT token handling and validation
+  - path: jwt_allauth.tokens.models
+    reason: Uses RefreshTokenWhitelistModel for token whitelist management
+  external:
+  - name: django
+    version: '>=3.2'
+    purpose: Database queries and constant-time comparison for security
+  - name: djangorestframework
+    version: '>=3.12'
+    purpose: Serializer base class and field definitions
+  - name: djangorestframework-simplejwt
+    version: '>=5.0'
+    purpose: InvalidToken exception for authentication errors
+structure:
+  classes:
+  - name: RemoveRefreshTokenSerializer
+    responsibility: Validates and removes JWT refresh tokens from whitelist during
+      logout
+    attributes:
+    - name: refresh
+      type: CharField
+    - name: user
+      type: CurrentUserDefault
+    methods:
+    - name: validate
+      signature: 'validate(attrs: Dict[str, Any])'
+      description: Validates refresh token, checks user ownership, and removes from
+        whitelist
+      parameters:
+      - name: attrs
+        type: Dict[str, Any]
+      returns:
+        type: Dict[str, str]
+        description: Empty dictionary on successful token removal
+      raises:
+      - exception: InvalidToken
+        description: Raised when token validation fails, user mismatch, or token not
+          in whitelist
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# Typical usage in logout view
+
+    serializer = RemoveRefreshTokenSerializer(data={''refresh'': refresh_token})
+
+    serializer.is_valid(raise_exception=True)
+
+    serializer.save()'

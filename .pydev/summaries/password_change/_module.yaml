@@ -1,0 +1,56 @@
+location: jwt_allauth.password_change
+purpose: Provides password change functionality for authenticated users via REST API,
+  including validation, security measures, and session/token management
+structure:
+  tree:
+  - password_change/
+  - '├── serializers.py # Django REST Framework serializer for password change operations'
+  - '└── views.py # REST API endpoint for password change requests'
+relationships:
+  dependencies:
+    internal:
+    - path: jwt_allauth.tokens.models.py
+      reason: Uses RefreshTokenWhitelistModel to manage token revocation during password
+        change
+    - path: jwt_allauth.app_settings
+      reason: Imports PasswordChangeSerializer for password validation
+    - path: jwt_allauth.utils
+      reason: Uses sensitive_post_parameters_m decorator for security
+    external:
+    - name: django
+      version: '>=3.0'
+      purpose: Framework for web application, user authentication, and settings management
+    - name: django-rest-framework
+      version: '>=3.0'
+      purpose: API serialization, validation, and view implementation
+interfaces:
+  classes:
+  - name: jwt_allauth.password_change.serializers.PasswordChangeSerializer
+    description: Validates and processes password change requests with optional old
+      password verification
+    methods:
+    - name: validate_old_password
+      signature: 'validate_old_password(value: str) -> str'
+      description: Validates that provided old password matches user's current password
+    - name: validate
+      signature: 'validate(attrs: dict) -> dict'
+      description: Validates complete password change data using Django's SetPasswordForm
+    - name: save
+      signature: save() -> None
+      description: Saves new password and handles session/token management
+  - name: jwt_allauth.password_change.views.PasswordChangeView
+    description: Handles password change requests for authenticated users via REST
+      API
+    methods:
+    - name: post
+      signature: 'post(request: HttpRequest) -> Response'
+      description: Processes password change POST requests and validates data
+  functions: []
+workflows:
+- Authenticated user submits password change request via POST with new password data
+- Serializer validates old password (if enabled) and new password confirmation
+- Django's SetPasswordForm validates password strength and requirements
+- New password is saved and session/tokens are managed (revocation or update)
+- Success response confirms password change completion
+notes: Supports optional old password validation and configurable logout behavior
+  on password change

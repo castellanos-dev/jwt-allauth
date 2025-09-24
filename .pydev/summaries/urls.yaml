@@ -1,0 +1,37 @@
+location: jwt_allauth.urls
+purpose: Defines URL routing configuration for JWT AllAuth authentication endpoints,
+  organizing endpoints by authentication requirements and providing password reset
+  flow with conditional template views
+dependencies:
+  internal:
+  - path: jwt_allauth.login.views
+    reason: LoginView for user authentication
+  - path: jwt_allauth.logout.views
+    reason: LogoutView and LogoutAllView for session termination
+  - path: jwt_allauth.password_change.views
+    reason: PasswordChangeView for authenticated password updates
+  - path: jwt_allauth.password_reset.views
+    reason: Multiple password reset related views including confirmation and default
+      flows
+  - path: jwt_allauth.registration.urls
+    reason: User registration endpoints
+  - path: jwt_allauth.token_refresh.views
+    reason: TokenRefreshView for JWT token renewal
+  - path: jwt_allauth.user_details.views
+    reason: UserDetailsView for user profile management
+  external:
+  - name: django
+    version: '>=2.2'
+    purpose: URL routing framework and template views
+  - name: django.conf.settings
+    version: '>=2.2'
+    purpose: Configuration-based conditional URL patterns
+structure:
+  globals:
+  - name: urlpatterns
+    value: List of path objects
+    purpose: Main URL configuration defining all authentication endpoints
+examples:
+- language: python
+  code: "# Include in project urls.py\nurlpatterns = [\n    path('api/auth/', include('jwt_allauth.urls')),\n\
+    ]"

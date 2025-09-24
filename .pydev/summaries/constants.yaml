@@ -1,0 +1,42 @@
+location: jwt_allauth.constants
+purpose: Defines application-wide constants for JWT authentication and password reset
+  functionality, including token types, template paths, redirect URLs, and cookie
+  names
+dependencies:
+  internal: []
+  external: []
+structure:
+  classes: []
+  functions: []
+  globals:
+  - name: PASS_RESET
+    value: '''PASS_RESET'''
+    purpose: Token type identifier for password reset operations
+  - name: PASS_RESET_ACCESS
+    value: '''PASS_RESET_ACCESS'''
+    purpose: Token type identifier for password reset access operations
+  - name: TEMPLATE_PATHS
+    value: '''JWT_ALLAUTH_TEMPLATES'''
+    purpose: Configuration key for JWT Allauth template paths
+  - name: EMAIL_VERIFIED_REDIRECT
+    value: '''EMAIL_VERIFIED_REDIRECT'''
+    purpose: Redirect configuration key for email verification completion
+  - name: PASSWORD_RESET_REDIRECT
+    value: '''PASSWORD_RESET_REDIRECT'''
+    purpose: Redirect configuration key for password reset completion
+  - name: PASS_RESET_COOKIE
+    value: '''password_reset_access_token'''
+    purpose: Cookie name for storing password reset access tokens
+  - name: FOR_USER
+    value: '''for_user'''
+    purpose: Key identifier for user association in token payloads
+  - name: ONE_TIME_PERMISSION
+    value: '''one_time_permission'''
+    purpose: Key identifier for one-time permission grants in token payloads
+  - name: REFRESH_TOKEN_COOKIE
+    value: '''refresh_token'''
+    purpose: Cookie name for storing refresh tokens
+examples:
+- language: python
+  code: "# Using constants for token validation\nif token_type == PASS_RESET:\n  \
+    \  # Handle password reset token\n    pass"

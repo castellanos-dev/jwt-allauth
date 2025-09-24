@@ -1,0 +1,95 @@
+location: jwt_allauth.password_reset
+purpose: Provides complete password reset functionality with JWT token-based authentication,
+  including email validation, reset token generation, password setting, and secure
+  token management
+structure:
+  tree:
+  - password_reset/
+  - '├── models.py # Defines custom TokenUser subclass for password reset operations'
+  - '├── serializers.py # Handles email validation, reset token generation, and password
+    setting'
+  - '├── permissions.py # Provides DRF permission class for one-time JWT token validation'
+  - '└── views.py # Manages password reset flow including email sending and password
+    reset completion'
+relationships:
+  dependencies:
+    internal:
+    - path: jwt_allauth/constants.py
+      reason: Token constants and configuration values
+    - path: jwt_allauth/tokens/
+      reason: Token generation, validation, and management
+    - path: jwt_allauth/utils.py
+      reason: Utility functions and template configuration
+    - path: jwt_allauth/password_change/serializers.py
+      reason: Base password change functionality
+    external:
+    - name: django
+      version: '>=3.0'
+      purpose: Web framework core and authentication system
+    - name: django-rest-framework
+      version: '>=3.0'
+      purpose: API views and serializers
+    - name: django-rest-framework-simplejwt
+      version: '>=5.0'
+      purpose: JWT token handling
+    - name: allauth.account
+      version: null
+      purpose: Email validation and adapter utilities
+interfaces:
+  classes:
+  - name: jwt_allauth.password_reset.models.SetPasswordTokenUser
+    description: Represents user from JWT token for password reset operations
+    methods:
+    - name: id
+      signature: id() -> Union[int, str]
+      description: Cached property that extracts user ID from JWT token payload
+  - name: jwt_allauth.password_reset.serializers.PasswordResetSerializer
+    description: Handles password reset email requests with validation
+    methods:
+    - name: validate_email
+      signature: 'validate_email(value: str) -> str'
+      description: Validates email format and existence in system
+    - name: save
+      signature: save() -> None
+      description: Generates and sends password reset email
+  - name: jwt_allauth.password_reset.serializers.SetPasswordSerializer
+    description: Handles password setting without old password verification
+    methods:
+    - name: validate_old_password
+      signature: 'validate_old_password(value: str) -> None'
+      description: Bypasses old password validation
+  - name: jwt_allauth.password_reset.permissions.ResetPasswordPermission
+    description: Validates password reset requests using one-time JWT tokens
+    methods:
+    - name: has_permission
+      signature: 'has_permission(request: HttpRequest, view: APIView) -> bool'
+      description: Checks for valid password reset token in cookies
+  - name: jwt_allauth.password_reset.views.PasswordResetView
+    description: Initiates password reset process by sending reset email
+    methods:
+    - name: post
+      signature: 'post(request: HttpRequest) -> Response'
+      description: Validates email and sends password reset email
+  - name: jwt_allauth.password_reset.views.PasswordResetConfirmView
+    description: Validates password reset link and sets access token cookie
+    methods:
+    - name: get
+      signature: get(*args, **kwargs) -> HttpResponseRedirect
+      description: Validates uidb64 and token, creates one-time access token
+  - name: jwt_allauth.password_reset.views.ResetPasswordView
+    description: Completes password reset process with new password validation
+    methods:
+    - name: post
+      signature: 'post(request: HttpRequest) -> Response'
+      description: Validates token, sets new password, manages sessions
+  functions: []
+workflows:
+- 'Password reset request: User submits email → Email validation → Reset token generation
+  → Email sent with confirmation link'
+- 'Password reset confirmation: User clicks link → Token validation → One-time access
+  token created → Redirect to reset form with secure cookie'
+- 'Password setting: User submits new password → One-time token validation → Password
+  update → Session management → Success response with access token'
+notes: Uses one-time JWT tokens stored in cookies for secure password reset flow.
+  Tokens are validated against whitelist to prevent reuse. Supports both API and template-based
+  reset flows.

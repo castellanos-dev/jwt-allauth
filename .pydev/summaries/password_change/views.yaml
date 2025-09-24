@@ -1,0 +1,62 @@
+location: jwt_allauth.password_change.views
+purpose: Provides password change functionality for authenticated users via REST API
+  endpoint
+dependencies:
+  internal:
+  - path: jwt_allauth.app_settings
+    reason: Imports PasswordChangeSerializer for password validation
+  - path: jwt_allauth.utils
+    reason: Uses sensitive_post_parameters_m decorator for security
+  external:
+  - name: django
+    version: ''
+    purpose: User model handling and translation
+  - name: django-rest-framework
+    version: ''
+    purpose: API view implementation, authentication, throttling, and response handling
+structure:
+  classes:
+  - name: PasswordChangeView
+    responsibility: Handles password change requests for authenticated users
+    attributes:
+    - name: serializer_class
+      type: PasswordChangeSerializer
+    - name: permission_classes
+      type: tuple
+    - name: throttle_classes
+      type: list
+    methods:
+    - name: dispatch
+      signature: dispatch(*args, **kwargs)
+      description: Wraps the dispatch method with sensitive parameter protection
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: HTTP response from parent dispatch
+      raises: []
+    - name: post
+      signature: post(request)
+      description: Processes password change POST requests, validates data, and saves
+        new password
+      parameters:
+      - name: request
+        type: HttpRequest
+      returns:
+        type: Response
+        description: Success message indicating password was saved
+      raises:
+      - exception: ValidationError
+        description: When password data fails serializer validation
+      - exception: ObjectDoesNotExist
+        description: When user cannot be retrieved from database
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: "# Password change API call\nimport requests\n\nresponse = requests.post(\n\
+    \    '/api/password/change/',\n    headers={'Authorization': 'Bearer <token>'},\n\
+    \    json={'new_password1': 'newpass123', 'new_password2': 'newpass123'}\n)"

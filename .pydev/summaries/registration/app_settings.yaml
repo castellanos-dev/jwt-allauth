@@ -1,0 +1,35 @@
+location: registration.app_settings
+purpose: Configures and provides JWT AllAuth registration permission classes by combining
+  Django settings with default permissions
+dependencies:
+  internal:
+  - path: jwt_allauth/utils.py
+    reason: Uses import_callable utility to dynamically import permission classes
+  external:
+  - name: django
+    version: '>=3.2'
+    purpose: Access Django settings configuration
+  - name: djangorestframework
+    version: '>=3.12'
+    purpose: Uses AllowAny permission class from DRF
+structure:
+  functions:
+  - name: register_permission_classes
+    signature: register_permission_classes()
+    purpose: Dynamically builds a tuple of permission classes for registration endpoints
+      by combining AllowAny with custom classes from Django settings
+    parameters: []
+    returns:
+      type: tuple
+      description: Tuple of permission class instances ready for use in DRF views
+    raises:
+    - exception: ImportError
+      description: If any class path in JWT_ALLAUTH_REGISTER_PERMISSION_CLASSES cannot
+        be imported
+  globals: []
+examples:
+- language: python
+  code: "# In Django settings.py\nJWT_ALLAUTH_REGISTER_PERMISSION_CLASSES = [\n  \
+    \  'myapp.permissions.CustomRegistrationPermission'\n]\n\n# Usage in views\nfrom\
+    \ registration.app_settings import register_permission_classes\n\npermission_classes\
+    \ = register_permission_classes()"

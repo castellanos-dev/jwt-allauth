@@ -1,0 +1,93 @@
+location: tokens.models
+purpose: Defines Django models for token management including refresh token whitelisting
+  and generic token storage with device/browser metadata
+dependencies:
+  internal:
+  - path: jwt_allauth/utils.py
+    reason: Uses import_callable for dynamic token model loading
+  external:
+  - name: django
+    version: ''
+    purpose: Core framework for models and settings
+  - name: django-rest-framework
+    version: ''
+    purpose: Provides default Token model base
+structure:
+  classes:
+  - name: BaseToken
+    responsibility: Abstract base model providing common token metadata fields (device
+      info, browser details, timestamps)
+    attributes:
+    - name: id
+      type: BigAutoField
+    - name: created
+      type: DateTimeField
+    - name: ip
+      type: GenericIPAddressField
+    - name: is_mobile
+      type: BooleanField
+    - name: is_tablet
+      type: BooleanField
+    - name: is_pc
+      type: BooleanField
+    - name: is_bot
+      type: BooleanField
+    - name: browser
+      type: CharField
+    - name: browser_version
+      type: CharField
+    - name: os
+      type: CharField
+    - name: os_version
+      type: CharField
+    - name: device
+      type: CharField
+    - name: device_brand
+      type: CharField
+    - name: device_model
+      type: CharField
+    methods: []
+  - name: AbstractRefreshToken
+    responsibility: Abstract model extending BaseToken with JWT-specific fields (jti,
+      session, enabled status) for refresh token management
+    attributes:
+    - name: jti
+      type: CharField
+    - name: enabled
+      type: BooleanField
+    - name: session
+      type: CharField
+    methods: []
+  - name: RefreshTokenWhitelistModel
+    responsibility: Concrete model for storing whitelisted refresh tokens with user
+      association and device metadata
+    attributes:
+    - name: user
+      type: ForeignKey
+    methods: []
+  - name: GenericTokenModel
+    responsibility: Concrete model for storing generic purpose tokens with user association
+      and metadata
+    attributes:
+    - name: user
+      type: ForeignKey
+    - name: token
+      type: CharField
+    - name: purpose
+      type: CharField
+    methods: []
+  functions: []
+  globals:
+  - name: TokenModel
+    value: Dynamic import from settings
+    purpose: Configurable token model that can be overridden via REST_AUTH_TOKEN_MODEL
+      setting
+examples:
+- language: python
+  code: "# Create a refresh token entry\nrefresh_token = RefreshTokenWhitelistModel.objects.create(\n\
+    \    user=user,\n    jti=\"unique_jti\",\n    session=\"session_id\",\n    ip=\"\
+    192.168.1.1\",\n    browser=\"Chrome\"\n)"
+- language: python
+  code: "# Create a generic token for password reset\ntoken = GenericTokenModel.objects.create(\n\
+    \    user=user,\n    token=\"reset_token_123\",\n    purpose=\"password_reset\"\
+    ,\n    device=\"iPhone\"\n)"

@@ -1,0 +1,44 @@
+location: bin
+purpose: Contains command-line interface tools for project management and automation
+structure:
+  tree:
+  - bin/
+  - '└── jwt_allauth.py # CLI tool for creating and managing Django projects with
+    JWT Allauth pre-configured'
+relationships:
+  dependencies:
+    internal: []
+    external:
+    - name: argparse
+      version: standard
+      purpose: Command-line argument parsing
+    - name: subprocess
+      version: standard
+      purpose: Running django-admin commands
+    - name: re
+      version: standard
+      purpose: Regular expressions for file content modification
+    - name: os
+      version: standard
+      purpose: File system operations and path handling
+interfaces:
+  classes: []
+  functions:
+  - name: bin.jwt_allauth.main
+    signature: main()
+    description: Main entry point for the JWT Allauth CLI tool, handles command routing
+      and project creation workflow
+  - name: bin.jwt_allauth._modify_settings
+    signature: '_modify_settings(settings_path: str, email_config: bool)'
+    description: Modifies Django settings.py file to include JWT Allauth configuration,
+      authentication backends, and optional email settings
+  - name: bin.jwt_allauth._modify_urls
+    signature: '_modify_urls(urls_path: str)'
+    description: Modifies Django urls.py file to include JWT Allauth URL patterns
+      and ensure proper import statements
+workflows:
+- 'Project creation workflow: Parse command-line arguments → Create Django project
+  using django-admin → Modify settings.py with JWT Allauth configuration → Modify
+  urls.py to include authentication URLs → Handle optional email configuration'
+notes: Designed as a standalone CLI tool that can be installed and used independently
+  for rapid Django project setup with JWT authentication

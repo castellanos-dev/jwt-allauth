@@ -1,0 +1,156 @@
+location: jwt_allauth.password_reset.views
+purpose: Handles password reset flow including email sending, confirmation link validation,
+  and password reset completion with JWT token management
+dependencies:
+  internal:
+  - path: jwt_allauth/app_settings.py
+    reason: Import PasswordResetSerializer
+  - path: jwt_allauth/constants.py
+    reason: Import password reset related constants
+  - path: jwt_allauth/password_reset/permissions.py
+    reason: Import ResetPasswordPermission
+  - path: jwt_allauth/password_reset/serializers.py
+    reason: Import SetPasswordSerializer
+  - path: jwt_allauth/tokens/app_settings.py
+    reason: Import RefreshToken
+  - path: jwt_allauth/tokens/models.py
+    reason: Import GenericTokenModel, RefreshTokenWhitelistModel
+  - path: jwt_allauth/tokens/serializers.py
+    reason: Import GenericTokenModelSerializer
+  - path: jwt_allauth/tokens/tokens.py
+    reason: Import GenericToken
+  - path: jwt_allauth/utils.py
+    reason: Import get_user_agent, sensitive_post_parameters_m
+  external:
+  - name: django
+    version: '>=3.0'
+    purpose: Web framework for views, authentication, and utilities
+  - name: django-rest-framework
+    version: '>=3.0'
+    purpose: API view classes and response handling
+  - name: django-rest-framework-simplejwt
+    version: '>=5.0'
+    purpose: JWT token validation
+structure:
+  classes:
+  - name: PasswordResetView
+    responsibility: Initiates password reset process by sending reset email
+    attributes:
+    - name: serializer_class
+      type: PasswordResetSerializer
+    - name: permission_classes
+      type: tuple
+    - name: throttle_classes
+      type: list
+    methods:
+    - name: post
+      signature: post(request)
+      description: Validates email and sends password reset email
+      parameters:
+      - name: request
+        type: HttpRequest
+      returns:
+        type: Response
+        description: Success message with HTTP 200
+      raises:
+      - exception: ValidationError
+        description: When email validation fails
+  - name: DefaultPasswordResetView
+    responsibility: Renders default password reset form template
+    attributes:
+    - name: permission_classes
+      type: tuple
+    - name: template_name
+      type: str
+    methods:
+    - name: get
+      signature: get(request)
+      description: Renders password reset form with validity check
+      parameters:
+      - name: request
+        type: HttpRequest
+      returns:
+        type: HttpResponse
+        description: Rendered template response
+      raises: []
+  - name: PasswordResetConfirmView
+    responsibility: Validates password reset link and sets access token cookie
+    attributes:
+    - name: form_url
+      type: str
+    methods:
+    - name: get
+      signature: get(*_, **kwargs)
+      description: Validates uidb64 and token, creates one-time access token
+      parameters:
+      - name: _
+        type: args
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponseRedirect
+        description: Redirect to reset form with cookie
+      raises:
+      - exception: ImproperlyConfigured
+        description: When uidb64 or token parameters are missing
+    - name: get_user
+      signature: get_user(uidb64)
+      description: Decodes uidb64 and retrieves user from database
+      parameters:
+      - name: uidb64
+        type: str
+      returns:
+        type: User
+        description: User object or None if invalid
+      raises: []
+  - name: ResetPasswordView
+    responsibility: Completes password reset process with new password validation
+    attributes:
+    - name: serializer_class
+      type: SetPasswordSerializer
+    - name: permission_classes
+      type: tuple
+    - name: throttle_classes
+      type: list
+    methods:
+    - name: dispatch
+      signature: dispatch(*args, **kwargs)
+      description: Wraps dispatch with sensitive parameter protection
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Standard dispatch response
+      raises: []
+    - name: post
+      signature: post(request)
+      description: Validates one-time token, sets new password, manages sessions
+      parameters:
+      - name: request
+        type: HttpRequest
+      returns:
+        type: Response
+        description: Access token and success message
+      raises:
+      - exception: InvalidToken
+        description: When token is invalid or already used
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# Password reset flow example
+
+    # 1. User requests reset
+
+    response = PasswordResetView().post(request_with_email)
+
+    # 2. User clicks confirmation link
+
+    response = PasswordResetConfirmView().get(request, uidb64=''...'', token=''...'')
+
+    # 3. User submits new password
+
+    response = ResetPasswordView().post(request_with_new_password)'

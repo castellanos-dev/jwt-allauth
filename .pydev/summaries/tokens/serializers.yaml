@@ -1,0 +1,38 @@
+location: jwt_allauth.tokens.serializers
+purpose: Django REST Framework serializers for token models, providing data validation
+  and serialization/deserialization for token-related API operations
+dependencies:
+  internal:
+  - path: tokens/models.py
+    reason: Serializers depend on RefreshTokenWhitelistModel and GenericTokenModel
+      for model definitions and field mappings
+  external:
+  - name: djangorestframework
+    version: 3.x
+    purpose: Base serializer classes and serialization framework
+structure:
+  classes:
+  - name: RefreshTokenWhitelistSerializer
+    responsibility: Serialize and validate RefreshTokenWhitelistModel instances, excluding
+      the 'id' field from serialization
+    attributes: []
+    methods: []
+  - name: GenericTokenModelSerializer
+    responsibility: Serialize and validate GenericTokenModel instances, excluding
+      the 'id' field from serialization
+    attributes: []
+    methods: []
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# Serializing a token instance
+
+    token = GenericTokenModel.objects.first()
+
+    serializer = GenericTokenModelSerializer(token)
+
+    serialized_data = serializer.data'
+- language: python
+  code: "# Validating incoming token data\nserializer = RefreshTokenWhitelistSerializer(data=request.data)\n\
+    if serializer.is_valid():\n    token = serializer.save()"

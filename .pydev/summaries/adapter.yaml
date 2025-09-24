@@ -1,0 +1,111 @@
+location: jwt_allauth.adapter
+purpose: Custom Django allauth account adapter providing JWT-specific email handling
+  with enhanced template customization and email confirmation workflows
+dependencies:
+  internal:
+  - path: utils.py
+    reason: Uses get_template_path function for template path resolution
+  external:
+  - name: allauth.account
+    version: null
+    purpose: Extends DefaultAccountAdapter and uses allauth app settings
+  - name: allauth.core
+    version: null
+    purpose: Access to request context for template rendering
+  - name: django.contrib.sites
+    version: null
+    purpose: Retrieves current site information for email context
+  - name: django.core.mail
+    version: null
+    purpose: Email message construction and sending
+  - name: django.template
+    version: null
+    purpose: Template loading and rendering functionality
+structure:
+  classes:
+  - name: JWTAllAuthAdapter
+    responsibility: Extends allauth's email confirmation system with JWT-specific
+      template handling and email normalization
+    attributes: []
+    methods:
+    - name: clean_email
+      signature: clean_email(email)
+      description: Normalizes email addresses by trimming whitespace and converting
+        to lowercase after parent class processing
+      parameters:
+      - name: email
+        type: str
+      returns:
+        type: str
+        description: Normalized email address
+      raises: []
+    - name: send_confirmation_mail
+      signature: send_confirmation_mail(request, emailconfirmation, signup)
+      description: Generates and sends email confirmation with context customization
+        for JWT verification workflows
+      parameters:
+      - name: request
+        type: HttpRequest
+      - name: emailconfirmation
+        type: EmailConfirmation
+      - name: signup
+        type: bool
+      returns:
+        type: str
+        description: Confirmation key used in the email
+      raises: []
+    - name: send_mail
+      signature: send_mail(template_prefix, email, context, subject_path=None, template_path=None)
+      description: Constructs and sends email using template configuration with enhanced
+        context including site information
+      parameters:
+      - name: template_prefix
+        type: str
+      - name: email
+        type: str|list
+      - name: context
+        type: dict
+      - name: subject_path
+        type: str
+      - name: template_path
+        type: str
+      returns:
+        type: None
+        description: Sends email, no return value
+      raises: []
+    - name: render_mail
+      signature: render_mail(template_prefix, email, context, headers=None, subject_path=None,
+        template_path=None)
+      description: Renders email message with support for multiple template formats,
+        custom paths, and multipart email generation
+      parameters:
+      - name: template_prefix
+        type: str
+      - name: email
+        type: str|list
+      - name: context
+        type: dict
+      - name: headers
+        type: dict
+      - name: subject_path
+        type: str
+      - name: template_path
+        type: str
+      returns:
+        type: EmailMessage
+        description: Configured email message object
+      raises:
+      - exception: TemplateDoesNotExist
+        description: If no valid template can be found for rendering
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# Typical usage - sending email confirmation
+
+    adapter = JWTAllAuthAdapter()
+
+    key = adapter.send_confirmation_mail(request, email_confirmation, signup=True)'
+- language: python
+  code: "# Custom template path usage\nadapter.send_mail('email/template', 'user@example.com',\
+    \ context, \n                  subject_path='custom/subject.txt', template_path='custom/body.html')"
