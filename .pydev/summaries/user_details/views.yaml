@@ -1,0 +1,57 @@
+location: jwt_allauth.user_details.views
+purpose: Provides a REST API endpoint for authenticated users to retrieve and update
+  their own user details
+dependencies:
+  internal:
+  - path: jwt_allauth.app_settings
+    reason: Imports UserDetailsSerializer for user data serialization
+  external:
+  - name: django
+    version: '>=2.0'
+    purpose: User model handling and authentication framework
+  - name: django-rest-framework
+    version: '>=3.0'
+    purpose: API view implementation and permission handling
+structure:
+  classes:
+  - name: UserDetailsView
+    responsibility: Handles GET and PATCH requests for authenticated user's profile
+      data
+    attributes:
+    - name: serializer_class
+      type: UserDetailsSerializer
+    - name: permission_classes
+      type: tuple
+    - name: http_method_names
+      type: list
+    methods:
+    - name: get_object
+      signature: get_object()
+      description: Retrieves the current authenticated user instance
+      parameters: []
+      returns:
+        type: User
+        description: Current authenticated user object
+      raises:
+      - exception: User.DoesNotExist
+        description: If the authenticated user no longer exists in database
+    - name: get_queryset
+      signature: get_queryset()
+      description: Returns empty queryset for compatibility with django-rest-swagger
+      parameters: []
+      returns:
+        type: QuerySet
+        description: Empty queryset of User model
+      raises: []
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# GET /api/user/details/
+
+    # Returns current user''s profile data
+
+
+    # PATCH /api/user/details/
+
+    # Updates user''s profile fields (username, first_name, last_name)'

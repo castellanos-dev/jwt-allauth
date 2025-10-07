@@ -1,0 +1,22 @@
+location: registration.email_verification.serializers
+purpose: Defines Django REST Framework serializer for email verification API endpoint,
+  handling validation of verification key input
+dependencies:
+  external:
+  - name: rest_framework
+    version: null
+    purpose: Base serializer classes and field types for API request validation
+structure:
+  classes:
+  - name: VerifyEmailSerializer
+    responsibility: Validates and serializes email verification key input from API
+      requests
+    attributes: []
+    methods: []
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: "# Typical usage in API view\nserializer = VerifyEmailSerializer(data={'key':\
+    \ 'verification_token'})\nif serializer.is_valid():\n    # Process verification\n\
+    \    pass"

@@ -1,0 +1,67 @@
+location: login
+purpose: JWT-based authentication module that extends SimpleJWT with allauth integration
+  for user login, token generation, and refresh token management
+structure:
+  tree:
+  - login/
+  - '├── serializers.py # Custom JWT authentication serializer with allauth integration'
+  - '└── views.py # Django REST Framework view for JWT-based user authentication'
+relationships:
+  dependencies:
+    internal:
+    - path: jwt_allauth.tokens.app_settings
+      reason: Uses custom RefreshToken class for token generation
+    - path: jwt_allauth.utils
+      reason: Uses allauth_authenticate function for user authentication and decorators
+    - path: jwt_allauth.app_settings.py
+      reason: Imports LoginSerializer for authentication logic
+    - path: jwt_allauth.constants.py
+      reason: Imports REFRESH_TOKEN_COOKIE constant name
+    external:
+    - name: django
+      version: '>=3.0'
+      purpose: Framework for web application, settings, authentication, and database
+        transactions
+    - name: django-rest-framework
+      version: '>=3.12'
+      purpose: REST API framework for view implementation, response handling, and
+        exception handling
+    - name: djangorestframework-simplejwt
+      version: '>=5.0'
+      purpose: Base token serializer, JWT settings, and token generation base view
+interfaces:
+  classes:
+  - name: login.serializers.LoginSerializer
+    description: Handle user authentication via allauth, validate credentials, generate
+      JWT tokens, and update last login timestamp
+    methods:
+    - name: get_token
+      signature: get_token(user)
+      description: Class method that creates and returns a refresh token for the authenticated
+        user
+    - name: validate
+      signature: validate(attrs)
+      description: Atomic transaction method that authenticates user, validates credentials,
+        generates tokens, and updates last login
+  - name: login.views.LoginView
+    description: Handle user authentication requests, generate JWT tokens, and manage
+      refresh token delivery method based on configuration
+    methods:
+    - name: dispatch
+      signature: dispatch(*args, **kwargs)
+      description: Wrapped dispatch method that applies sensitive post parameter masking
+    - name: post
+      signature: 'post(request: Request, *args, **kwargs) -> Response'
+      description: Handle POST login requests, validate credentials, generate tokens,
+        and configure response with access token and optional refresh token cookie
+  functions: []
+workflows:
+- User submits login credentials via POST request to LoginView
+- LoginView validates request and passes credentials to LoginSerializer
+- LoginSerializer authenticates user via allauth integration in atomic transaction
+- JWT tokens are generated using custom RefreshToken class
+- Access token returned in response body, refresh token optionally set as HTTP cookie
+- Last login timestamp updated for authenticated user
+notes: Supports both cookie-based and body-based refresh token delivery. Uses atomic
+  transactions for authentication to ensure data consistency. Integrates allauth authentication
+  system with JWT tokens.

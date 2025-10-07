@@ -1,0 +1,108 @@
+location: jwt_allauth.tokens
+purpose: Provides JWT token management with database persistence, including refresh
+  token whitelisting, session management, and generic purpose tokens with device metadata
+  tracking
+structure:
+  tree:
+  - tokens/
+  - '├── models.py # Defines Django models for token management including refresh
+    token whitelisting and generic token storage'
+  - '├── serializers.py # Django REST Framework serializers for token models validation
+    and serialization'
+  - '├── app_settings.py # Configuration module for dynamic JWT refresh token implementation
+    loading'
+  - '└── tokens.py # Extends JWT token functionality with session management and database
+    persistence'
+relationships:
+  dependencies:
+    internal:
+    - path: jwt_allauth/utils.py
+      reason: Uses import_callable for dynamic token model loading and user_agent_dict
+        for request metadata
+    - path: tokens/models.py
+      reason: Provides model definitions for database persistence
+    - path: tokens/serializers.py
+      reason: Provides serializers for token validation and database operations
+    - path: tokens/tokens.py
+      reason: Provides DefaultRefreshToken as fallback implementation
+    external:
+    - name: django
+      purpose: Core framework for models, settings, and authentication
+    - name: django-rest-framework
+      purpose: Provides base serializer classes and API validation
+    - name: rest_framework_simplejwt
+      purpose: Base JWT token implementation
+    - name: hashlib
+      purpose: Token hashing for security
+    - name: uuid
+      purpose: Session ID generation
+interfaces:
+  classes:
+  - name: jwt_allauth.tokens.models.BaseToken
+    description: Abstract base model providing common token metadata fields (device
+      info, browser details, timestamps)
+    methods: []
+  - name: jwt_allauth.tokens.models.AbstractRefreshToken
+    description: Abstract model extending BaseToken with JWT-specific fields for refresh
+      token management
+    methods: []
+  - name: jwt_allauth.tokens.models.RefreshTokenWhitelistModel
+    description: Concrete model for storing whitelisted refresh tokens with user association
+      and device metadata
+    methods: []
+  - name: jwt_allauth.tokens.models.GenericTokenModel
+    description: Concrete model for storing generic purpose tokens with user association
+      and metadata
+    methods: []
+  - name: jwt_allauth.tokens.serializers.RefreshTokenWhitelistSerializer
+    description: Serialize and validate RefreshTokenWhitelistModel instances, excluding
+      'id' field
+    methods: []
+  - name: jwt_allauth.tokens.serializers.GenericTokenModelSerializer
+    description: Serialize and validate GenericTokenModel instances, excluding 'id'
+      field
+    methods: []
+  - name: jwt_allauth.tokens.tokens.RefreshToken
+    description: Extended JWT refresh token with session management, user attributes,
+      and database whitelisting
+    methods:
+    - name: set_session
+      signature: set_session(id_=None)
+      description: Sets unique session identifier in token payload
+    - name: set_user_attributes
+      signature: set_user_attributes(user)
+      description: Adds configurable user attributes from settings to token payload
+    - name: set_user_role
+      signature: set_user_role(user)
+      description: Sets user role in token payload
+    - name: for_user
+      signature: for_user(user, request=None, enabled=True)
+      description: Creates refresh token for user with session, attributes, and database
+        persistence
+  - name: jwt_allauth.tokens.tokens.GenericToken
+    description: Purpose-specific token generator with database tracking and security
+      features
+    methods:
+    - name: __init__
+      signature: __init__(purpose, request=None)
+      description: Initializes token generator with specific purpose and optional
+        request context
+    - name: make_token
+      signature: make_token(user)
+      description: Generates token, stores hash in database, and cleans up old tokens
+        for same purpose
+    - name: check_token
+      signature: check_token(user, token)
+      description: Validates token against database and removes it if valid
+  functions: []
+workflows:
+- 'Refresh token creation: User authentication triggers RefreshToken.for_user() which
+  creates JWT with session, user attributes, and persists to whitelist database'
+- 'Generic token generation: GenericToken.make_token() creates purpose-specific tokens
+  (e.g., password reset) with database tracking and automatic cleanup of old tokens'
+- 'Token validation: GenericToken.check_token() validates tokens against database
+  records and removes them upon successful validation'
+- 'Session management: Refresh tokens include unique session identifiers for tracking
+  user sessions across devices'
+notes: TokenModel is dynamically configurable via REST_AUTH_TOKEN_MODEL setting. All
+  tokens include comprehensive device/browser metadata extracted from request headers

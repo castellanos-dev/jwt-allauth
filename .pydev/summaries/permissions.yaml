@@ -1,0 +1,78 @@
+location: jwt_allauth.permissions
+purpose: Custom base permission classes for role-based access control using JWT claims,
+  extending Django REST Framework's BasePermission to validate user roles from JWT
+  payload
+dependencies:
+  internal:
+  - path: roles.py
+    reason: Imports STAFF_CODE and SUPER_USER_CODE constants for role validation
+  external:
+  - name: rest_framework
+    version: null
+    purpose: Base permission class inheritance and DRF integration
+structure:
+  classes:
+  - name: BasePermission
+    responsibility: Base permission class that checks JWT role claims and automatically
+      grants access to staff and superusers
+    attributes:
+    - name: accepted_roles
+      type: list
+    methods:
+    - name: _check_role_permission
+      signature: _check_role_permission(request, include_staff=True)
+      description: Internal method to validate role-based permissions against JWT
+        payload
+      parameters:
+      - name: request
+        type: Request
+      - name: include_staff
+        type: bool
+      returns:
+        type: bool
+        description: True if authorized, False otherwise
+      raises:
+      - exception: ValueError
+        description: If accepted_roles is not a list
+    - name: has_permission
+      signature: has_permission(request, view)
+      description: DRF permission check method that validates JWT role claims including
+        staff/superuser access
+      parameters:
+      - name: request
+        type: Request
+      - name: view
+        type: View
+      returns:
+        type: bool
+        description: True if authorized, False otherwise
+      raises: []
+  - name: BasePermissionStaffExcluded
+    responsibility: Permission class that checks JWT role claims without automatic
+      staff/superuser access
+    attributes:
+    - name: accepted_roles
+      type: list
+    methods:
+    - name: has_permission
+      signature: has_permission(request, view)
+      description: DRF permission check method that validates JWT role claims excluding
+        staff/superuser access
+      parameters:
+      - name: request
+        type: Request
+      - name: view
+        type: View
+      returns:
+        type: bool
+        description: True if authorized, False otherwise
+      raises:
+      - exception: ValueError
+        description: If accepted_roles is not a list
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: "# Subclass for specific role permission\nclass AdminPermission(BasePermission):\n\
+    \    accepted_roles = ['admin']\n\n# Usage in DRF view\nclass AdminView(APIView):\n\
+    \    permission_classes = [AdminPermission]"

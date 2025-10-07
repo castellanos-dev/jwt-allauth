@@ -1,0 +1,52 @@
+location: exceptions
+purpose: Defines custom authentication exception classes for JWT authentication scenarios,
+  specifically handling email verification and credential validation errors
+dependencies:
+  external:
+  - name: django
+    version: null
+    purpose: Translation utilities for internationalization
+  - name: rest_framework
+    version: null
+    purpose: HTTP status codes and REST framework integration
+  - name: rest_framework_simplejwt
+    version: null
+    purpose: Base authentication exception class inheritance
+structure:
+  classes:
+  - name: NotVerifiedEmail
+    responsibility: Represents authentication failure due to unverified user email
+      address
+    attributes:
+    - name: status_code
+      type: int
+    - name: default_detail
+      type: str
+    - name: default_code
+      type: str
+    methods: []
+    inherits_from: AuthenticationFailed
+  - name: IncorrectCredentials
+    responsibility: Represents authentication failure due to invalid username/password
+      combination
+    attributes:
+    - name: status_code
+      type: int
+    - name: default_detail
+      type: str
+    - name: default_code
+      type: str
+    methods: []
+    inherits_from: AuthenticationFailed
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: "# Raising custom authentication exceptions\nif not user.email_verified:\n\
+    \    raise NotVerifiedEmail()\n\nif not user.check_password(password):\n    raise\
+    \ IncorrectCredentials()"
+test_criteria:
+- Verify NotVerifiedEmail exception has correct HTTP 401 status code
+- Test IncorrectCredentials exception message and code values
+- Validate exception inheritance from AuthenticationFailed
+- Check translation-ready string formatting

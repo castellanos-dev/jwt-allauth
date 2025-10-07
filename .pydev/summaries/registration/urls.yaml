@@ -1,0 +1,35 @@
+location: jwt_allauth.registration.urls
+purpose: Defines URL routing for user registration and email verification endpoints
+  in the JWT AllAuth Django application
+dependencies:
+  internal:
+  - path: registration/views.py
+    reason: Uses RegisterView for user registration endpoint
+  - path: registration/email_verification/views.py
+    reason: Uses VerifyEmailView for email verification endpoint
+  - path: utils.py
+    reason: Uses get_template_path function for template resolution
+  - path: constants.py
+    reason: Uses EMAIL_VERIFIED_REDIRECT constant for conditional URL configuration
+  external:
+  - name: django
+    version: '>=2.2'
+    purpose: URL routing framework and template view classes
+structure:
+  classes: []
+  functions: []
+  globals:
+  - name: urlpatterns
+    value: List of URL patterns
+    purpose: Defines all URL routes for registration and email verification
+examples:
+- language: python
+  code: '# URL patterns include:
+
+    # POST /registration/ - User registration
+
+    # GET /registration/verification/{key}/ - Email verification
+
+    # GET /registration/account_email_verification_sent/ - Verification sent confirmation
+
+    # GET /registration/verified/ - Email verified confirmation'

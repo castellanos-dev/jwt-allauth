@@ -1,0 +1,139 @@
+location: jwt_allauth.logout.views
+purpose: Django REST Framework views for handling user logout operations, including
+  single session logout and logout from all devices
+dependencies:
+  internal:
+  - path: logout/serializers.py
+    reason: Uses RemoveRefreshTokenSerializer for token validation during logout
+  - path: tokens/models.py
+    reason: Uses RefreshTokenWhitelistModel to manage refresh token whitelist for
+      logout operations
+  external:
+  - name: django
+    version: '>=3.2'
+    purpose: Translation utilities and framework foundation
+  - name: djangorestframework
+    version: '>=3.12'
+    purpose: APIView base class, permissions, response handling
+  - name: djangorestframework-simplejwt
+    version: '>=5.0'
+    purpose: Token validation exceptions (TokenError, InvalidToken)
+structure:
+  classes:
+  - name: LogoutView
+    responsibility: Handle single session logout by validating and removing refresh
+      token
+    attributes:
+    - name: permission_classes
+      type: tuple
+    methods:
+    - name: get
+      signature: get(request, *args, **kwargs)
+      description: Rejects GET requests with method not allowed response
+      parameters:
+      - name: request
+        type: HttpRequest
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: Response
+        description: HTTP 405 Method Not Allowed
+      raises: []
+    - name: post
+      signature: post(request)
+      description: Handles POST requests to initiate logout process
+      parameters:
+      - name: request
+        type: HttpRequest
+      returns:
+        type: Response
+        description: Logout operation result
+      raises: []
+    - name: logout
+      signature: logout(request)
+      description: Static method that performs the actual logout token validation
+        and removal
+      parameters:
+      - name: request
+        type: HttpRequest
+      returns:
+        type: Response
+        description: Success or error response with appropriate status
+      raises:
+      - exception: TokenError
+        description: When token validation fails
+      - exception: InvalidToken
+        description: When provided token is invalid
+  - name: LogoutAllView
+    responsibility: Handle logout from all devices by removing all refresh tokens
+      for the user
+    attributes:
+    - name: permission_classes
+      type: tuple
+    methods:
+    - name: get
+      signature: get(request, *args, **kwargs)
+      description: Rejects GET requests with method not allowed response
+      parameters:
+      - name: request
+        type: HttpRequest
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: Response
+        description: HTTP 405 Method Not Allowed
+      raises: []
+    - name: post
+      signature: post(request)
+      description: Handles POST requests to initiate logout from all devices
+      parameters:
+      - name: request
+        type: HttpRequest
+      returns:
+        type: Response
+        description: Logout operation result
+      raises: []
+    - name: logout
+      signature: logout(request)
+      description: Static method that deletes all refresh tokens for the user
+      parameters:
+      - name: request
+        type: HttpRequest
+      returns:
+        type: Response
+        description: Success response confirming logout from all devices
+      raises: []
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# Logout single session
+
+    response = LogoutView().post(request)
+
+
+    # Logout all devices
+
+    response = LogoutAllView().post(request)'
+- language: http
+  code: '# Single logout
+
+    POST /auth/logout/
+
+    Authorization: Bearer <access_token>
+
+    Content-Type: application/json
+
+
+    {"refresh": "<refresh_token>"}
+
+
+    # Logout all devices
+
+    POST /auth/logout/all/
+
+    Authorization: Bearer <access_token>'

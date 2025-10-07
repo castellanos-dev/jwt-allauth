@@ -1,0 +1,91 @@
+location: jwt_allauth.registration.email_verification.views
+purpose: Handles email verification confirmation via GET requests, enabling refresh
+  tokens for verified users and redirecting after successful verification
+dependencies:
+  internal:
+  - path: jwt_allauth/constants.py
+    reason: Uses EMAIL_VERIFIED_REDIRECT constant for redirect configuration
+  - path: jwt_allauth/tokens/models.py
+    reason: Uses RefreshTokenWhitelistModel to enable refresh tokens for verified
+      users
+  - path: jwt_allauth/registration/email_verification/serializers.py
+    reason: Uses VerifyEmailSerializer for email verification validation
+  external:
+  - name: allauth
+    version: '>=0.42.0'
+    purpose: Extends ConfirmEmailView for email confirmation functionality
+  - name: django
+    version: '>=3.2'
+    purpose: HTTP response handling, URL reversing, and settings access
+  - name: djangorestframework
+    version: '>=3.12'
+    purpose: APIView base class and AllowAny permission
+structure:
+  classes:
+  - name: VerifyEmailView
+    responsibility: Email verification endpoint that confirms email addresses, enables
+      refresh tokens, and redirects users
+    attributes:
+    - name: permission_classes
+      type: tuple
+    - name: allowed_methods
+      type: tuple
+    methods:
+    - name: get_serializer
+      signature: get_serializer(*args, **kwargs)
+      description: Static method that returns VerifyEmailSerializer instance
+      parameters:
+      - name: args
+        type: Any
+      - name: kwargs
+        type: Any
+      returns:
+        type: VerifyEmailSerializer
+        description: Email verification serializer instance
+      raises: []
+    - name: get
+      signature: get(request, *args, **kwargs)
+      description: Handles GET requests for email verification - enables refresh token,
+        confirms email, and redirects
+      parameters:
+      - name: request
+        type: HttpRequest
+      - name: args
+        type: Any
+      - name: kwargs
+        type: Any
+      returns:
+        type: HttpResponseRedirect
+        description: Redirect to configured URL after successful verification
+      raises: []
+    - name: post
+      signature: post(request, *args, **kwargs)
+      description: Rejects POST requests with HTTP 405 Method Not Allowed
+      parameters:
+      - name: request
+        type: HttpRequest
+      - name: args
+        type: Any
+      - name: kwargs
+        type: Any
+      returns:
+        type: HttpResponseNotAllowed
+        description: HTTP 405 response indicating only GET is allowed
+      raises: []
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# Email verification flow
+
+    # User clicks verification link → GET /verify-email/<key>/
+
+    # View confirms email, enables refresh token, redirects to success page'
+- language: python
+  code: '# Test case example
+
+    response = client.get(''/verify-email/abc123/'')
+
+    assert response.status_code == 302
+
+    assert response.url == ''/email-verified/'''

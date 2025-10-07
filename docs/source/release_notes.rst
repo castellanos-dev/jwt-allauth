@@ -4,7 +4,12 @@ Release Notes
 Version 1.1.0
 -------------
 
-Released: TBD
+Released: October 7, 2025
+
+New Features
+~~~~~~~~~~~~
+
+- Added support for including additional user attributes in refresh tokens via the ``JWT_ALLAUTH_USER_ATTRIBUTES`` setting, allowing flexible configuration of user data included in JWT payloads while maintaining the existing role assignment logic.
 
 Bug Fixes
 ~~~~~~~~~

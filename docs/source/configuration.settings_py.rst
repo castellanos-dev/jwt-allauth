@@ -19,6 +19,8 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` - whether to send refresh tokens as HTTP-only cookies instead of in the JSON response payload (default: ``True``).
 
+    - ``JWT_ALLAUTH_USER_ATTRIBUTES`` - list of user attribute paths to include in refresh tokens (default: ``[]``). Each string should be a dot-separated path to the attribute (e.g., ``'address'``, ``'profile.age'``). The 'role' attribute is automatically included and should not be specified.
+
 - Redirection URLs
 
     - ``EMAIL_VERIFIED_REDIRECT`` - the url path to be redirected once the email verified can be configured through.

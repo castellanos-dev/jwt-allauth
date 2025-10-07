@@ -1,0 +1,98 @@
+{
+  "docs/source/index.rst": {
+    "size": 3499,
+    "mtime": 1759686079
+  },
+  "docs/source/password_reset.rst": {
+    "size": 1446,
+    "mtime": 1743780683
+  },
+  "docs/source/configuration.settings_py.rst": {
+    "size": 2638,
+    "mtime": 1759772009
+  },
+  "docs/source/refresh_token.rst": {
+    "size": 2429,
+    "mtime": 1759863145
+  },
+  "docs/source/api_endpoints.rst": {
+    "size": 3097,
+    "mtime": 1759663372
+  },
+  "docs/source/jwt_allauth.password_change.rst": {
+    "size": 434,
+    "mtime": 1759684619
+  },
+  "docs/source/configuration.rst": {
+    "size": 145,
+    "mtime": 1757861713
+  },
+  "docs/source/configuration.user_model.rst": {
+    "size": 4687,
+    "mtime": 1759663093
+  },
+  "docs/source/email_verification.rst": {
+    "size": 338,
+    "mtime": 1743707679
+  },
+  "docs/source/permissions.rst": {
+    "size": 1500,
+    "mtime": 1757840427
+  },
+  "docs/source/jwt_allauth.password_reset.rst": {
+    "size": 426,
+    "mtime": 1741641423
+  },
+  "docs/source/jwt_allauth.rst": {
+    "size": 1206,
+    "mtime": 1743360527
+  },
+  "docs/source/modules.rst": {
+    "size": 466,
+    "mtime": 1757861686
+  },
+  "docs/source/jwt_allauth.user_details.rst": {
+    "size": 410,
+    "mtime": 1741642314
+  },
+  "docs/source/jwt_allauth.token.rst": {
+    "size": 525,
+    "mtime": 1759678439
+  },
+  "docs/source/jwt_allauth.login.rst": {
+    "size": 350,
+    "mtime": 1741641168
+  },
+  "docs/source/installation.rst": {
+    "size": 2367,
+    "mtime": 1743847863
+  },
+  "docs/source/test.rst": {
+    "size": 2195,
+    "mtime": 1757840427
+  },
+  "docs/source/authors.rst": {
+    "size": 134,
+    "mtime": 1743849122
+  },
+  "docs/source/jwt_allauth.logout.rst": {
+    "size": 358,
+    "mtime": 1741641328
+  },
+  "docs/source/configuration.serializers.rst": {
+    "size": 1407,
+    "mtime": 1742147646
+  },
+  "docs/source/jwt_allauth.token_refresh.rst": {
+    "size": 418,
+    "mtime": 1741642246
+  },
+  "docs/source/jwt_allauth.registration.rst": {
+    "size": 736,
+    "mtime": 1741642020
+  },
+  "docs/source/jwt_allauth.registration.email_verification.rst": {
+    "size": 536,
+    "mtime": 1741641982
+  }
+}

@@ -1,0 +1,63 @@
+location: login.serializers
+purpose: Custom JWT authentication serializer that extends SimpleJWT with allauth
+  integration for user authentication and token generation
+dependencies:
+  internal:
+  - path: jwt_allauth.tokens.app_settings
+    reason: Uses custom RefreshToken class for token generation
+  - path: jwt_allauth.utils
+    reason: Uses allauth_authenticate function for user authentication
+  external:
+  - name: django
+    version: '>=3.0'
+    purpose: Framework for settings, authentication, and database transactions
+  - name: django-rest-framework
+    version: '>=3.0'
+    purpose: API framework and exception handling
+  - name: djangorestframework-simplejwt
+    version: '>=5.0'
+    purpose: Base token serializer and JWT settings
+structure:
+  classes:
+  - name: LoginSerializer
+    responsibility: Handle user authentication via allauth, validate credentials,
+      generate JWT tokens, and update last login timestamp
+    attributes:
+    - name: token_class
+      type: RefreshToken
+    - name: username_field
+      type: str
+    - name: user
+      type: User
+    methods:
+    - name: get_token
+      signature: get_token(user)
+      description: Class method that creates and returns a refresh token for the authenticated
+        user
+      parameters:
+      - name: user
+        type: User
+      returns:
+        type: RefreshToken
+        description: JWT refresh token instance
+      raises: []
+    - name: validate
+      signature: validate(attrs)
+      description: Atomic transaction method that authenticates user, validates credentials,
+        generates tokens, and updates last login
+      parameters:
+      - name: attrs
+        type: Dict[str, Any]
+      returns:
+        type: Dict[Any, Any]
+        description: Validated data containing refresh and access tokens
+      raises:
+      - exception: exceptions.AuthenticationFailed
+        description: When user authentication fails or account is not active
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: "# Typical usage in Django REST Framework view\nserializer = LoginSerializer(data={'email':\
+    \ 'user@example.com', 'password': 'secret'})\nif serializer.is_valid():\n    tokens\
+    \ = serializer.validated_data  # Contains 'refresh' and 'access' tokens"

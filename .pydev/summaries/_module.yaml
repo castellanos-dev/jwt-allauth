@@ -1,0 +1,49 @@
+location: jwt_allauth
+purpose: Django REST Framework integration for JWT authentication with user profile
+  management capabilities
+structure:
+  tree:
+  - 'user_details/ # User profile management components'
+  - '├── serializers.py # Defines serializers for user model data representation'
+  - '└── views.py # Provides REST API endpoints for user profile operations'
+relationships:
+  dependencies:
+    internal:
+    - path: user_details.serializers
+      reason: Provides UserDetailsSerializer for user data serialization
+    external:
+    - name: django
+      version: '>=2.0'
+      purpose: User model handling and authentication framework
+    - name: django-rest-framework
+      version: '>=3.0'
+      purpose: API view implementation and permission handling
+    - name: django.contrib.auth
+      version: null
+      purpose: Access Django's user model through get_user_model() function
+    - name: rest_framework
+      version: null
+      purpose: Base classes and utilities for creating REST API serializers
+interfaces:
+  classes:
+  - name: jwt_allauth.user_details.views.UserDetailsView
+    description: Handles GET and PATCH requests for authenticated user's profile data
+    methods:
+    - name: get_object
+      signature: get_object()
+      description: Retrieves the current authenticated user instance
+    - name: get_queryset
+      signature: get_queryset()
+      description: Returns empty queryset for compatibility with django-rest-swagger
+  - name: user_details.serializers.UserDetailsSerializer
+    description: Serializes user model data excluding password field, providing read-only
+      email and writable name fields
+    methods: []
+  functions: []
+workflows:
+- 'User profile retrieval: Authenticated users can GET their profile data via UserDetailsView'
+- 'Profile updates: Users can PATCH their first_name and last_name fields through
+  the API'
+- 'Data serialization: UserDetailsSerializer handles conversion between user model
+  instances and JSON representation'
+notes: Email field is read-only in the serializer to prevent unauthorized email changes

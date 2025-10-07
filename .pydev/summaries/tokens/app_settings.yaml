@@ -1,0 +1,25 @@
+location: jwt_allauth.tokens.app_settings
+purpose: Configuration module for dynamically loading the JWT refresh token implementation
+  based on Django settings
+dependencies:
+  internal:
+  - path: tokens/tokens.py
+    reason: Provides DefaultRefreshToken as fallback implementation
+  - path: utils.py
+    reason: Uses import_callable utility for dynamic class loading
+  external:
+  - name: django
+    version: '>=3.2'
+    purpose: Settings configuration and module import system
+structure:
+  globals:
+  - name: RefreshToken
+    value: Dynamically imported class
+    purpose: Primary export - the configured JWT refresh token implementation class
+examples:
+- language: python
+  code: '# Using the configured RefreshToken
+
+    from jwt_allauth.tokens.app_settings import RefreshToken
+
+    token = RefreshToken.for_user(user)'

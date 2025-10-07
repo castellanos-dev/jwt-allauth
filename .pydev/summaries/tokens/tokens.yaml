@@ -1,0 +1,134 @@
+location: jwt_allauth.tokens.tokens
+purpose: Extends JWT token functionality with session management, user attributes,
+  and database persistence for refresh tokens and generic purpose tokens
+dependencies:
+  internal:
+  - path: jwt_allauth.tokens.models
+    reason: GenericTokenModel for database persistence
+  - path: jwt_allauth.tokens.serializers
+    reason: Serializers for token validation and database operations
+  - path: jwt_allauth.utils
+    reason: user_agent_dict for request metadata extraction
+  external:
+  - name: django
+    purpose: Framework configuration and authentication
+  - name: rest_framework
+    purpose: API validation and exception handling
+  - name: rest_framework_simplejwt
+    purpose: Base JWT token implementation
+  - name: hashlib
+    purpose: Token hashing for security
+  - name: uuid
+    purpose: Session ID generation
+structure:
+  classes:
+  - name: RefreshToken
+    responsibility: Extended JWT refresh token with session management, user attributes,
+      and database whitelisting
+    attributes: []
+    methods:
+    - name: set_session
+      signature: set_session(id_=None)
+      description: Sets unique session identifier in token payload
+      parameters:
+      - name: id_
+        type: str
+      returns:
+        type: None
+        description: Modifies token payload in-place
+      raises: []
+    - name: set_user_attributes
+      signature: set_user_attributes(user)
+      description: Adds configurable user attributes from settings to token payload
+      parameters:
+      - name: user
+        type: User
+      returns:
+        type: None
+        description: Modifies token payload in-place
+      raises: []
+    - name: set_user_role
+      signature: set_user_role(user)
+      description: Sets user role in token payload
+      parameters:
+      - name: user
+        type: User
+      returns:
+        type: None
+        description: Modifies token payload in-place
+      raises: []
+    - name: for_user
+      signature: for_user(user, request=None, enabled=True)
+      description: Creates refresh token for user with session, attributes, and database
+        persistence
+      parameters:
+      - name: user
+        type: User
+      - name: request
+        type: HttpRequest
+      - name: enabled
+        type: bool
+      returns:
+        type: RefreshToken
+        description: Configured refresh token instance
+      raises:
+      - exception: InvalidToken
+        description: When token validation fails during database persistence
+  - name: GenericToken
+    responsibility: Purpose-specific token generator with database tracking and security
+      features
+    attributes: []
+    methods:
+    - name: __init__
+      signature: __init__(purpose, request=None)
+      description: Initializes token generator with specific purpose and optional
+        request context
+      parameters:
+      - name: purpose
+        type: str
+      - name: request
+        type: HttpRequest
+      returns:
+        type: None
+        description: Constructor
+      raises: []
+    - name: make_token
+      signature: make_token(user)
+      description: Generates token, stores hash in database, and cleans up old tokens
+        for same purpose
+      parameters:
+      - name: user
+        type: User
+      returns:
+        type: str
+        description: Generated token string
+      raises:
+      - exception: InvalidToken
+        description: When token validation fails during database persistence
+    - name: check_token
+      signature: check_token(user, token)
+      description: Validates token against database and removes it if valid
+      parameters:
+      - name: user
+        type: User
+      - name: token
+        type: str
+      returns:
+        type: bool
+        description: Whether token is valid and exists in database
+      raises: []
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# Create refresh token with session and user attributes
+
+    refresh = RefreshToken.for_user(user, request)
+
+    # Create purpose-specific token (e.g., email verification)
+
+    token_gen = GenericToken(''email_verification'', request)
+
+    token = token_gen.make_token(user)
+
+    valid = token_gen.check_token(user, token)'

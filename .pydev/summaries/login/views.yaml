@@ -1,0 +1,70 @@
+location: jwt_allauth.login.views
+purpose: Django REST Framework view for JWT-based user authentication, handling login
+  with token generation and refresh token management via cookie or response body
+dependencies:
+  internal:
+  - path: jwt_allauth.app_settings.py
+    reason: Imports LoginSerializer for authentication logic
+  - path: jwt_allauth.utils.py
+    reason: Uses decorators for sensitive parameter handling and user agent extraction
+  - path: jwt_allauth.constants.py
+    reason: Imports REFRESH_TOKEN_COOKIE constant name
+  external:
+  - name: django
+    version: '>=3.0'
+    purpose: Framework for web application and settings access
+  - name: djangorestframework
+    version: '>=3.12'
+    purpose: REST API framework for view implementation and response handling
+  - name: djangorestframework-simplejwt
+    version: '>=5.0'
+    purpose: JWT token generation base view and exception handling
+structure:
+  classes:
+  - name: LoginView
+    responsibility: Handle user authentication requests, generate JWT tokens, and
+      manage refresh token delivery method based on configuration
+    attributes:
+    - name: serializer_class
+      type: LoginSerializer
+    - name: throttle_classes
+      type: List[AnonRateThrottle]
+    methods:
+    - name: dispatch
+      signature: dispatch(*args, **kwargs)
+      description: Wrapped dispatch method that applies sensitive post parameter masking
+      parameters:
+      - name: args
+        type: Any
+      - name: kwargs
+        type: Any
+      returns:
+        type: HttpResponse
+        description: HTTP response from parent dispatch
+      raises: []
+    - name: post
+      signature: 'post(request: Request, *args, **kwargs) -> Response'
+      description: Handle POST login requests, validate credentials, generate tokens,
+        and configure response with access token and optional refresh token cookie
+      parameters:
+      - name: request
+        type: Request
+      - name: args
+        type: Any
+      - name: kwargs
+        type: Any
+      returns:
+        type: Response
+        description: HTTP 200 response with access token and optional refresh token
+      raises:
+      - exception: InvalidToken
+        description: When authentication fails or token generation error occurs
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# Login request with credentials
+
+    response = client.post(''/login/'', {''username'': ''user'', ''password'': ''pass''})
+
+    # Returns access token in body, refresh token in cookie if JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=True'

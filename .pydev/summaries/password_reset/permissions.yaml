@@ -1,0 +1,50 @@
+location: jwt_allauth.password_reset.permissions
+purpose: Provides DRF permission class for password reset functionality that validates
+  one-time JWT tokens from cookies
+dependencies:
+  internal:
+  - path: jwt_allauth/constants.py
+    reason: Imports token constants (PASS_RESET_ACCESS, PASS_RESET_COOKIE, FOR_USER,
+      ONE_TIME_PERMISSION)
+  - path: jwt_allauth/password_reset/models.py
+    reason: Uses SetPasswordTokenUser to create authenticated user from token
+  - path: jwt_allauth/tokens/app_settings.py
+    reason: Uses RefreshToken for token validation
+  external:
+  - name: rest_framework
+    version: '>=3.0'
+    purpose: BasePermission class for DRF permission system
+  - name: rest_framework_simplejwt
+    version: '>=5.0'
+    purpose: TokenError exception for JWT validation errors
+structure:
+  classes:
+  - name: ResetPasswordPermission
+    responsibility: Validates password reset requests by checking for valid one-time
+      JWT tokens in cookies
+    attributes: []
+    methods:
+    - name: has_permission
+      signature: has_permission(request, view)
+      description: Checks if request has valid password reset token in cookies and
+        sets request.user/request.auth accordingly
+      parameters:
+      - name: request
+        type: HttpRequest
+      - name: view
+        type: APIView
+      returns:
+        type: bool
+        description: True if valid password reset token present, False otherwise
+      raises:
+      - exception: TokenError
+        description: When JWT token validation fails (handled internally)
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: "# Usage in DRF view\nfrom .permissions import ResetPasswordPermission\n\n\
+    class PasswordResetView(APIView):\n    permission_classes = [ResetPasswordPermission]\n\
+    \    \n    def post(self, request):\n        # request.user will be SetPasswordTokenUser\
+    \ if permission passed\n        # request.auth will contain the validated JWT\
+    \ token\n        pass"
