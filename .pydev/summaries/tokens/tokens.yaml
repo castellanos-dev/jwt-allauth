@@ -1,36 +1,35 @@
 location: jwt_allauth.tokens.tokens
-purpose: Provides custom JWT token implementations with database-backed whitelisting
-  and session management for enhanced security and tracking
+purpose: Extends JWT token functionality with session management, user attributes,
+  and database persistence for refresh tokens and generic purpose tokens
 dependencies:
   internal:
-  - path: tokens/models.py
-    reason: Uses GenericTokenModel for storing token metadata and validation
-  - path: tokens/serializers.py
-    reason: Uses RefreshTokenWhitelistSerializer and GenericTokenModelSerializer for
-      database operations
-  - path: utils.py
-    reason: Uses user_agent_dict for extracting request metadata
+  - path: jwt_allauth.tokens.models
+    reason: GenericTokenModel for database persistence
+  - path: jwt_allauth.tokens.serializers
+    reason: Serializers for token validation and database operations
+  - path: jwt_allauth.utils
+    reason: user_agent_dict for request metadata extraction
   external:
   - name: django
-    version: '>=3.0'
-    purpose: Base framework and PasswordResetTokenGenerator inheritance
-  - name: django-rest-framework
-    version: '>=3.0'
-    purpose: ValidationError handling and integration
-  - name: djangorestframework-simplejwt
-    version: '>=5.0'
-    purpose: Base RefreshToken implementation and InvalidToken exception
+    purpose: Framework configuration and authentication
+  - name: rest_framework
+    purpose: API validation and exception handling
+  - name: rest_framework_simplejwt
+    purpose: Base JWT token implementation
+  - name: hashlib
+    purpose: Token hashing for security
+  - name: uuid
+    purpose: Session ID generation
 structure:
   classes:
   - name: RefreshToken
-    responsibility: Extended JWT refresh token with session tracking, user role inclusion,
+    responsibility: Extended JWT refresh token with session management, user attributes,
       and database whitelisting
     attributes: []
     methods:
     - name: set_session
       signature: set_session(id_=None)
-      description: Sets unique session identifier in token payload, generates UUID
-        if not provided
+      description: Sets unique session identifier in token payload
       parameters:
       - name: id_
         type: str
@@ -38,9 +37,19 @@ structure:
         type: None
         description: Modifies token payload in-place
       raises: []
+    - name: set_user_attributes
+      signature: set_user_attributes(user)
+      description: Adds configurable user attributes from settings to token payload
+      parameters:
+      - name: user
+        type: User
+      returns:
+        type: None
+        description: Modifies token payload in-place
+      raises: []
     - name: set_user_role
       signature: set_user_role(user)
-      description: Includes user role in token payload for authorization purposes
+      description: Sets user role in token payload
       parameters:
       - name: user
         type: User
@@ -49,8 +58,8 @@ structure:
         description: Modifies token payload in-place
       raises: []
     - name: for_user
-      signature: for_user(cls, user, request=None, enabled=True)
-      description: Creates refresh token for user with session tracking and database
+      signature: for_user(user, request=None, enabled=True)
+      description: Creates refresh token for user with session, attributes, and database
         persistence
       parameters:
       - name: user
@@ -64,10 +73,10 @@ structure:
         description: Configured refresh token instance
       raises:
       - exception: InvalidToken
-        description: When token serialization fails validation
+        description: When token validation fails during database persistence
   - name: GenericToken
-    responsibility: Purpose-specific token generator with database-backed validation
-      and single-use enforcement
+    responsibility: Purpose-specific token generator with database tracking and security
+      features
     attributes: []
     methods:
     - name: __init__
@@ -81,12 +90,12 @@ structure:
         type: HttpRequest
       returns:
         type: None
-        description: Instance initialization
+        description: Constructor
       raises: []
     - name: make_token
       signature: make_token(user)
-      description: Generates and stores hashed token in database, removes previous
-        tokens for same purpose
+      description: Generates token, stores hash in database, and cleans up old tokens
+        for same purpose
       parameters:
       - name: user
         type: User
@@ -95,11 +104,10 @@ structure:
         description: Generated token string
       raises:
       - exception: InvalidToken
-        description: When token serialization fails validation
+        description: When token validation fails during database persistence
     - name: check_token
       signature: check_token(user, token)
-      description: Validates token against database and user, deletes token after
-        successful validation
+      description: Validates token against database and removes it if valid
       parameters:
       - name: user
         type: User
@@ -107,26 +115,20 @@ structure:
         type: str
       returns:
         type: bool
-        description: True if token is valid and exists in database
+        description: Whether token is valid and exists in database
       raises: []
   functions: []
   globals: []
 examples:
 - language: python
-  code: '# Create refresh token with session tracking
+  code: '# Create refresh token with session and user attributes
 
     refresh = RefreshToken.for_user(user, request)
 
-    access_token = str(refresh.access_token)
-
-
     # Create purpose-specific token (e.g., email verification)
 
-    verification_token = GenericToken(''email_verification'', request)
+    token_gen = GenericToken(''email_verification'', request)
 
-    token_str = verification_token.make_token(user)
+    token = token_gen.make_token(user)
 
-
-    # Validate purpose-specific token
-
-    is_valid = verification_token.check_token(user, token_str)'
+    valid = token_gen.check_token(user, token)'

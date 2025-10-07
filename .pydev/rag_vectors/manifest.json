@@ -1,7 +1,7 @@
 {
   "docs/source/index.rst": {
     "size": 3499,
-    "mtime": 1757840427
+    "mtime": 1759686079
   },
   "docs/source/password_reset.rst": {
     "size": 1446,
@@ -9,19 +9,19 @@
   },
   "docs/source/configuration.settings_py.rst": {
     "size": 2638,
-    "mtime": 1757840427
+    "mtime": 1759772009
   },
   "docs/source/refresh_token.rst": {
     "size": 2429,
-    "mtime": 1757861718
+    "mtime": 1759863145
   },
   "docs/source/api_endpoints.rst": {
     "size": 3097,
-    "mtime": 1757840427
+    "mtime": 1759663372
   },
   "docs/source/jwt_allauth.password_change.rst": {
     "size": 434,
-    "mtime": 1741641373
+    "mtime": 1759684619
   },
   "docs/source/configuration.rst": {
     "size": 145,
@@ -29,7 +29,7 @@
   },
   "docs/source/configuration.user_model.rst": {
     "size": 4687,
-    "mtime": 1743182231
+    "mtime": 1759663093
   },
   "docs/source/email_verification.rst": {
     "size": 338,
@@ -57,7 +57,7 @@
   },
   "docs/source/jwt_allauth.token.rst": {
     "size": 525,
-    "mtime": 1757840427
+    "mtime": 1759678439
   },
   "docs/source/jwt_allauth.login.rst": {
     "size": 350,
