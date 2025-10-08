@@ -1,66 +1,71 @@
 location: jwt_allauth.logout
-purpose: Handles JWT-based user logout operations including single session logout
-  and logout from all devices, managing refresh token whitelist for secure session
-  termination
+purpose: Provides JWT logout functionality for Django REST Framework, including single
+  session logout and logout from all devices with token validation and removal
 structure:
   tree:
   - logout/
-  - '├── serializers.py # Provides serializer for JWT refresh token logout functionality'
-  - '└── views.py # Django REST Framework views for handling user logout operations'
+  - '├── views.py # JWT logout view implementations'
+  - '└── serializers.py # Token validation and removal serializers'
 relationships:
   dependencies:
     internal:
-    - path: jwt_allauth.tokens.app_settings
-      reason: Uses RefreshToken class for JWT token handling and validation
+    - path: jwt_allauth.logout.serializers
+      reason: Uses RemoveRefreshTokenSerializer for token validation
     - path: jwt_allauth.tokens.models
-      reason: Uses RefreshTokenWhitelistModel for token whitelist management
+      reason: Uses RefreshTokenWhitelistModel for token management
+    - path: jwt_allauth.tokens.app_settings
+      reason: Uses RefreshToken class for JWT handling
+    - path: jwt_allauth.constants
+      reason: Uses REFRESH_TOKEN_COOKIE constant
     external:
     - name: django
-      version: '>=3.2'
-      purpose: Database queries, constant-time comparison for security, and translation
-        utilities
+      purpose: Translation utilities and settings configuration
+    - name: rest_framework
+      purpose: API view base classes and permissions
+    - name: rest_framework_simplejwt
+      purpose: JWT token validation and error handling
     - name: djangorestframework
-      version: '>=3.12'
-      purpose: Serializer base class, APIView base class, permissions, and response
-        handling
-    - name: djangorestframework-simplejwt
-      version: '>=5.0'
-      purpose: Token validation exceptions (TokenError, InvalidToken) for authentication
-        errors
+      purpose: Serializer base class and field definitions
 interfaces:
   classes:
+  - name: jwt_allauth.logout.views.LogoutView
+    description: Handles user logout by invalidating refresh token and clearing session
+    methods:
+    - name: get
+      signature: get(request, *args, **kwargs)
+      description: Rejects GET requests with method not allowed
+    - name: post
+      signature: post(request)
+      description: Handles POST requests for logout
+    - name: logout
+      signature: logout(request)
+      description: Performs logout logic including token validation and removal
+  - name: jwt_allauth.logout.views.LogoutAllView
+    description: Handles logout from all devices by removing all refresh tokens for
+      the user
+    methods:
+    - name: get
+      signature: get(request, *args, **kwargs)
+      description: Rejects GET requests with method not allowed
+    - name: post
+      signature: post(request)
+      description: Handles POST requests for logout from all devices
+    - name: logout
+      signature: logout(request)
+      description: Deletes all refresh tokens for current user
   - name: jwt_allauth.logout.serializers.RemoveRefreshTokenSerializer
     description: Validates and removes JWT refresh tokens from whitelist during logout
     methods:
     - name: validate
-      signature: 'validate(attrs: Dict[str, Any]) -> Dict[str, str]'
-      description: Validates refresh token, checks user ownership, and removes from
-        whitelist
-  - name: jwt_allauth.logout.views.LogoutView
-    description: Handle single session logout by validating and removing refresh token
-    methods:
-    - name: post
-      signature: 'post(request: HttpRequest) -> Response'
-      description: Handles POST requests to initiate logout process
-    - name: logout
-      signature: 'logout(request: HttpRequest) -> Response'
-      description: Static method that performs the actual logout token validation
-        and removal
-  - name: jwt_allauth.logout.views.LogoutAllView
-    description: Handle logout from all devices by removing all refresh tokens for
-      the user
-    methods:
-    - name: post
-      signature: 'post(request: HttpRequest) -> Response'
-      description: Handles POST requests to initiate logout from all devices
-    - name: logout
-      signature: 'logout(request: HttpRequest) -> Response'
-      description: Static method that deletes all refresh tokens for the user
+      signature: 'validate(attrs: Dict[str, Any])'
+      description: Validates refresh token and removes from whitelist
   functions: []
 workflows:
-- 'Single session logout: User provides refresh token via POST request → serializer
-  validates token ownership → token removed from whitelist → session terminated'
-- 'Logout all devices: Authenticated user requests logout → all refresh tokens for
-  user deleted from whitelist → all active sessions terminated'
-notes: Uses constant-time comparison for security, requires proper JWT token validation,
-  and maintains token whitelist for secure logout operations
+- 'Single session logout: POST request validates and removes specific refresh token
+  from whitelist'
+- 'Logout from all devices: POST request removes all refresh tokens associated with
+  user'
+- 'Token validation workflow: Check token validity, user ownership, and whitelist
+  status'
+notes: Uses refresh token whitelist for secure logout, supports both single session
+  and global logout operations

@@ -1,28 +1,26 @@
 location: jwt_allauth.logout.views
-purpose: Django REST Framework views for handling user logout operations, including
-  single session logout and logout from all devices
+purpose: Provides JWT logout functionality for Django REST Framework, including single
+  session logout and logout from all devices
 dependencies:
   internal:
-  - path: logout/serializers.py
-    reason: Uses RemoveRefreshTokenSerializer for token validation during logout
-  - path: tokens/models.py
-    reason: Uses RefreshTokenWhitelistModel to manage refresh token whitelist for
-      logout operations
+  - path: jwt_allauth.logout.serializers
+    reason: Uses RemoveRefreshTokenSerializer for token validation and removal
+  - path: jwt_allauth.tokens.models
+    reason: Uses RefreshTokenWhitelistModel for managing refresh tokens
+  - path: jwt_allauth.constants
+    reason: Uses REFRESH_TOKEN_COOKIE constant for cookie-based token handling
   external:
   - name: django
-    version: '>=3.2'
-    purpose: Translation utilities and framework foundation
-  - name: djangorestframework
-    version: '>=3.12'
-    purpose: APIView base class, permissions, response handling
-  - name: djangorestframework-simplejwt
-    version: '>=5.0'
-    purpose: Token validation exceptions (TokenError, InvalidToken)
+    purpose: Translation utilities and settings configuration
+  - name: rest_framework
+    purpose: API view base classes, permissions, and response handling
+  - name: rest_framework_simplejwt
+    purpose: JWT token validation and error handling
 structure:
   classes:
   - name: LogoutView
-    responsibility: Handle single session logout by validating and removing refresh
-      token
+    responsibility: Handles user logout by invalidating refresh token and clearing
+      session
     attributes:
     - name: permission_classes
       type: tuple
@@ -43,7 +41,7 @@ structure:
       raises: []
     - name: post
       signature: post(request)
-      description: Handles POST requests to initiate logout process
+      description: Handles POST requests for logout by calling logout method
       parameters:
       - name: request
         type: HttpRequest
@@ -53,7 +51,7 @@ structure:
       raises: []
     - name: logout
       signature: logout(request)
-      description: Static method that performs the actual logout token validation
+      description: Static method that performs logout logic including token validation
         and removal
       parameters:
       - name: request
@@ -67,7 +65,7 @@ structure:
       - exception: InvalidToken
         description: When provided token is invalid
   - name: LogoutAllView
-    responsibility: Handle logout from all devices by removing all refresh tokens
+    responsibility: Handles logout from all devices by removing all refresh tokens
       for the user
     attributes:
     - name: permission_classes
@@ -89,17 +87,17 @@ structure:
       raises: []
     - name: post
       signature: post(request)
-      description: Handles POST requests to initiate logout from all devices
+      description: Handles POST requests for logout from all devices
       parameters:
       - name: request
         type: HttpRequest
       returns:
         type: Response
-        description: Logout operation result
+        description: Logout all operation result
       raises: []
     - name: logout
       signature: logout(request)
-      description: Static method that deletes all refresh tokens for the user
+      description: Static method that deletes all refresh tokens for the current user
       parameters:
       - name: request
         type: HttpRequest
@@ -111,29 +109,11 @@ structure:
   globals: []
 examples:
 - language: python
-  code: '# Logout single session
+  code: '# Single session logout
 
     response = LogoutView().post(request)
 
 
-    # Logout all devices
+    # Logout from all devices
 
     response = LogoutAllView().post(request)'
-- language: http
-  code: '# Single logout
-
-    POST /auth/logout/
-
-    Authorization: Bearer <access_token>
-
-    Content-Type: application/json
-
-
-    {"refresh": "<refresh_token>"}
-
-
-    # Logout all devices
-
-    POST /auth/logout/all/
-
-    Authorization: Bearer <access_token>'
