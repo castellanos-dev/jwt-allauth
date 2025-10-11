@@ -12,8 +12,8 @@ compromised or outdated refresh tokens can be promptly invalidated when necessar
 The following constants should be included in the settings.py file:
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN`` - refresh token class (default: ``jwt_allauth.tokens.tokens.RefreshToken``).
-    
-    - ``JWT_ALLAUTH_USER_ATTRIBUTES`` - list of user attribute paths to include in tokens (default: ``[]``).
+
+    - ``JWT_ALLAUTH_USER_ATTRIBUTES`` - dictionary mapping output claim names to user attribute paths to include in tokens (default: ``{}``). Example: ``{"organization_id": "organization.id", "area_id": "area.id"}``. The 'role' attribute is automatically included and should not be specified.
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` - whether to send refresh tokens as HTTP-only cookies instead of in the JSON response payload (default: ``True``).
 
@@ -33,25 +33,3 @@ the complete user object in your view methods, you should use the :func:`~jwt_al
         def get(self, request):
             # request.user is now the complete user object
             return Response({"username": request.user.username})
-
-Example:
-
-.. code-block:: python
-
-    from jwt_allauth.tokens.tokens import RefreshToken as DefaultRefreshToken
-
-    class RefreshToken(DefaultRefreshToken):
-        def set_user_attributes(self, user):
-            """Add user attributes defined in JWT_ALLAUTH_USER_ATTRIBUTES setting to token payload."""
-            # Implementation automatically includes user attributes from settings
-            # Note: 'role' is always included separately and should not be in JWT_ALLAUTH_USER_ATTRIBUTES
-
-        def set_user_permissions(self, user):
-            self.payload['permissions'] = user.permissions
-
-        @classmethod
-        def for_user(cls, user, request=None, enabled=True):
-            token = super().for_user(user)
-            token.set_user_attributes(user)
-            token.set_user_permissions(user)
-            return token

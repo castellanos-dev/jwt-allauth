@@ -26,22 +26,38 @@ class RefreshToken(DefaultRefreshToken):
     def set_user_attributes(self, user):
         """
         Add configurable user attributes to the token payload.
+        Expects settings.JWT_ALLAUTH_USER_ATTRIBUTES as a dict mapping
+        output claim names to dot-paths on the user object.
+        Example: {'organization_id': 'organization.id', 'area_id': 'area.id'}
         """
-        user_attributes = getattr(settings, 'JWT_ALLAUTH_USER_ATTRIBUTES', [])
+        configured_attributes = getattr(settings, 'JWT_ALLAUTH_USER_ATTRIBUTES', {})
 
-        # Validate configuration: final attribute names must be unique and must not
-        # collide with existing payload keys like 'role' which always exists.
-        final_names = [attr.split('.')[-1] for attr in user_attributes]
-        duplicates = sorted(set([name for name in final_names if final_names.count(name) > 1]))
+        # Accept legacy list format for backward compatibility but prefer dict.
+        # In legacy mode, the final attribute name is used as the claim key.
+        if isinstance(configured_attributes, list):
+            attribute_map = {
+                attr_path.split('.')[-1]: attr_path
+                for attr_path in configured_attributes
+            }
+        elif isinstance(configured_attributes, dict):
+            attribute_map = configured_attributes
+        else:
+            attribute_map = {}
+
+        # Validate configuration: output names must be unique and must not collide
+        # with reserved payload keys like 'role'.
+        output_names = list(attribute_map.keys())
+        duplicates = sorted(set([name for name in output_names if output_names.count(name) > 1]))
         reserved_conflicts = []
-        if 'role' in final_names:
+        if 'role' in output_names:
             reserved_conflicts.append('role')
         if duplicates or reserved_conflicts:
             conflict_list = sorted(set(duplicates + reserved_conflicts))
             raise ValueError(
                 f"Incompatible JWT_ALLAUTH_USER_ATTRIBUTES: duplicate or reserved attribute names {conflict_list}"
             )
-        for attr_path in user_attributes:
+
+        for output_name, attr_path in attribute_map.items():
             keys = attr_path.split('.')
             current_value = user
             missing = False
@@ -65,10 +81,8 @@ class RefreshToken(DefaultRefreshToken):
                     missing = True
                     break
 
-            if not missing:
-                final_name = keys[-1]
-                if final_name != 'role' and final_name not in self.payload and not callable(current_value):
-                    self.payload[final_name] = current_value
+            if not missing and output_name != 'role' and output_name not in self.payload and not callable(current_value):
+                self.payload[output_name] = current_value
 
     def set_user_role(self, user):
         self.payload['role'] = user.role

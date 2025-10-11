@@ -467,7 +467,7 @@ class TokenTests(TestsMixin):
         self.assertFalse(token_entry.is_tablet)
         self.assertFalse(token_entry.is_bot)
 
-    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES=['email', 'username'])
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES={'email': 'email', 'username': 'username'})
     def test_set_user_attributes_with_valid_user_attributes(self):
         """Verify that set_user_attributes correctly adds configured user attributes to token payload"""
         token = RefreshTokenClass()
@@ -483,7 +483,7 @@ class TokenTests(TestsMixin):
         self.assertEqual(token.payload['email'], 'test@example.com')
         self.assertEqual(token.payload['username'], 'testuser')
 
-    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES=['profile.role', 'profile.department.name'])
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES={'role': 'profile.role', 'name': 'profile.department.name'})
     def test_set_user_attributes_with_nested_attribute_paths(self):
         """Verify that set_user_attributes correctly handles nested attribute paths"""
         token = RefreshTokenClass()
@@ -503,7 +503,7 @@ class TokenTests(TestsMixin):
         with self.assertRaises(ValueError):
             token.set_user_attributes(user)
 
-    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES=['email', 'nonexistent_attr', 'profile.missing'])
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES={'email': 'email', 'nonexistent_attr': 'nonexistent_attr', 'missing': 'profile.missing'})
     def test_set_user_attributes_with_missing_attributes(self):
         """Verify that set_user_attributes handles missing or None attributes gracefully"""
         token = RefreshTokenClass()
@@ -519,7 +519,7 @@ class TokenTests(TestsMixin):
         self.assertNotIn('nonexistent_attr', token.payload)
         self.assertNotIn('missing', token.payload)
 
-    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES=['role', 'email'])
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES={'role': 'role', 'email': 'email'})
     def test_set_user_attributes_prevents_role_attribute_collision(self):
         """Verify that set_user_attributes does not overwrite existing 'role' attribute"""
         token = RefreshTokenClass()
@@ -534,7 +534,7 @@ class TokenTests(TestsMixin):
         with self.assertRaises(ValueError):
             token.set_user_attributes(user)
 
-    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES=['email', 'username', 'profile.title'])
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES={'email': 'email', 'username': 'username', 'title': 'profile.title'})
     def test_for_user_includes_user_attributes_in_token(self):
         """Verify that RefreshToken.for_user method calls set_user_attributes and includes user attributes"""
         # Use a real persisted user to satisfy whitelist serializer

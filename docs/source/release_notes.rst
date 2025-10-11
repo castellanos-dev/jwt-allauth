@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 1.1.1
+-------------
+
+Released: October 11, 2025
+
+Breaking Change
+~~~~~~~~~~~~~~~
+
+- ``JWT_ALLAUTH_USER_ATTRIBUTES`` now expects a dictionary mapping output claim names to user attribute paths (e.g., ``{"organization_id": "organization.id"}``) instead of a list of paths. This change prevents duplicate final attribute names (e.g., multiple ``id`` keys) in JWT payloads. The previous list format is still accepted for backward compatibility, but it is deprecated and may be removed in a future release.
+
 Version 1.1.0
 -------------
 
