@@ -503,7 +503,8 @@ class TokenTests(TestsMixin):
         with self.assertRaises(ValueError):
             token.set_user_attributes(user)
 
-    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES={'email': 'email', 'nonexistent_attr': 'nonexistent_attr', 'missing': 'profile.missing'})
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES={
+        'email': 'email', 'nonexistent_attr': 'nonexistent_attr', 'missing': 'profile.missing'})
     def test_set_user_attributes_with_missing_attributes(self):
         """Verify that set_user_attributes handles missing or None attributes gracefully"""
         token = RefreshTokenClass()
