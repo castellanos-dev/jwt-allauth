@@ -1,0 +1,71 @@
+location: bin.jwt_allauth
+purpose: CLI tool for creating and managing Django projects with JWT Allauth pre-configured
+dependencies:
+  internal: []
+  external:
+  - name: argparse
+    version: standard
+    purpose: Command-line argument parsing
+  - name: subprocess
+    version: standard
+    purpose: Running django-admin commands
+  - name: re
+    version: standard
+    purpose: Regular expressions for file content modification
+  - name: os
+    version: standard
+    purpose: File system operations and path handling
+structure:
+  classes: []
+  functions:
+  - name: main
+    signature: main()
+    purpose: Main entry point for the JWT Allauth CLI tool, handles command routing
+      and project creation workflow
+    parameters: []
+    returns:
+      type: int
+      description: Exit status code (0 for success, 1 for error)
+    raises:
+    - exception: Exception
+      description: Unexpected errors during project creation or file operations
+  - name: _modify_settings
+    signature: _modify_settings(settings_path, email_config)
+    purpose: Modifies Django settings.py file to include JWT Allauth configuration,
+      authentication backends, and optional email settings
+    parameters:
+    - name: settings_path
+      type: str
+    - name: email_config
+      type: bool
+    returns:
+      type: None
+      description: Modifies file in place
+    raises:
+    - exception: IOError
+      description: If settings file cannot be read or written
+  - name: _modify_urls
+    signature: _modify_urls(urls_path)
+    purpose: Modifies Django urls.py file to include JWT Allauth URL patterns and
+      ensure proper import statements
+    parameters:
+    - name: urls_path
+      type: str
+    returns:
+      type: None
+      description: Modifies file in place
+    raises:
+    - exception: IOError
+      description: If urls file cannot be read or written
+  globals: []
+examples:
+- language: bash
+  code: '# Create a new project with JWT Allauth
+
+    jwt-allauth startproject myproject --email True'
+- language: python
+  code: '# Typical usage from Python
+
+    import subprocess
+
+    result = subprocess.run([''jwt-allauth'', ''startproject'', ''myapp''], capture_output=True)'

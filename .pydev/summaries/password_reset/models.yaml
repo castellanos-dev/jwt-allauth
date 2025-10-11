@@ -1,0 +1,41 @@
+location: jwt_allauth.password_reset.models
+purpose: Defines a custom TokenUser subclass for password reset functionality that
+  extracts user ID from JWT tokens
+dependencies:
+  internal:
+  - path: jwt_allauth/constants.py
+    reason: Imports FOR_USER constant for token payload key
+  external:
+  - name: django
+    version: '>=3.0'
+    purpose: Uses cached_property decorator for performance optimization
+  - name: rest_framework_simplejwt
+    version: '>=5.0'
+    purpose: Extends TokenUser base class for JWT authentication
+structure:
+  classes:
+  - name: SetPasswordTokenUser
+    responsibility: Represents a user from JWT token specifically for password reset
+      operations, providing cached access to user ID
+    attributes: []
+    methods:
+    - name: id
+      signature: id()
+      description: Cached property that extracts and returns user ID from JWT token
+        payload using FOR_USER key
+      parameters: []
+      returns:
+        type: Union[int, str]
+        description: User ID extracted from token payload
+      raises:
+      - exception: KeyError
+        description: If FOR_USER key is not present in token payload
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# Usage in password reset flow
+
+    token_user = SetPasswordTokenUser(token_payload)
+
+    user_id = token_user.id  # Cached access to user ID'

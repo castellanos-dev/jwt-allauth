@@ -1,0 +1,88 @@
+location: password_change.serializers
+purpose: Django REST Framework serializer for handling password change operations
+  with optional old password validation and session management
+dependencies:
+  internal:
+  - path: jwt_allauth.tokens.models.py
+    reason: Uses RefreshTokenWhitelistModel to manage token revocation during password
+      change
+  external:
+  - name: django
+    version: '>=3.0'
+    purpose: Framework for web application, user authentication, and settings management
+  - name: django-rest-framework
+    version: '>=3.0'
+    purpose: API serialization and validation framework
+structure:
+  classes:
+  - name: PasswordChangeSerializer
+    responsibility: Validates and processes password change requests, handles old
+      password verification, and manages session/token cleanup
+    attributes:
+    - name: old_password_field_enabled
+      type: bool
+    - name: logout_on_password_change
+      type: bool
+    - name: request
+      type: HttpRequest
+    - name: user
+      type: User
+    - name: set_password_form
+      type: SetPasswordForm
+    - name: set_password_form_class
+      type: class
+    methods:
+    - name: __init__
+      signature: __init__(*args, **kwargs)
+      description: Initializes serializer with configuration from settings and context,
+        removes old_password field if disabled
+      parameters:
+      - name: args
+        type: Any
+      - name: kwargs
+        type: Any
+      returns:
+        type: None
+        description: Initialized serializer instance
+      raises: []
+    - name: validate_old_password
+      signature: validate_old_password(value)
+      description: Validates that the provided old password matches the user's current
+        password when old password field is enabled
+      parameters:
+      - name: value
+        type: str
+      returns:
+        type: str
+        description: Validated old password value
+      raises:
+      - exception: ValidationError
+        description: When old password is incorrect and validation is enabled
+    - name: validate
+      signature: validate(attrs)
+      description: Validates the complete password change data using Django's SetPasswordForm
+      parameters:
+      - name: attrs
+        type: dict
+      returns:
+        type: dict
+        description: Validated attributes
+      raises:
+      - exception: ValidationError
+        description: When password form validation fails
+    - name: save
+      signature: save()
+      description: Saves the new password and handles session management - either
+        revoking other tokens or updating session auth hash
+      parameters: []
+      returns:
+        type: None
+        description: Password change operation completed
+      raises: []
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: "# Typical usage in a Django REST Framework view\nserializer = PasswordChangeSerializer(data=request.data,\
+    \ context={'request': request})\nif serializer.is_valid():\n    serializer.save()\n\
+    \    return Response({'detail': 'Password changed successfully'})"

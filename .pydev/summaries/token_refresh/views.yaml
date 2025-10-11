@@ -1,0 +1,65 @@
+location: jwt_allauth.token_refresh.views
+purpose: Custom JWT token refresh view that handles refresh tokens via cookies or
+  request data based on configuration
+dependencies:
+  internal:
+  - path: token_refresh/serializers.py
+    reason: Uses TokenRefreshSerializer for token validation and refresh
+  - path: utils.py
+    reason: Uses get_user_agent decorator and user_agent_dict for request context
+  - path: constants.py
+    reason: Uses REFRESH_TOKEN_COOKIE constant for cookie name
+  external:
+  - name: django
+    version: '>=3.0'
+    purpose: Settings configuration and request handling
+  - name: djangorestframework
+    version: '>=3.0'
+    purpose: API view framework, request/response handling
+  - name: djangorestframework-simplejwt
+    version: '>=5.0'
+    purpose: Base token refresh view and JWT token handling
+structure:
+  classes:
+  - name: TokenRefreshView
+    responsibility: Handle JWT token refresh requests with configurable token storage
+      (cookie vs request body)
+    attributes:
+    - name: serializer_class
+      type: TokenRefreshSerializer
+    - name: throttle_classes
+      type: List[UserRateThrottle]
+    methods:
+    - name: post
+      signature: 'post(request: Request, *args, **kwargs)'
+      description: Process token refresh request, extract refresh token from cookie
+        or body based on settings, validate tokens, return new access token
+      parameters:
+      - name: request
+        type: Request
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: Response
+        description: HTTP response with new access token and optional refresh token
+      raises:
+      - exception: InvalidToken
+        description: When refresh token validation fails
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# Token refresh with cookie-based refresh token
+
+    response = TokenRefreshView().post(request)
+
+    # Returns: {''access'': ''new_jwt_token''} with refresh token set as HTTP-only
+    cookie'
+- language: python
+  code: '# Token refresh with body-based refresh token (when JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False)
+
+    response = TokenRefreshView().post(request_with_refresh_in_body)
+
+    # Returns: {''access'': ''new_jwt_token'', ''refresh'': ''new_refresh_token''}'

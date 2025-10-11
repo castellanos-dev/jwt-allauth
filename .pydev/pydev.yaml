@@ -1,0 +1,32 @@
+src_dir: jwt_allauth
+docs_dir: docs
+test_dirs:
+- tests
+test:
+  framework: script
+  command: python runtests.py
+  description: Tests use Django's test framework with unittest base. Tests are organized
+    in /tests directory with test_*.py naming pattern. Most test classes inherit from
+    TestsMixin which provides Django test client utilities. Tests cover various JWT
+    authentication endpoints including login, logout, registration, password reset,
+    and token management. Uses Django test settings and fixtures for database setup.
+  examples:
+  - "class PasswordChangeTests(TestsMixin):\n    def setUp(self):\n        self.init()\n\
+    \    def test_password_change_unauthorized(self):\n        resp = self.post(self.password_change_url,\
+    \ data={}, status_code=401)\n        self.assertEqual(resp['detail'], u'Authentication\
+    \ credentials were not provided.')"
+  - "class TestStartProject(unittest.TestCase):\n    def setUp(self):\n        self.test_dir\
+    \ = tempfile.mkdtemp()\n    def tearDown(self):\n        shutil.rmtree(self.test_dir)\n\
+    \    def test_modify_settings(self):\n        _modify_settings(settings_path,\
+    \ email_config=True)\n        self.assertIn(\"'rest_framework'\", content)"
+  - "class LoginTests(TestsMixin):\n    def setUp(self):\n        self.init()\n  \
+    \  def test_login_failed_empty_email_validation(self):\n        resp = self.post(self.login_url,\
+    \ data=payload, status_code=400)\n        self.assertEqual(resp['email'][0], u'This\
+    \ field may not be blank.')"
+  - "class EmailVerificationTests(TestsMixin):\n    def setUp(self):\n        self.init()\n\
+    \    def test_email_verification_no_key(self):\n        self.get(self.verify_email_url,\
+    \ status_code=404)"
+  - "class RegistrationTests(TestsMixin):\n    def setUp(self):\n        self.init()\n\
+    \    def test_registration_no_payload(self):\n        resp = self.post(self.register_url,\
+    \ data={}, status_code=400)\n        self.assertEqual(resp['email'][0], u'This\
+    \ field is required.')"

@@ -1,0 +1,50 @@
+location: user_details.serializers
+purpose: Defines Django REST Framework serializers for user model data representation,
+  specifically handling user details without password information
+dependencies:
+  external:
+  - name: django.contrib.auth
+    version: null
+    purpose: Access Django's user model through get_user_model() function
+  - name: rest_framework
+    version: null
+    purpose: Base classes and utilities for creating REST API serializers
+structure:
+  classes:
+  - name: UserDetailsSerializer
+    responsibility: Serialize user model data excluding password field, providing
+      read-only email field and writable first_name/last_name fields
+    attributes: []
+    methods: []
+    meta:
+      model: get_user_model()
+      fields:
+      - email
+      - first_name
+      - last_name
+      read_only_fields:
+      - email
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# Serializing user data
+
+    serializer = UserDetailsSerializer(user_instance)
+
+    data = serializer.data
+
+
+    # Deserializing user update data
+
+    serializer = UserDetailsSerializer(user_instance, data={''first_name'': ''John''})
+
+    serializer.is_valid()
+
+    serializer.save()'
+test_criteria:
+- Verify serializer includes only email, first_name, last_name fields
+- Test email field is read-only and cannot be modified
+- Validate first_name and last_name fields can be updated
+- Check serializer correctly handles user model instance serialization
+- Test validation rules for name fields (length, format if any)

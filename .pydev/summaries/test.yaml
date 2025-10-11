@@ -1,0 +1,330 @@
+location: jwt_allauth.tests.test_utils
+purpose: Provides testing utilities for JWT-authenticated Django applications, including
+  a custom test client with built-in JWT authentication support and a base test case
+  class with pre-configured user accounts and tokens
+dependencies:
+  internal:
+  - path: allauth.account.internal.userkit
+    reason: Access user_field utility for setting user attributes
+  - path: allauth.account.models
+    reason: Use EmailAddress model for email verification setup
+  - path: jwt_allauth.tokens.app_settings
+    reason: Import RefreshToken for JWT token generation
+  external:
+  - name: django.contrib.auth
+    purpose: Access get_user_model for user model reference
+  - name: django.test
+    purpose: Base TestCase and Client classes for testing framework
+structure:
+  classes:
+  - name: JAClient
+    responsibility: Custom Django test client that automatically handles JWT authentication
+      for HTTP requests
+    attributes:
+    - name: content_type
+      type: str
+    - name: ACCESS
+      type: str
+    - name: STAFF_ACCESS
+      type: str
+    methods:
+    - name: __init__
+      signature: __init__(token, staff_token, *args, **kwargs)
+      description: Initialize client with regular and staff JWT tokens
+      parameters:
+      - name: token
+        type: str
+      - name: staff_token
+        type: str
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: None
+        description: None
+      raises: []
+    - name: update_kwargs
+      signature: update_kwargs(access_token=None, default_auth=False, staff_auth=False,
+        **kwargs)
+      description: Add authentication headers and content type to request kwargs
+      parameters:
+      - name: access_token
+        type: str
+      - name: default_auth
+        type: bool
+      - name: staff_auth
+        type: bool
+      - name: kwargs
+        type: dict
+      returns:
+        type: dict
+        description: Updated kwargs with auth headers
+      raises: []
+    - name: post
+      signature: post(*args, access_token=None, **kwargs)
+      description: HTTP POST with optional JWT token injection
+      parameters:
+      - name: args
+        type: tuple
+      - name: access_token
+        type: str
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: auth_post
+      signature: auth_post(*args, **kwargs)
+      description: HTTP POST with default user authentication
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: get
+      signature: get(*args, access_token=None, **kwargs)
+      description: HTTP GET with optional JWT token injection
+      parameters:
+      - name: args
+        type: tuple
+      - name: access_token
+        type: str
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: auth_get
+      signature: auth_get(*args, **kwargs)
+      description: HTTP GET with default user authentication
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: patch
+      signature: patch(*args, access_token=None, **kwargs)
+      description: HTTP PATCH with optional JWT token injection
+      parameters:
+      - name: args
+        type: tuple
+      - name: access_token
+        type: str
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: auth_patch
+      signature: auth_patch(*args, **kwargs)
+      description: HTTP PATCH with default user authentication
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: put
+      signature: put(*args, access_token=None, **kwargs)
+      description: HTTP PUT with optional JWT token injection
+      parameters:
+      - name: args
+        type: tuple
+      - name: access_token
+        type: str
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: auth_put
+      signature: auth_put(*args, **kwargs)
+      description: HTTP PUT with default user authentication
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: delete
+      signature: delete(*args, access_token=None, **kwargs)
+      description: HTTP DELETE with optional JWT token injection
+      parameters:
+      - name: args
+        type: tuple
+      - name: access_token
+        type: str
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: auth_delete
+      signature: auth_delete(*args, **kwargs)
+      description: HTTP DELETE with default user authentication
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: staff_post
+      signature: staff_post(*args, **kwargs)
+      description: HTTP POST with staff user authentication
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: staff_get
+      signature: staff_get(*args, **kwargs)
+      description: HTTP GET with staff user authentication
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: staff_patch
+      signature: staff_patch(*args, **kwargs)
+      description: HTTP PATCH with staff user authentication
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: staff_put
+      signature: staff_put(*args, **kwargs)
+      description: HTTP PUT with staff user authentication
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+    - name: staff_delete
+      signature: staff_delete(*args, **kwargs)
+      description: HTTP DELETE with staff user authentication
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: HttpResponse
+        description: Django HTTP response
+      raises: []
+  - name: JATestCase
+    responsibility: Base test case class providing pre-configured JWT-authenticated
+      testing environment
+    attributes:
+    - name: EMAIL
+      type: str
+    - name: PASS
+      type: str
+    - name: FIRST_NAME
+      type: str
+    - name: LAST_NAME
+      type: str
+    - name: USER
+      type: User
+    - name: LOGIN_PAYLOAD
+      type: dict
+    - name: STAFF_EMAIL
+      type: str
+    - name: STAFF_PASS
+      type: str
+    - name: STAFF_FIRST_NAME
+      type: str
+    - name: STAFF_LAST_NAME
+      type: str
+    - name: STAFF_USER
+      type: User
+    - name: TOKEN
+      type: RefreshToken
+    - name: ACCESS
+      type: str
+    - name: STAFF_TOKEN
+      type: RefreshToken
+    - name: STAFF_ACCESS
+      type: str
+    methods:
+    - name: setUp
+      signature: setUp()
+      description: Create and configure regular and staff users with JWT tokens for
+        testing
+      parameters: []
+      returns:
+        type: None
+        description: None
+      raises: []
+    - name: ja_client
+      signature: ja_client()
+      description: Property providing pre-configured JAClient instance with authentication
+        tokens
+      parameters: []
+      returns:
+        type: JAClient
+        description: Configured test client
+      raises: []
+    - name: authenticate
+      signature: authenticate(user)
+      description: Update access token for a specific user
+      parameters:
+      - name: user
+        type: User
+      returns:
+        type: None
+        description: None
+      raises: []
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: "# Example test case using JATestCase\nclass MyEndpointTest(JATestCase):\n\
+    \    def test_authenticated_endpoint(self):\n        response = self.ja_client.auth_get('/api/protected/')\n\
+    \        self.assertEqual(response.status_code, 200)\n    \n    def test_staff_only_endpoint(self):\n\
+    \        response = self.ja_client.staff_get('/api/admin/')\n        self.assertEqual(response.status_code,\
+    \ 200)"
+- language: python
+  code: "# Example using custom token\nclass CustomTokenTest(JATestCase):\n    def\
+    \ test_custom_token(self):\n        custom_token = 'custom.jwt.token'\n      \
+    \  response = self.ja_client.get('/api/data/', access_token=custom_token)\n  \
+    \      self.assertEqual(response.status_code, 200)"

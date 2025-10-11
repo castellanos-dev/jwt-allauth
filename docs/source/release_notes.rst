@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 1.1.0
+-------------
+
+Released: October 7, 2025
+
+New Features
+~~~~~~~~~~~~
+
+- Added support for including additional user attributes in refresh tokens via the ``JWT_ALLAUTH_USER_ATTRIBUTES`` setting, allowing flexible configuration of user data included in JWT payloads while maintaining the existing role assignment logic.
+
+Bug Fixes
+~~~~~~~~~
+
+- Fixed API endpoints that incorrectly required refresh token in request payload when ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` was enabled, now properly extracting refresh tokens from cookies when configured.
+
+- Fixed a bug that caused migrations not to run correctly in some situations.
+
 Version 1.0.3
 -------------
 
@@ -19,6 +36,7 @@ Bug Fixes
 ~~~~~~~~~
 
 - Improved security for token refresh operations
+- Fixed a bug that caused migrations not to run correctly in some situations.
 
 
 Version 1.0.2

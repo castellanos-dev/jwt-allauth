@@ -1,0 +1,63 @@
+location: jwt_allauth.registration
+purpose: Provides user registration functionality with JWT token generation, email
+  verification, and account creation capabilities
+structure:
+  tree:
+  - registration/
+  - '├── app_settings.py # Configures JWT AllAuth registration permission classes'
+  - '├── serializers.py # Handles user registration data validation and creation'
+  - '├── urls.py # Defines URL routing for registration and email verification'
+  - '└── views.py # Implements user registration views with JWT token generation'
+relationships:
+  dependencies:
+    internal:
+    - path: jwt_allauth.utils
+      reason: Utility functions for imports and decorators
+    - path: jwt_allauth.tokens
+      reason: JWT token models and settings
+    - path: jwt_allauth.constants
+      reason: Application constants and redirect URLs
+    external:
+    - name: django
+      version: '>=3.2'
+      purpose: Web framework and settings management
+    - name: django-rest-framework
+      version: '>=3.12'
+      purpose: API serialization and view implementation
+    - name: allauth
+      version: null
+      purpose: User authentication and email verification
+interfaces:
+  classes:
+  - name: jwt_allauth.registration.views.RegisterView
+    description: Handles user registration requests with JWT token generation
+    methods:
+    - name: create
+      signature: create(request, *args, **kwargs) -> Response
+      description: Processes registration POST requests
+    - name: perform_create
+      signature: perform_create(serializer) -> RefreshToken
+      description: Saves user and generates JWT tokens
+    - name: get_response_data
+      signature: get_response_data(token) -> Dict
+      description: Generates response data based on email verification setting
+  - name: jwt_allauth.registration.serializers.RegisterSerializer
+    description: Validates and creates new user accounts with email verification
+    methods:
+    - name: validate
+      signature: validate(data) -> dict
+      description: Validates password matching and registration data
+    - name: save
+      signature: save(request) -> User
+      description: Creates user account atomically with email setup
+  functions:
+  - name: jwt_allauth.registration.app_settings.register_permission_classes
+    signature: register_permission_classes() -> tuple
+    description: Dynamically builds permission classes tuple for registration endpoints
+workflows:
+- User submits registration data → Validate credentials → Create user account → Generate
+  JWT tokens → Setup email verification → Return tokens or verification message
+- 'Email verification flow: Send verification email → User clicks link → Verify email
+  key → Redirect to success page'
+notes: Uses atomic transactions for user creation, supports custom permission classes
+  via Django settings, and handles email verification based on allauth configuration

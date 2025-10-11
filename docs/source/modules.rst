@@ -20,6 +20,11 @@
    password_reset
 
 .. toctree::
+   :maxdepth: 1
+
+   refresh_token
+
+.. toctree::
    :maxdepth: 2
 
    configuration

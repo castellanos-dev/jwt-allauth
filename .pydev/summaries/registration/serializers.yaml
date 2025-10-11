@@ -1,0 +1,145 @@
+location: registration.serializers
+purpose: Provides Django REST Framework serializers for user registration functionality,
+  handling validation and creation of new user accounts with email verification support
+dependencies:
+  internal: []
+  external:
+  - name: allauth
+    version: null
+    purpose: User authentication and account management, including email validation
+      and user setup
+  - name: django
+    version: null
+    purpose: Web framework for database operations, request handling, and security
+      utilities
+  - name: django-rest-framework
+    version: null
+    purpose: API serialization and validation framework
+structure:
+  classes:
+  - name: RegisterSerializer
+    responsibility: Handles user registration data validation and user creation with
+      atomic transaction support
+    attributes:
+    - name: _has_phone_field
+      type: bool
+    methods:
+    - name: validate_username
+      signature: validate_username(username)
+      description: Cleans and validates username using allauth adapter
+      parameters:
+      - name: username
+        type: str
+      returns:
+        type: str
+        description: Cleaned username
+      raises:
+      - exception: ValidationError
+        description: If username validation fails
+    - name: validate_email
+      signature: validate_email(email)
+      description: Validates email uniqueness and cleans email address, removes unverified
+        duplicate registrations
+      parameters:
+      - name: email
+        type: str
+      returns:
+        type: str
+        description: Validated email address
+      raises:
+      - exception: ValidationError
+        description: If email is already registered and verified
+    - name: validate_password1
+      signature: validate_password1(password)
+      description: Validates password strength using allauth adapter
+      parameters:
+      - name: password
+        type: str
+      returns:
+        type: str
+        description: Validated password
+      raises:
+      - exception: ValidationError
+        description: If password validation fails
+    - name: validate_first_name
+      signature: validate_first_name(first_name)
+      description: Validates first name format (letters and spaces only) and capitalizes
+        each word
+      parameters:
+      - name: first_name
+        type: str
+      returns:
+        type: str
+        description: Capitalized and formatted first name
+      raises:
+      - exception: ValidationError
+        description: If name contains invalid characters
+    - name: validate_last_name
+      signature: validate_last_name(last_name)
+      description: Validates last name format (letters and spaces only) and capitalizes
+        each word
+      parameters:
+      - name: last_name
+        type: str
+      returns:
+        type: str
+        description: Capitalized and formatted last name
+      raises:
+      - exception: ValidationError
+        description: If name contains invalid characters
+    - name: validate
+      signature: validate(data)
+      description: Validates that password1 and password2 match using constant-time
+        comparison
+      parameters:
+      - name: data
+        type: dict
+      returns:
+        type: dict
+        description: Validated data
+      raises:
+      - exception: ValidationError
+        description: If passwords do not match
+    - name: custom_signup
+      signature: custom_signup(request, user)
+      description: Hook for custom signup logic (currently empty implementation)
+      parameters:
+      - name: request
+        type: HttpRequest
+      - name: user
+        type: User
+      returns:
+        type: None
+        description: No return value
+      raises: []
+    - name: get_cleaned_data
+      signature: get_cleaned_data()
+      description: Returns cleaned and validated registration data as dictionary
+      parameters: []
+      returns:
+        type: dict
+        description: Dictionary containing username, password1, email, first_name,
+          last_name
+      raises: []
+    - name: save
+      signature: save(request)
+      description: Creates new user account atomically, sets up email verification
+        based on settings
+      parameters:
+      - name: request
+        type: HttpRequest
+      returns:
+        type: User
+        description: Newly created user instance
+      raises:
+      - exception: Exception
+        description: If user creation or email setup fails
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: "# User registration example\nserializer = RegisterSerializer(data={\n   \
+    \ 'email': 'user@example.com',\n    'password1': 'securepassword123',\n    'password2':\
+    \ 'securepassword123',\n    'first_name': 'john',\n    'last_name': 'doe'\n})\n\
+    if serializer.is_valid():\n    user = serializer.save(request)\n    # User created\
+    \ with email verification setup"

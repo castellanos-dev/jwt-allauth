@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 */__pycache__/*
+**/__pycache__/**
 
 # C extensions
 *.so
@@ -106,7 +107,15 @@ venv.bak/
 .mypy_cache/
 
 # migrations
-*/migrations/*
+**/migrations/*
+!**/migrations/__init__.py
 
 .idea/*
+.idea/
+.vscode/
+.vscode/*
+testing.env
 /docs/build/
+
+.DS_Store
+**/.DS_Store

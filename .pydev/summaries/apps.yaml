@@ -1,0 +1,56 @@
+location: jwt_allauth.apps
+purpose: Django AppConfig for JWT Allauth integration that configures Django settings
+  for JWT authentication with allauth, enforces security constraints, and sets up
+  required middleware and authentication backends
+dependencies:
+  internal:
+  - path: adapter.py
+    reason: Used as the default ACCOUNT_ADAPTER setting
+  external:
+  - name: django
+    version: ''
+    purpose: Core Django framework for app configuration and settings management
+  - name: allauth
+    version: ''
+    purpose: Authentication and account management integration
+  - name: rest_framework_simplejwt
+    version: ''
+    purpose: JWT token authentication implementation
+structure:
+  classes:
+  - name: JWTAllauthAppConfig
+    responsibility: Configures Django application settings for JWT-allauth integration
+      during app startup
+    attributes:
+    - name: name
+      type: str
+    - name: verbose_name
+      type: str
+    - name: default_auto_field
+      type: str
+    methods:
+    - name: ready
+      signature: ready()
+      description: Called when Django starts, configures all required settings for
+        JWT-allauth integration including security constraints, authentication backends,
+        and middleware
+      parameters: []
+      returns:
+        type: None
+        description: No return value
+      raises:
+      - exception: ValueError
+        description: When ROTATE_REFRESH_TOKENS is False or BLACKLIST_AFTER_ROTATION
+          is True
+      - exception: ValueError
+        description: When ACCOUNT_LOGIN_METHODS is not set to email-only
+      - exception: ValueError
+        description: When ACCOUNT_SIGNUP_FIELDS does not match expected email/password
+          configuration
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: '# This app config is automatically loaded by Django
+
+    # It ensures proper JWT-allauth configuration at startup'

@@ -1,0 +1,99 @@
+location: password_reset.serializers
+purpose: Provides serializers for password reset functionality including email validation,
+  reset token generation, and password setting without old password verification
+dependencies:
+  internal:
+  - path: jwt_allauth.constants
+    reason: Import PASS_RESET constant for token purpose
+  - path: jwt_allauth.password_change.serializers
+    reason: Extend PasswordChangeSerializer for SetPasswordSerializer
+  - path: jwt_allauth.tokens.tokens
+    reason: Use GenericToken for password reset token generation
+  - path: jwt_allauth.utils
+    reason: Use get_template_path for email template configuration
+  external:
+  - name: allauth.account
+    version: null
+    purpose: Email validation and adapter utilities
+  - name: django
+    version: null
+    purpose: Framework core, settings, and password reset form
+  - name: rest_framework
+    version: null
+    purpose: Serializer base classes and validation
+structure:
+  classes:
+  - name: PasswordResetSerializer
+    responsibility: Handle password reset email requests with email validation and
+      reset token generation
+    attributes:
+    - name: email
+      type: EmailField
+    - name: password_reset_form_class
+      type: PasswordResetForm
+    methods:
+    - name: get_email_options
+      signature: get_email_options()
+      description: Override this method to customize email sending options
+      parameters: []
+      returns:
+        type: dict
+        description: Dictionary of email options
+      raises: []
+    - name: validate_email
+      signature: validate_email(value)
+      description: Validate email format and ensure it exists in the system using
+        PasswordResetForm
+      parameters:
+      - name: value
+        type: str
+      returns:
+        type: str
+        description: Cleaned and validated email address
+      raises:
+      - exception: ValidationError
+        description: When email validation fails
+    - name: save
+      signature: save()
+      description: Generate and send password reset email only to verified email addresses
+      parameters: []
+      returns:
+        type: None
+        description: No return value
+      raises: []
+  - name: SetPasswordSerializer
+    responsibility: Handle password setting without old password verification, extending
+      password change functionality
+    attributes: []
+    methods:
+    - name: __init__
+      signature: __init__(*args, **kwargs)
+      description: Initialize serializer by removing old_password field and disabling
+        old password validation
+      parameters:
+      - name: args
+        type: tuple
+      - name: kwargs
+        type: dict
+      returns:
+        type: None
+        description: No return value
+      raises: []
+    - name: validate_old_password
+      signature: validate_old_password(value)
+      description: Override to bypass old password validation (no-op method)
+      parameters:
+      - name: value
+        type: str
+      returns:
+        type: None
+        description: No return value
+      raises: []
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: "# Password reset request\nserializer = PasswordResetSerializer(data={'email':\
+    \ 'user@example.com'}, context={'request': request})\nif serializer.is_valid():\n\
+    \    serializer.save()\n\n# Set new password\nserializer = SetPasswordSerializer(data={'new_password':\
+    \ 'new_secure_password'})\nif serializer.is_valid():\n    serializer.save()"

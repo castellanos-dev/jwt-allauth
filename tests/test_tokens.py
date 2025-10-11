@@ -1,4 +1,5 @@
 import time
+from unittest.mock import Mock
 from datetime import datetime, timedelta
 
 from allauth.account.models import EmailAddress
@@ -6,6 +7,7 @@ from django.test import override_settings
 
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from jwt_allauth.tokens.tokens import RefreshToken
+from jwt_allauth.tokens.tokens import RefreshToken as RefreshTokenClass
 from .mixins import TestsMixin
 from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
 
@@ -464,3 +466,92 @@ class TokenTests(TestsMixin):
         self.assertTrue(token_entry.is_mobile)
         self.assertFalse(token_entry.is_tablet)
         self.assertFalse(token_entry.is_bot)
+
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES=['email', 'username'])
+    def test_set_user_attributes_with_valid_user_attributes(self):
+        """Verify that set_user_attributes correctly adds configured user attributes to token payload"""
+        token = RefreshTokenClass()
+
+        # Create a mock user with the attributes we want to test
+        user = Mock()
+        user.email = 'test@example.com'
+        user.username = 'testuser'
+
+        token.set_user_attributes(user)
+
+        # Verify the attributes are added to the payload
+        self.assertEqual(token.payload['email'], 'test@example.com')
+        self.assertEqual(token.payload['username'], 'testuser')
+
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES=['profile.role', 'profile.department.name'])
+    def test_set_user_attributes_with_nested_attribute_paths(self):
+        """Verify that set_user_attributes correctly handles nested attribute paths"""
+        token = RefreshTokenClass()
+
+        # Create nested mock objects
+        department = Mock()
+        department.name = 'Engineering'
+
+        profile = Mock()
+        profile.role = 'admin'
+        profile.department = department
+
+        user = Mock()
+        user.profile = profile
+
+        # Including a final attribute name 'role' is incompatible and should raise
+        with self.assertRaises(ValueError):
+            token.set_user_attributes(user)
+
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES=['email', 'nonexistent_attr', 'profile.missing'])
+    def test_set_user_attributes_with_missing_attributes(self):
+        """Verify that set_user_attributes handles missing or None attributes gracefully"""
+        token = RefreshTokenClass()
+
+        user = Mock()
+        user.email = 'test@example.com'
+        # nonexistent_attr and profile.missing are not set, so they should be None
+
+        token.set_user_attributes(user)
+
+        # Only the existing attribute should be in the payload
+        self.assertEqual(token.payload['email'], 'test@example.com')
+        self.assertNotIn('nonexistent_attr', token.payload)
+        self.assertNotIn('missing', token.payload)
+
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES=['role', 'email'])
+    def test_set_user_attributes_prevents_role_attribute_collision(self):
+        """Verify that set_user_attributes does not overwrite existing 'role' attribute"""
+        token = RefreshTokenClass()
+
+        # First set the role via set_user_role (as done in for_user)
+        user = Mock()
+        user.role = 'admin'
+        user.email = 'test@example.com'
+
+        token.set_user_role(user)
+        # Configuration including 'role' must be rejected
+        with self.assertRaises(ValueError):
+            token.set_user_attributes(user)
+
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES=['email', 'username', 'profile.title'])
+    def test_for_user_includes_user_attributes_in_token(self):
+        """Verify that RefreshToken.for_user method calls set_user_attributes and includes user attributes"""
+        # Use a real persisted user to satisfy whitelist serializer
+        user = self.USER
+        user.email = 'test@example.com'
+        user.username = 'testuser'
+        user.save()
+
+        # Attach a profile-like object with title
+        profile = Mock()
+        profile.title = 'Developer'
+        user.profile = profile
+
+        # Generate token using for_user
+        token = RefreshTokenClass.for_user(user)
+
+        # Verify user attributes are included in the payload
+        self.assertEqual(token.payload['email'], 'test@example.com')
+        self.assertEqual(token.payload['username'], 'testuser')
+        self.assertEqual(token.payload['title'], 'Developer')

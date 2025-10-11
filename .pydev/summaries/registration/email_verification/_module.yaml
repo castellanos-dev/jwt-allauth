@@ -1,0 +1,53 @@
+location: jwt_allauth.registration.email_verification
+purpose: Handles email verification workflow including validation of verification
+  keys and confirmation of email addresses via API endpoints
+structure:
+  tree:
+  - registration/
+  - '├── email_verification/ # Email verification API endpoints and validation'
+  - '│   ├── serializers.py # Validates email verification key input from API requests'
+  - '│   └── views.py # Handles email verification confirmation and redirects'
+relationships:
+  dependencies:
+    internal:
+    - path: jwt_allauth/constants.py
+      reason: Uses EMAIL_VERIFIED_REDIRECT constant for redirect configuration
+    - path: jwt_allauth/tokens/models.py
+      reason: Uses RefreshTokenWhitelistModel to enable refresh tokens for verified
+        users
+    external:
+    - name: allauth
+      version: '>=0.42.0'
+      purpose: Extends ConfirmEmailView for email confirmation functionality
+    - name: django
+      version: '>=3.2'
+      purpose: HTTP response handling, URL reversing, and settings access
+    - name: djangorestframework
+      version: '>=3.12'
+      purpose: APIView base class, serializer classes, and permissions
+interfaces:
+  classes:
+  - name: jwt_allauth.registration.email_verification.serializers.VerifyEmailSerializer
+    description: Validates and serializes email verification key input from API requests
+    methods: []
+  - name: jwt_allauth.registration.email_verification.views.VerifyEmailView
+    description: Email verification endpoint that confirms email addresses, enables
+      refresh tokens, and redirects users
+    methods:
+    - name: get_serializer
+      signature: get_serializer(*args, **kwargs) -> VerifyEmailSerializer
+      description: Returns VerifyEmailSerializer instance for email verification validation
+    - name: get
+      signature: 'get(request: HttpRequest, *args, **kwargs) -> HttpResponseRedirect'
+      description: Handles GET requests for email verification - enables refresh token,
+        confirms email, and redirects
+    - name: post
+      signature: 'post(request: HttpRequest, *args, **kwargs) -> HttpResponseNotAllowed'
+      description: Rejects POST requests with HTTP 405 Method Not Allowed
+  functions: []
+workflows:
+- User receives verification email with unique key → Clicks verification link → GET
+  request to VerifyEmailView → Key validation via VerifyEmailSerializer → Email confirmation
+  and refresh token enabling → Redirect to success page
+notes: Only GET method is allowed for email verification endpoint; POST requests are
+  explicitly rejected with HTTP 405

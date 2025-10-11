@@ -1,0 +1,140 @@
+location: jwt_allauth.utils
+purpose: Utility functions and decorators for JWT authentication integration with
+  django-allauth, providing authentication helpers, request metadata extraction, and
+  template configuration
+dependencies:
+  internal:
+  - path: constants.py
+    reason: Import TEMPLATE_PATHS constant for template configuration
+  - path: exceptions.py
+    reason: Import NotVerifiedEmail and IncorrectCredentials exceptions
+  external:
+  - name: allauth
+    version: ''
+    purpose: Authentication adapter and email verification models
+  - name: django
+    version: ''
+    purpose: Framework core, user model, settings, and decorators
+  - name: django-user-agents
+    version: ''
+    purpose: User agent parsing and device detection
+  - name: rest_framework_simplejwt
+    version: ''
+    purpose: JWT token validation exceptions
+  - name: six
+    version: ''
+    purpose: Python 2/3 compatibility for string types
+structure:
+  classes: []
+  functions:
+  - name: import_callable
+    signature: import_callable(path_or_callable)
+    purpose: Convert Python path string to callable object or return input if already
+      callable
+    parameters:
+    - name: path_or_callable
+      type: str|callable
+    returns:
+      type: callable
+      description: Resolved callable object
+    raises:
+    - exception: AssertionError
+      description: If input is string but not valid Python path
+  - name: get_client_ip
+    signature: get_client_ip(request)
+    purpose: Extract client IP address from request metadata with X-Forwarded-For
+      header priority
+    parameters:
+    - name: request
+      type: HttpRequest
+    returns:
+      type: str
+      description: Client IP address or None
+    raises: []
+  - name: get_user_agent
+    signature: get_user_agent(f)
+    purpose: Decorator that adds user agent and IP information to request object based
+      on settings
+    parameters:
+    - name: f
+      type: function
+    returns:
+      type: function
+      description: Decorated view method
+    raises: []
+  - name: user_agent_dict
+    signature: user_agent_dict(request)
+    purpose: Generate detailed dictionary of user agent information including browser,
+      OS, device, and network details
+    parameters:
+    - name: request
+      type: HttpRequest
+    returns:
+      type: dict
+      description: Structured user agent details
+    raises: []
+  - name: get_template_path
+    signature: get_template_path(constant, default)
+    purpose: Get template path from settings using TEMPLATE_PATHS configuration with
+      fallback default
+    parameters:
+    - name: constant
+      type: str
+    - name: default
+      type: str
+    returns:
+      type: str
+      description: Configured template path or default
+    raises: []
+  - name: is_email_verified
+    signature: is_email_verified(user, raise_exception=False)
+    purpose: Check if user has verified email address with optional exception raising
+    parameters:
+    - name: user
+      type: User
+    - name: raise_exception
+      type: bool
+    returns:
+      type: bool
+      description: True if verified, False otherwise
+    raises:
+    - exception: NotVerifiedEmail
+      description: If raise_exception=True and email is unverified
+  - name: allauth_authenticate
+    signature: allauth_authenticate(**kwargs)
+    purpose: Authenticate user using allauth's adapter with email verification enforcement
+    parameters:
+    - name: kwargs
+      type: dict
+    returns:
+      type: User
+      description: Authenticated user object
+    raises:
+    - exception: IncorrectCredentials
+      description: If authentication fails
+    - exception: NotVerifiedEmail
+      description: If email is not verified
+  - name: load_user
+    signature: load_user(f)
+    purpose: Decorator that loads complete user object from database for stateless
+      JWT authentication
+    parameters:
+    - name: f
+      type: function
+    returns:
+      type: function
+      description: Decorated view method
+    raises:
+    - exception: InvalidToken
+      description: If user does not exist in database
+  globals:
+  - name: sensitive_post_parameters_m
+    value: method_decorator(sensitive_post_parameters(...))
+    purpose: Pre-configured decorator for protecting sensitive password fields in
+      POST requests
+examples:
+- language: python
+  code: "# Authenticate user with allauth integration\nuser = allauth_authenticate(email='user@example.com',\
+    \ password='password')\n\n# Check email verification status\nif is_email_verified(user):\n\
+    \    # Proceed with verified user\n    pass\n\n# Get user agent details for logging\n\
+    agent_info = user_agent_dict(request)"

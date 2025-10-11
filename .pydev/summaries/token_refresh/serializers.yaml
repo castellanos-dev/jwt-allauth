@@ -1,0 +1,54 @@
+location: token_refresh.serializers
+purpose: Handles JWT token refresh operations with security validations including
+  whitelist checking and session management
+dependencies:
+  internal:
+  - path: jwt_allauth.tokens.app_settings.py
+    reason: Uses RefreshToken class for token operations
+  - path: jwt_allauth.tokens.models.py
+    reason: Uses RefreshTokenWhitelistModel for token validation
+  - path: jwt_allauth.tokens.serializers.py
+    reason: Uses RefreshTokenWhitelistSerializer for saving refreshed tokens
+  - path: jwt_allauth.utils.py
+    reason: Uses is_email_verified for user validation
+  external:
+  - name: rest_framework
+    version: 3.x
+    purpose: Base serializer functionality
+  - name: rest_framework_simplejwt
+    version: 5.x
+    purpose: InvalidToken exception for authentication errors
+structure:
+  classes:
+  - name: TokenRefreshSerializer
+    responsibility: Validates refresh tokens, generates new access/refresh tokens,
+      and manages token whitelist
+    attributes:
+    - name: refresh
+      type: CharField
+    - name: access
+      type: CharField
+    - name: token_class
+      type: RefreshToken
+    methods:
+    - name: validate
+      signature: 'validate(attrs: Dict[str, Any])'
+      description: Validates refresh token against whitelist, generates new tokens,
+        updates whitelist
+      parameters:
+      - name: attrs
+        type: Dict[str, Any]
+      returns:
+        type: Dict[str, str]
+        description: New access and refresh tokens
+      raises:
+      - exception: InvalidToken
+        description: When token is not in whitelist or user email not verified
+  functions: []
+  globals: []
+examples:
+- language: python
+  code: "# Token refresh usage\nserializer = TokenRefreshSerializer(data={'refresh':\
+    \ 'old_refresh_token'}, context={'user_agent': 'Mozilla/5.0'})\nif serializer.is_valid():\n\
+    \    new_tokens = serializer.validated_data  # Contains new access and refresh\
+    \ tokens"
