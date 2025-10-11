@@ -14,6 +14,8 @@ New Features
 Bug Fixes
 ~~~~~~~~~
 
+- Fixed API endpoints that incorrectly required refresh token in request payload when ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` was enabled, now properly extracting refresh tokens from cookies when configured.
+
 - Fixed a bug that caused migrations not to run correctly in some situations.
 
 Version 1.0.3
@@ -34,6 +36,7 @@ Bug Fixes
 ~~~~~~~~~
 
 - Improved security for token refresh operations
+- Fixed a bug that caused migrations not to run correctly in some situations.
 
 
 Version 1.0.2

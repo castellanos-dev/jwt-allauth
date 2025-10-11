@@ -8,12 +8,12 @@
     "mtime": 1743780683
   },
   "docs/source/configuration.settings_py.rst": {
-    "size": 2638,
-    "mtime": 1759772009
+    "size": 2934,
+    "mtime": 1759869100
   },
   "docs/source/refresh_token.rst": {
-    "size": 2429,
-    "mtime": 1759863145
+    "size": 3015,
+    "mtime": 1759869100
   },
   "docs/source/api_endpoints.rst": {
     "size": 3097,
@@ -25,7 +25,7 @@
   },
   "docs/source/configuration.rst": {
     "size": 145,
-    "mtime": 1757861713
+    "mtime": 1759869100
   },
   "docs/source/configuration.user_model.rst": {
     "size": 4687,
@@ -49,7 +49,7 @@
   },
   "docs/source/modules.rst": {
     "size": 466,
-    "mtime": 1757861686
+    "mtime": 1759869100
   },
   "docs/source/jwt_allauth.user_details.rst": {
     "size": 410,
