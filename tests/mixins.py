@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TransactionTestCase
 from django.test.client import Client, MULTIPART_CONTENT
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
 from django.utils.encoding import force_str
 from rest_framework import permissions
 from rest_framework import status
@@ -108,10 +108,16 @@ class TestsMixin(TransactionTestCase):
         self.logout_url = reverse('rest_logout')
         self.logout_all_url = reverse('rest_logout_all')
         self.password_change_url = reverse('rest_password_change')
-        self.register_url = reverse('rest_register')
+        try:
+            self.register_url = reverse('rest_register')
+        except NoReverseMatch:
+            self.register_url = None
         self.password_reset_url = reverse('rest_password_reset')
         self.user_url = reverse('rest_user_details')
-        self.verify_email_url = reverse('account_confirm_email', args=['fake_key']).replace('fake_key/', '')
+        try:
+            self.verify_email_url = reverse('account_confirm_email', args=['fake_key']).replace('fake_key/', '')
+        except NoReverseMatch:
+            self.verify_email_url = None
         self.refresh_url = reverse('token_refresh')
         # self.fb_login_url = reverse('fb_login')
         # self.tw_login_url = reverse('tw_login')

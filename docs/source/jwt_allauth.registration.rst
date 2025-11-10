@@ -8,6 +8,7 @@ Subpackages
    :maxdepth: 2
 
    jwt_allauth.registration.email_verification
+   jwt_allauth.registration.admin_managed
 
 Submodules
 ----------

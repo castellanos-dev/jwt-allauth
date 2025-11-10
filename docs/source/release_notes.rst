@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 1.2.0
+-------------
+
+Released: November 10, 2025
+
+New Features
+~~~~~~~~~~~~
+
+- **Admin-Managed User Registration**: New registration flow controlled via ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` setting. When enabled:
+    - Self-registration endpoint is disabled
+    - Only users with allowed roles (configurable via ``JWT_ALLAUTH_REGISTRATION_ALLOWED_ROLES``) can register new users
+    - New ``/user-register/`` endpoint for admin registration
+    - Invited users set their own password via email verification link before gaining access
+    - No authentication tokens issued during registration; one-time password setup token issued after email verification
+
 Version 1.1.1
 -------------
 

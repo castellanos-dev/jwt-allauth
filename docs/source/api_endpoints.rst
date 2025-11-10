@@ -101,12 +101,33 @@ Registration
     - last_name
 
   Reverse name: rest_register
+.. note:: Disabled when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True`` (the open registration endpoint is removed in admin-managed mode).
+
+- **/registration/user-register/** (POST) ``[Admin role]``
+
+    - email
+    - role
+    - first_name (optional)
+    - last_name (optional)
+
+  Reverse name: rest_user_register
+
+.. note:: Enabled when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. Keeps the default ``/registration/`` endpoint unchanged unless you enable this setting. This endpoint returns 201 with an empty body and sends a verification email to the invited user.
 
 - **/registration/verification/<str:key>/** (GET)
 
 .. note:: Disabled when ``EMAIL_VERIFICATION = False``.
 
   Reverse name: account_confirm_email
+
+- **/registration/set-password/** (POST) ``[Cookie]``
+
+    - new_password1
+    - new_password2
+
+  Reverse name: rest_set_password
+
+.. note:: Only available when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. This endpoint is reached after the invited user clicks the verification link. The GET verification drops a one-time access token in the ``set_password_access_token`` cookie and redirects to the UI configured by ``PASSWORD_SET_REDIRECT``. Throttled with ``UserRateThrottle`` by default.
 
 - **/registration/account_email_verification_sent/** (GET)
 

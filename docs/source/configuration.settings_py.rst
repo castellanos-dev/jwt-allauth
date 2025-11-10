@@ -27,6 +27,8 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``PASSWORD_RESET_REDIRECT`` - the relative url with the form to set the new password on password reset.
 
+    - ``PASSWORD_SET_REDIRECT`` - the relative url to the UI form to set the password for admin-managed registration (used after email verification).
+
 - Templates
 
     - ``JWT_ALLAUTH_TEMPLATES`` - python dictionary with the following configuration:
@@ -58,3 +60,17 @@ Configure these variables in the ``settings.py`` file of your project.
     - ``PASSWORD_RESET_COOKIE_MAX_AGE`` - maximum age of the cookie in seconds (default: ``3600``).
 
     - ``LOGOUT_ON_PASSWORD_CHANGE`` - whether to logout from the other user sessions on password change (default: ``True``).
+
+- Admin-managed registration
+
+    - ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` - enable admin-only registration endpoint and set-password flow (default: ``False``).
+
+    - ``JWT_ALLAUTH_REGISTRATION_ALLOWED_ROLES`` - list of role codes that can register users when admin-managed registration is enabled. Defaults to ``[STAFF_CODE, SUPER_USER_CODE]``.
+
+    - ``PASSWORD_SET_COOKIE_HTTP_ONLY`` - whether to set a http-only cookie for the set-password flow (default: ``True``).
+
+    - ``PASSWORD_SET_COOKIE_SECURE`` - whether to set a secure cookie for the set-password flow (default: ``not DEBUG``).
+
+    - ``PASSWORD_SET_COOKIE_SAME_SITE`` - same-site cookie policy for the set-password flow (default: ``'Lax'``).
+
+    - ``PASSWORD_SET_COOKIE_MAX_AGE`` - maximum age of the set-password cookie in seconds (default: ``3600 * 24``).

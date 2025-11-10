@@ -11,3 +11,9 @@ FOR_USER = 'for_user'
 ONE_TIME_PERMISSION = 'one_time_permission'
 
 REFRESH_TOKEN_COOKIE = 'refresh_token'
+
+# Admin-managed registration: set password flow
+PASS_SET = 'PASS_SET'
+PASS_SET_ACCESS = 'PASS_SET_ACCESS'
+PASSWORD_SET_REDIRECT = 'PASSWORD_SET_REDIRECT'
+SET_PASSWORD_COOKIE = 'set_password_access_token'
