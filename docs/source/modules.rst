@@ -22,6 +22,11 @@
 .. toctree::
    :maxdepth: 1
 
+   mfa_totp
+
+.. toctree::
+   :maxdepth: 1
+
    refresh_token
 
 .. toctree::

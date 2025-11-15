@@ -21,6 +21,12 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``JWT_ALLAUTH_USER_ATTRIBUTES`` - dictionary mapping output claim names to dot-separated user attribute paths to include in refresh tokens (default: ``{}``). Example: ``{"organization_id": "organization.id", "area_id": "area.id"}``. The 'role' attribute is automatically included and should not be specified, and output claim names must be unique.
 
+    - ``JWT_ALLAUTH_MFA_TOTP_MODE`` - TOTP multi-factor authentication mode (default: ``'disabled'``). Supported values:
+
+        - ``'disabled'`` - MFA TOTP is completely disabled and cannot be configured by users.
+        - ``'optional'`` - MFA TOTP is optional; users can configure it voluntarily but login does not require it.
+        - ``'required'`` - MFA TOTP is mandatory; users must configure it and cannot log in without providing a TOTP code.
+
 - Redirection URLs
 
     - ``EMAIL_VERIFIED_REDIRECT`` - the url path to be redirected once the email verified can be configured through.

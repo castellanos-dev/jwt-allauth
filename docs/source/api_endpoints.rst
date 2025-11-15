@@ -145,3 +145,48 @@ Refresh Token Configuration
 ---------------------------
 
 .. note:: By default, refresh tokens are sent as secure HTTP-only cookies for enhanced security. This protects against XSS attacks by making tokens inaccessible to JavaScript. You can configure this behavior using the ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` setting. When set to ``False``, refresh tokens will be included in the JSON response payload instead.
+
+Multi-Factor Authentication (MFA)
+---------------------------------
+
+.. note:: Requires ``allauth.mfa`` in ``INSTALLED_APPS`` of your Django project and database migrations applied.
+
+- **/mfa/setup/** (POST) ``[Authenticated]``
+
+  Starts TOTP setup. Returns ``provisioning_uri`` (otpauth), ``secret``, and ``qr_code`` (SVG). The client can use the QR code or secret directly.
+
+- **/mfa/activate/** (POST) ``[Authenticated]``
+
+    - code
+
+  Activates TOTP after scanning the QR. Returns recovery codes.
+
+- **/mfa/verify/** (POST)
+
+    - challenge_id
+    - code
+
+  Completes login when MFA is enabled. Returns access (and refresh if configured in payload).
+
+- **/mfa/verify-recovery/** (POST)
+
+    - challenge_id
+    - recovery_code
+
+  Completes login using a one-time recovery code when MFA device is unavailable.
+
+- **/mfa/deactivate/** (POST) ``[Authenticated]``
+
+    - password
+
+  Deactivates TOTP for the authenticated user.
+
+- **/mfa/authenticators/** (GET) ``[Authenticated]``
+
+  Lists user authenticators.
+
+.. note:: MFA TOTP can be configured with the ``JWT_ALLAUTH_MFA_TOTP_MODE`` setting:
+
+   - ``'disabled'`` (default): MFA endpoints return 403 Forbidden when accessed.
+   - ``'optional'``: Users can set up MFA but it's not required during login.
+   - ``'required'``: Users must set up MFA and provide TOTP code during login. Deactivation is blocked.

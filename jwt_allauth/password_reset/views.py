@@ -14,15 +14,15 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework_simplejwt.exceptions import InvalidToken
 
 from jwt_allauth.app_settings import PasswordResetSerializer
-from jwt_allauth.constants import PASS_RESET, PASSWORD_RESET_REDIRECT, PASS_RESET_ACCESS, PASS_RESET_COOKIE, FOR_USER, \
-    ONE_TIME_PERMISSION, REFRESH_TOKEN_COOKIE, PASS_SET_ACCESS
+from jwt_allauth.constants import PASS_RESET, PASSWORD_RESET_REDIRECT, FOR_USER, \
+    ONE_TIME_PERMISSION, PASS_SET_ACCESS, PASS_RESET_ACCESS, PASS_RESET_COOKIE
 from jwt_allauth.password_reset.permissions import ResetPasswordPermission, SetPasswordPermission
 from jwt_allauth.password_reset.serializers import SetPasswordSerializer
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.tokens.tokens import GenericToken
-from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m
+from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m, build_token_response
 
 
 class PasswordResetView(GenericAPIView):
@@ -159,27 +159,10 @@ class ResetPasswordView(GenericAPIView):
             RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
 
         refresh_token = RefreshToken.for_user(request.user)
-        response_data = {
-            "access": str(refresh_token.access_token),
-            "detail": _("Password reset.")
-        }
-
-        # Handle refresh token based on configuration
-        if not getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True):
-            response_data["refresh"] = str(refresh_token)
-
-        response = Response(response_data)
-
-        if getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True):
-            response.set_cookie(
-                key=REFRESH_TOKEN_COOKIE,
-                value=str(refresh_token),
-                httponly=True,
-                secure=not settings.DEBUG if hasattr(settings, 'DEBUG') else True,
-                samesite='Lax'
-            )
-
-        return response
+        return build_token_response(
+            refresh_token,
+            extra_data={"detail": _("Password reset.")}
+        )
 
 
 class SetPasswordView(GenericAPIView):
@@ -216,24 +199,7 @@ class SetPasswordView(GenericAPIView):
             RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
 
         refresh_token = RefreshToken.for_user(request.user)
-        response_data = {
-            "access": str(refresh_token.access_token),
-            "detail": _("Password set.")
-        }
-
-        # Handle refresh token based on configuration
-        if not getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True):
-            response_data["refresh"] = str(refresh_token)
-
-        response = Response(response_data)
-
-        if getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True):
-            response.set_cookie(
-                key=REFRESH_TOKEN_COOKIE,
-                value=str(refresh_token),
-                httponly=True,
-                secure=not settings.DEBUG if hasattr(settings, 'DEBUG') else True,
-                samesite='Lax'
-            )
-
-        return response
+        return build_token_response(
+            refresh_token,
+            extra_data={"detail": _("Password set.")}
+        )

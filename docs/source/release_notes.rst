@@ -16,6 +16,20 @@ New Features
     - Invited users set their own password via email verification link before gaining access
     - No authentication tokens issued during registration; one-time password setup token issued after email verification
 
+- **MFA TOTP**: Added REST endpoints for TOTP-based multi-factor authentication using ``django-allauth`` MFA:
+   - ``POST /mfa/setup/``: returns provisioning URI (otpauth), secret, and QR code (SVG)
+   - ``POST /mfa/activate/``: activates TOTP and returns recovery codes
+   - ``POST /mfa/verify/``: completes login when MFA is required
+   - ``POST /mfa/verify-recovery/``: completes login using one-time recovery codes
+   - ``POST /mfa/deactivate/``: disables TOTP for the current user
+   - ``GET /mfa/authenticators/``: lists user authenticators
+   Requires enabling ``allauth.mfa`` in your project ``INSTALLED_APPS`` and running migrations.
+   Configurable via ``JWT_ALLAUTH_MFA_TOTP_MODE`` setting with three modes:
+
+     - ``'disabled'`` (default): MFA TOTP is disabled
+     - ``'optional'``: Users can enable MFA TOTP but it's not required for login
+     - ``'required'``: Users must enable MFA TOTP and provide TOTP code during login
+
 Version 1.1.1
 -------------
 
