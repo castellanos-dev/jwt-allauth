@@ -71,3 +71,55 @@ Email verification behavior
 
 - The verification GET confirms the email in admin-managed mode and issues a one-time token, then redirects to the password set UI.
 - The set-password endpoint does not alter email verification status.
+
+MFA REQUIRED Integration
+------------------------
+
+When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` and ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``, the admin-managed registration flow is extended to enforce MFA setup and provides immediate token issuance after MFA activation:
+
+**Flow with MFA REQUIRED:**
+
+1. Admin creates user via ``POST /registration/user-register/`` → User created, no tokens
+2. User receives verification email
+3. User clicks verification link → One-time token issued in cookie
+4. User sets password via ``POST /registration/set-password/`` → **Returns MFA setup challenge** instead of tokens:
+
+   .. code-block:: json
+
+       {
+           "mfa_setup_required": true,
+           "setup_challenge_id": "a1b2c3d4-e5f6-4a8b-9c0d-e1f2a3b4c5d6",
+           "detail": "Password set. Please configure MFA to complete registration."
+       }
+
+5. User accesses ``POST /mfa/setup/`` with ``setup_challenge_id`` (no authentication required)
+6. User accesses ``POST /mfa/activate/`` with ``setup_challenge_id`` and TOTP code
+7. **Tokens are issued** after successful MFA activation
+8. User can now login normally
+
+**Key Differences:**
+
+- ``set-password`` endpoint returns ``mfa_setup_required`` + ``setup_challenge_id`` instead of tokens
+- Users cannot receive tokens until MFA is configured
+- The ``setup_challenge_id`` allows temporary access to MFA setup endpoints without full authentication
+- **After successful MFA activation** (``POST /mfa/activate/``), tokens are issued immediately (unlike self-service registration)
+- This ensures all users go through MFA setup before gaining any access, preventing security bypasses
+- Users immediately have access after MFA activation without needing to re-login
+
+**Settings Impact:**
+
+The following settings continue to work as expected:
+- ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` — Controls token delivery method after MFA activation (respects this setting)
+- ``PASSWORD_SET_COOKIE_*`` — Controls one-time token cookie during password setup
+- ``JWT_ALLAUTH_MFA_TOTP_MODE`` — Must be set to ``'required'`` for this behavior
+- ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` — Must be set to ``True`` for tokens to be issued immediately after MFA activation
+
+**Important: Immediate Token Issuance**
+
+When both ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` and ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``:
+
+- ``/mfa/activate/`` endpoint returns **tokens immediately** after successful TOTP verification
+- This means users do **not** need to re-login after MFA setup
+- This improves user experience for invited/admin-managed workflows by providing seamless onboarding
+
+This behavior is **different from self-service registration**, where ``/mfa/activate/`` returns only recovery codes and the user must re-login to obtain tokens.

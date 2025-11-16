@@ -23,6 +23,7 @@ New Features
    - ``POST /mfa/verify-recovery/``: completes login using one-time recovery codes
    - ``POST /mfa/deactivate/``: disables TOTP for the current user
    - ``GET /mfa/authenticators/``: lists user authenticators
+
    Requires enabling ``allauth.mfa`` in your project ``INSTALLED_APPS`` and running migrations.
    Configurable via ``JWT_ALLAUTH_MFA_TOTP_MODE`` setting with three modes:
 

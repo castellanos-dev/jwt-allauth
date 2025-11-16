@@ -40,63 +40,6 @@ Configuration
 
 MFA TOTP is controlled via the ``JWT_ALLAUTH_MFA_TOTP_MODE`` setting in ``settings.py``. Three modes are available.
 
-Adapter Configuration
-~~~~~~~~~~~~~~~~~~~~~
-
-Automatic Setup
-^^^^^^^^^^^^^^^
-
-The JWT All-Auth MFA adapter is **automatically configured**. The adapter extends allauth's default MFA adapter with JWT-specific functionality.
-
-During app initialization (in the ``ready()`` method of the AppConfig), the following happens:
-
-1. If no ``MFA_ADAPTER`` is explicitly set in your settings, it automatically configures:
-
-   .. code-block:: python
-
-       MFA_ADAPTER = 'jwt_allauth.mfa.adapter.JWTAllAuthMFAAdapter'
-
-2. This custom adapter manages TOTP (Time-based One-Time Password) configuration
-
-**You do not need to manually set ``MFA_ADAPTER`` in your settings** unless you want to override it
-with your own custom implementation.
-
-Customizing the TOTP Issuer
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The TOTP issuer is the name that appears in authenticator apps like Google Authenticator, Microsoft Authenticator, etc.
-
-To customize it, add this optional setting:
-
-.. code-block:: python
-
-    # settings.py
-    JWT_ALLAUTH_TOTP_ISSUER = "My Application Name"
-
-TOTP Issuer Priority
-^^^^^^^^^^^^^^^^^^^^^
-
-When determining what issuer name to use, the adapter follows this priority:
-
-1. ``JWT_ALLAUTH_TOTP_ISSUER`` (if explicitly set in settings)
-2. ``'JWT-Allauth'`` (default value if setting is not provided)
-3. Current site name (only if ``JWT_ALLAUTH_TOTP_ISSUER`` is explicitly set to empty string or ``None``)
-
-Examples::
-
-    # Default (no custom setting)
-    # Result: TOTP issuer = "JWT-Allauth"
-
-    # Custom issuer
-    JWT_ALLAUTH_TOTP_ISSUER = "Acme Corp"
-    # Result: TOTP issuer = "Acme Corp"
-
-    # Use site name
-    JWT_ALLAUTH_TOTP_ISSUER = ""
-    # Result: TOTP issuer = current site name (from SITE_ID)
-
-For detailed information about the adapter implementation, see :doc:`jwt_allauth.mfa.adapter`.
-
 TOTP Mode Setting
 ~~~~~~~~~~~~~~~~~
 
@@ -183,155 +126,62 @@ Behavior Matrix
      - ✅ OK
      - ❌ 403
 
-API Endpoints
--------------
-
-The following endpoints are available for MFA management (requires ``allauth.mfa`` to be installed):
-
-Setup and Activation
+Adapter Configuration
 ~~~~~~~~~~~~~~~~~~~~~
 
-**POST /mfa/setup/** ``[Authenticated]``
+Automatic Setup
+^^^^^^^^^^^^^^^
 
-  Initiates TOTP setup. Returns provisioning URI, secret, and QR code (SVG format).
+The JWT All-Auth MFA adapter is **automatically configured**. The adapter extends allauth's default MFA adapter with JWT-specific functionality.
 
-  Example response:
+During app initialization (in the ``ready()`` method of the AppConfig), the following happens:
 
-  .. code-block:: json
+1. If no ``MFA_ADAPTER`` is explicitly set in your settings, it automatically configures:
 
-      {
-          "secret": "JBSWY3DPEBLW64TMMQ======",
-          "provisioning_uri": "otpauth://totp/example.com:user%40example.com?secret=...",
-          "qr_code": "<svg>...</svg>"
-      }
+   .. code-block:: python
 
-  Available in modes: ``'optional'``, ``'required'``
+       MFA_ADAPTER = 'jwt_allauth.mfa.adapter.JWTAllAuthMFAAdapter'
 
-**POST /mfa/activate/** ``[Authenticated]``
+2. This custom adapter manages TOTP (Time-based One-Time Password) configuration
 
-  Activates TOTP after the user scans the QR code or enters the secret. Requires a valid 6-digit TOTP code.
+**You do not need to manually set ``MFA_ADAPTER`` in your settings** unless you want to override it
+with your own custom implementation.
 
-  Request:
+Customizing the TOTP Issuer
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  .. code-block:: json
+The TOTP issuer is the name that appears in authenticator apps like Google Authenticator, Microsoft Authenticator, etc.
 
-      {
-          "code": "123456"
-      }
+To customize it, add this optional setting:
 
-  Response:
+.. code-block:: python
 
-  .. code-block:: json
+    # settings.py
+    JWT_ALLAUTH_TOTP_ISSUER = "My Application Name"
 
-      {
-          "success": true,
-          "recovery_codes": [
-              "ABC12345DEF67890",
-              "GHI12345JKL67890",
-              "..."
-          ]
-      }
+TOTP Issuer Priority
+^^^^^^^^^^^^^^^^^^^^^
 
-  Available in modes: ``'optional'``, ``'required'``
+When determining what issuer name to use, the adapter follows this priority:
 
-Verification
-~~~~~~~~~~~~~
+1. ``JWT_ALLAUTH_TOTP_ISSUER`` (if explicitly set in settings)
+2. ``'JWT-Allauth'`` (default value if setting is not provided)
+3. Current site name (only if ``JWT_ALLAUTH_TOTP_ISSUER`` is explicitly set to empty string or ``None``)
 
-**POST /mfa/verify/** ``[No Authentication]``
+Examples::
 
-  Completes login when MFA is enabled. Requires a valid 6-digit TOTP code and a challenge ID obtained from login.
+    # Default (no custom setting)
+    # Result: TOTP issuer = "JWT-Allauth"
 
-  Request:
+    # Custom issuer
+    JWT_ALLAUTH_TOTP_ISSUER = "Acme Corp"
+    # Result: TOTP issuer = "Acme Corp"
 
-  .. code-block:: json
+    # Use site name
+    JWT_ALLAUTH_TOTP_ISSUER = ""
+    # Result: TOTP issuer = current site name (from SITE_ID)
 
-      {
-          "challenge_id": "a1b2c3d4-e5f6-4a8b-9c0d-e1f2a3b4c5d6",
-          "code": "654321"
-      }
-
-  Response:
-
-  .. code-block:: json
-
-      {
-          "access": "eyJ0eXAiOiJKV1QiLCJhbGc..."
-      }
-
-  Available in all modes when user has MFA enabled.
-
-**POST /mfa/verify-recovery/** ``[No Authentication]``
-
-  Completes login using a recovery code when the user doesn't have access to their TOTP device.
-
-  Request:
-
-  .. code-block:: json
-
-      {
-          "challenge_id": "a1b2c3d4-e5f6-4a8b-9c0d-e1f2a3b4c5d6",
-          "recovery_code": "ABC12345DEF67890"
-      }
-
-  Response:
-
-  .. code-block:: json
-
-      {
-          "access": "eyJ0eXAiOiJKV1QiLCJhbGc..."
-      }
-
-  Available in all modes when user has MFA enabled.
-
-Management
-~~~~~~~~~~
-
-**POST /mfa/deactivate/** ``[Authenticated]``
-
-  Disables TOTP for the authenticated user. Requires the user's password.
-
-  Request:
-
-  .. code-block:: json
-
-      {
-          "password": "user_password"
-      }
-
-  Response:
-
-  .. code-block:: json
-
-      {
-          "success": true
-      }
-
-  Available in mode: ``'optional'`` only. Returns ``403 Forbidden`` in ``'required'`` mode.
-
-**GET /mfa/authenticators/** ``[Authenticated]``
-
-  Lists all authenticators (TOTP and recovery codes) for the authenticated user.
-
-  Response:
-
-  .. code-block:: json
-
-      [
-          {
-              "id": 1,
-              "type": "totp",
-              "created_at": "2025-01-15T10:30:00Z",
-              "last_used_at": "2025-01-15T14:22:00Z"
-          },
-          {
-              "id": 2,
-              "type": "recovery_codes",
-              "created_at": "2025-01-15T10:30:00Z",
-              "last_used_at": null
-          }
-      ]
-
-  Available in modes: ``'optional'``, ``'required'``
+For more information about MFA TOTP configuration, see :doc:`configuration.settings_py`.
 
 Login Flow
 ----------
@@ -398,16 +248,44 @@ The login endpoint (``POST /login/``) behavior varies depending on the MFA mode 
 
 .. code-block:: bash
 
-    # User WITHOUT TOTP
+    # User WITHOUT TOTP (Bootstrap flow instead of 403)
     POST /login/
     {
         "email": "user@example.com",
         "password": "secure_password"
     }
 
-    Response (403 Forbidden):
+    Response (200 OK - Bootstrap challenge):
     {
-        "detail": "Multi-factor authentication is required."
+        "mfa_setup_required": true,
+        "setup_challenge_id": "a1b2c3d4-e5f6-4a8b-9c0d-e1f2a3b4c5d6"
+    }
+
+    # User must setup MFA first
+    POST /mfa/setup/
+    {
+        "setup_challenge_id": "a1b2c3d4-e5f6-4a8b-9c0d-e1f2a3b4c5d6"
+    }
+
+    Response:
+    {
+        "secret": "JBSWY3DPEBLW64TMMQ======",
+        "provisioning_uri": "otpauth://totp/...",
+        "qr_code": "<svg>...</svg>"
+    }
+
+    # Then activate TOTP
+    POST /mfa/activate/
+    {
+        "code": "123456",
+        "setup_challenge_id": "a1b2c3d4-e5f6-4a8b-9c0d-e1f2a3b4c5d6"
+    }
+
+    Response (tokens issued after MFA activation):
+    {
+        "success": true,
+        "recovery_codes": ["ABC...", "DEF..."],
+        "access": "eyJ0eXAiOiJKV1QiLCJhbGc..."
     }
 
     # User WITH TOTP
@@ -427,10 +305,174 @@ The login endpoint (``POST /login/``) behavior varies depending on the MFA mode 
     POST /mfa/verify/
     {
         "challenge_id": "a1b2c3d4-e5f6-4a8b-9c0d-e1f2a3b4c5d6",
-        "code": "123456"
+        "code": "654321"
     }
 
     Response:
     {
         "access": "eyJ0eXAiOiJKV1QiLCJhbGc..."
     }
+
+Registration Flow with MFA REQUIRED
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, both self-service and admin-managed registration flows are modified to enforce MFA setup before token issuance:
+
+**Self-Service Registration** (``POST /registration/``)
+
+.. code-block:: bash
+
+    # User registers
+    POST /registration/
+    {
+        "email": "newuser@example.com",
+        "password1": "secure_password",
+        "password2": "secure_password",
+        "first_name": "John",
+        "last_name": "Doe"
+    }
+
+    Response (201 Created - Bootstrap challenge):
+    {
+        "mfa_setup_required": true,
+        "setup_challenge_id": "a1b2c3d4-e5f6-4a8b-9c0d-e1f2a3b4c5d6",
+        "detail": "Verification e-mail sent."
+    }
+
+    # User verifies email (if EMAIL_VERIFICATION=True)
+    GET /registration/verification/<key>/
+
+    # User proceeds with MFA setup (same as login bootstrap)
+    POST /mfa/setup/
+    POST /mfa/activate/
+    # ... receives tokens
+
+**Admin-Managed Registration** (``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``)
+
+.. code-block:: bash
+
+    # Admin creates user
+    POST /registration/user-register/
+    {
+        "email": "inviteduser@example.com",
+        "role": 300
+    }
+
+    Response (201 Created)
+
+    # User receives email with verification link
+    # User verifies email
+    GET /registration/verification/<key>/
+
+    # User sets password (returns bootstrap challenge instead of tokens)
+    POST /registration/set-password/
+    {
+        "new_password1": "new_password",
+        "new_password2": "new_password"
+    }
+
+    Response (200 OK - Bootstrap challenge):
+    {
+        "mfa_setup_required": true,
+        "setup_challenge_id": "a1b2c3d4-e5f6-4a8b-9c0d-e1f2a3b4c5d6",
+        "detail": "Password set. Please configure MFA to complete registration."
+    }
+
+    # User proceeds with MFA setup
+    POST /mfa/setup/
+    {
+        "setup_challenge_id": "a1b2c3d4-e5f6-4a8b-9c0d-e1f2a3b4c5d6"
+    }
+
+    Response:
+    {
+        "secret": "JBSWY3DPEBLW64TMMQ======",
+        "provisioning_uri": "otpauth://totp/...",
+        "qr_code": "<svg>...</svg>"
+    }
+
+    # User activates TOTP
+    POST /mfa/activate/
+    {
+        "code": "123456",
+        "setup_challenge_id": "a1b2c3d4-e5f6-4a8b-9c0d-e1f2a3b4c5d6"
+    }
+
+    Response (200 OK - Tokens issued):
+    {
+        "success": true,
+        "recovery_codes": ["ABC12345DEF67890", ...],
+        "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..." (or in HTTP-only cookie)
+    }
+
+    # User is now fully registered and authenticated
+
+Key Points
+^^^^^^^^^^
+
+- In both registration flows, when MFA is REQUIRED, **no tokens are issued during registration or password setup**
+- Users receive a ``setup_challenge_id`` instead, which allows access to ``/mfa/setup/`` and ``/mfa/activate/`` without authentication
+- After successful MFA activation using ``setup_challenge_id``, **tokens are always issued** via ``/mfa/activate/`` (using ``build_token_response()``), completing login/registration in a single step
+- ``build_token_response()`` respects ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` configuration for token delivery method
+- This prevents bypass of MFA requirements and ensures consistent security posture across all registration methods
+
+Challenge Token TTL
+~~~~~~~~~~~~~~~~~~~
+
+Setup challenges expire after 5 minutes (300 seconds). This is controlled by ``MFA_TOKEN_MAX_AGE_SECONDS`` in constants.
+
+If a user doesn't complete MFA setup within 5 minutes, they must re-login or re-register to get a new challenge.
+
+Security Considerations
+-----------------------
+
+✅ **Prevents Bypass:**
+- No tokens issued during registration or password setup
+- MFA setup is mandatory before any API access
+
+✅ **Consistent Across Methods:**
+- Self-service and admin-managed registration behave identically
+- Login and registration share the same bootstrap mechanism
+
+✅ **Temporary Access Control:**
+- Setup challenges are single-purpose (MFA setup only)
+- Challenges are stored server-side in cache, not in tokens
+- Challenges expire after 5 minutes
+
+✅ **Respects Configuration:**
+- Cookie preferences (HTTP-only, Secure, SameSite) are honored
+- Works with both JSON and cookie-based token delivery
+
+Troubleshooting
+---------------
+
+**Challenge Expired**
+
+.. code-block:: json
+
+    {
+        "detail": "Setup not initiated."
+    }
+
+**Solution:** User took too long. They must start from login/registration again.
+
+**Challenge ID Not Found**
+
+.. code-block:: json
+
+    {
+        "detail": "Authentication credentials were not provided."
+    }
+
+**Solution:** The ``setup_challenge_id`` wasn't provided or was incorrect. Include it in the request body.
+
+**Permission Denied**
+
+.. code-block:: json
+
+    {
+        "detail": "TOTP already activated."
+    }
+
+**Solution:** User already configured MFA. They can login and use ``/mfa/deactivate/`` (if in 'optional' mode) to reset, then re-setup.

@@ -17,13 +17,22 @@ from jwt_allauth.constants import (
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.utils import allauth_authenticate
 
-MFA_TOTP_MODE = getattr(settings, 'JWT_ALLAUTH_MFA_TOTP_MODE', MFA_TOTP_DISABLED)
+
+def get_mfa_totp_mode() -> str:
+    """
+    Return the current MFA TOTP mode from settings.
+
+    This must be evaluated at call time (not import time) so that
+    Django's `override_settings` used in tests – and any runtime changes
+    – are respected.
+    """
+    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
 
 try:
     from allauth.mfa.models import Authenticator  # type: ignore
 except Exception:  # pragma: no cover - optional dependency guard
     Authenticator = None  # type: ignore
-    if MFA_TOTP_MODE != MFA_TOTP_DISABLED:
+    if get_mfa_totp_mode() != MFA_TOTP_DISABLED:
         raise Exception(
             "MFA TOTP is not available. Please ensure 'django-jwt-allauth[mfa]' "
             "is installed and 'allauth.mfa' is added to INSTALLED_APPS."
@@ -66,18 +75,26 @@ class LoginSerializer(TokenObtainPairSerializer):
             )
 
         # MFA TOTP check
-        if MFA_TOTP_MODE != MFA_TOTP_DISABLED and Authenticator is not None:
+        mfa_mode = get_mfa_totp_mode()
+        if mfa_mode != MFA_TOTP_DISABLED and Authenticator is not None:
             has_mfa = Authenticator.objects.filter(
                 user=self.user,
                 type=getattr(Authenticator, "Type").TOTP if hasattr(Authenticator, "Type") else "totp",
             ).exists()
 
             # If MFA is REQUIRED, user must have MFA enabled
-            if MFA_TOTP_MODE == MFA_TOTP_REQUIRED and not has_mfa:
-                raise exceptions.AuthenticationFailed(
-                    "Multi-factor authentication is required.",
-                    "mfa_required",
+            # Instead of raising 403, return setup challenge for bootstrap
+            if mfa_mode == MFA_TOTP_REQUIRED and not has_mfa:
+                setup_challenge_id = str(uuid.uuid4())
+                cache.set(
+                    f"mfa_setup_challenge:{setup_challenge_id}",
+                    {"user_id": self.user.id},
+                    timeout=MFA_TOKEN_MAX_AGE_SECONDS,
                 )
+                return {
+                    "mfa_setup_required": True,
+                    "setup_challenge_id": setup_challenge_id,
+                }
 
             # If user has MFA enabled (OPTIONAL or REQUIRED mode), request MFA verification
             if has_mfa:

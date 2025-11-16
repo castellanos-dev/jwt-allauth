@@ -4,8 +4,8 @@ from django.test import override_settings
 from django.urls import reverse, NoReverseMatch, clear_url_caches
 from rest_framework import status
 
-from jwt_allauth.constants import SET_PASSWORD_COOKIE, PASS_SET_ACCESS, FOR_USER, \
-    ONE_TIME_PERMISSION, REFRESH_TOKEN_COOKIE
+from jwt_allauth.constants import SET_PASSWORD_COOKIE, PASS_SET_ACCESS, \
+    REFRESH_TOKEN_COOKIE
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel
 from .mixins import TestsMixin
@@ -40,7 +40,8 @@ class AdminManagedRegistrationTests(TestsMixin):
 
     def test_default_register_endpoint_not_accessible(self):
         # When admin-managed registration is enabled, /registration/ root should be 404
-        response = self.client.post('/registration/', data={"email": self.INVITED_EMAIL}, content_type='application/json')
+        response = self.client.post(
+            '/registration/', data={"email": self.INVITED_EMAIL}, content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         # And reversing the original name should fail
         with self.assertRaises(NoReverseMatch):
@@ -86,7 +87,8 @@ class AdminManagedRegistrationTests(TestsMixin):
 
     @override_settings(JWT_ALLAUTH_REGISTRATION_ALLOWED_ROLES=[0])
     def test_staff_not_allowed_when_excluded_by_settings(self):
-        staff = get_user_model().objects.create_user('admin3', email='admin3@demo.com', password='A-1_strong', is_staff=True)
+        staff = get_user_model().objects.create_user(
+            'admin3', email='admin3@demo.com', password='A-1_strong', is_staff=True)
         EmailAddress.objects.create(user=staff, email=staff.email, verified=True, primary=True)
         staff_access = str(RefreshToken.for_user(staff).access_token)
 
@@ -99,7 +101,8 @@ class AdminManagedRegistrationTests(TestsMixin):
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_duplicate_email_rules(self):
-        staff = get_user_model().objects.create_user('admin2', email='admin2@demo.com', password='A-1_strong', is_staff=True)
+        staff = get_user_model().objects.create_user(
+            'admin2', email='admin2@demo.com', password='A-1_strong', is_staff=True)
         EmailAddress.objects.create(user=staff, email=staff.email, verified=True, primary=True)
         staff_access = str(RefreshToken.for_user(staff).access_token)
 
@@ -200,7 +203,8 @@ class AdminManagedEmailVerificationOffTests(TestsMixin):
 
     def test_user_register_and_email_unverified(self):
         # Staff registers user; email should be created but remain unverified
-        staff = get_user_model().objects.create_user('admin_off', email='admin_off@demo.com', password='A-1_strong', is_staff=True)
+        staff = get_user_model().objects.create_user(
+            'admin_off', email='admin_off@demo.com', password='A-1_strong', is_staff=True)
         EmailAddress.objects.create(user=staff, email=staff.email, verified=True, primary=True)
         staff_access = str(RefreshToken.for_user(staff).access_token)
 

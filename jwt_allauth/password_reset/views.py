@@ -1,5 +1,8 @@
+import uuid
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import HttpResponseRedirect, HttpResponseNotFound
 from django.shortcuts import render
@@ -14,8 +17,13 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework_simplejwt.exceptions import InvalidToken
 
 from jwt_allauth.app_settings import PasswordResetSerializer
-from jwt_allauth.constants import PASS_RESET, PASSWORD_RESET_REDIRECT, FOR_USER, \
-    ONE_TIME_PERMISSION, PASS_SET_ACCESS, PASS_RESET_ACCESS, PASS_RESET_COOKIE
+from jwt_allauth.constants import (
+    PASS_RESET, PASSWORD_RESET_REDIRECT, FOR_USER,
+    ONE_TIME_PERMISSION, PASS_SET_ACCESS, PASS_RESET_ACCESS, PASS_RESET_COOKIE,
+    MFA_TOKEN_MAX_AGE_SECONDS,
+    MFA_TOTP_DISABLED,
+    MFA_TOTP_REQUIRED,
+)
 from jwt_allauth.password_reset.permissions import ResetPasswordPermission, SetPasswordPermission
 from jwt_allauth.password_reset.serializers import SetPasswordSerializer
 from jwt_allauth.tokens.app_settings import RefreshToken
@@ -23,6 +31,17 @@ from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistMo
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.tokens.tokens import GenericToken
 from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m, build_token_response
+
+
+def get_mfa_totp_mode() -> str:
+    """
+    Return the current MFA TOTP mode from settings.
+
+    This must be evaluated at call time (not import time) so that
+    Django's `override_settings` used in tests – and any runtime changes
+    – are respected.
+    """
+    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
 
 
 class PasswordResetView(GenericAPIView):
@@ -197,6 +216,24 @@ class SetPasswordView(GenericAPIView):
         # Revoke old sessions
         if getattr(settings, 'LOGOUT_ON_PASSWORD_CHANGE', True):
             RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
+
+        # If MFA TOTP is REQUIRED, return setup challenge instead of tokens
+        if get_mfa_totp_mode() == MFA_TOTP_REQUIRED:
+            setup_challenge_id = str(uuid.uuid4())
+            cache.set(
+                f"mfa_setup_challenge:{setup_challenge_id}",
+                {"user_id": request.user.id},
+                timeout=MFA_TOKEN_MAX_AGE_SECONDS,
+            )
+
+            return Response(
+                {
+                    "mfa_setup_required": True,
+                    "setup_challenge_id": setup_challenge_id,
+                    "detail": _("Password set. Please configure MFA to complete registration."),
+                },
+                status=status.HTTP_200_OK,
+            )
 
         refresh_token = RefreshToken.for_user(request.user)
         return build_token_response(

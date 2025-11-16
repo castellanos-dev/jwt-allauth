@@ -10,8 +10,13 @@ except Exception:  # pragma: no cover - optional dependency guard
 class MFAActivateSerializer(serializers.Serializer):
     """
     Activates TOTP for the authenticated user by providing a 6-digit code.
+
+    Can be used in two ways:
+    - With JWT authentication (normal case)
+    - With setup_challenge_id (bootstrap MFA after login when REQUIRED mode)
     """
     code = serializers.CharField(min_length=6, max_length=6)
+    setup_challenge_id = serializers.CharField(required=False, allow_blank=True)
 
 
 class MFAVerifySerializer(serializers.Serializer):

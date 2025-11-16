@@ -11,6 +11,8 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``LOGOUT_ON_PASSWORD_CHANGE`` - whether to logout from the other user sessions on password change (default: ``True``).
 
+    - ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` - whether to enable admin-only registration endpoint and set-password flow (default: ``False``). The user will receive a verification email and will need to set their password before they can login.
+
     - ``JWT_ACCESS_TOKEN_LIFETIME`` - access token lifetime (default: ``timedelta(minutes=30)``).
 
     - ``JWT_REFRESH_TOKEN_LIFETIME`` - refresh token lifetime (default: ``timedelta(days=90)``).
@@ -27,7 +29,7 @@ Configure these variables in the ``settings.py`` file of your project.
         - ``'optional'`` - MFA TOTP is optional; users can configure it voluntarily but login does not require it.
         - ``'required'`` - MFA TOTP is mandatory; users must configure it and cannot log in without providing a TOTP code.
 
-    - ``JWT_ALLAUTH_TOTP_ISSUER`` - custom TOTP issuer name displayed in authenticator apps like Google Authenticator (default: ``'JWT-Allauth'``). The JWT All-Auth MFA adapter is automatically configured when ``jwt_allauth`` is in ``INSTALLED_APPS``. If not set, defaults to ``'JWT-Allauth'``. Set to empty string to use the current site name instead. See :doc:`jwt_allauth.mfa.adapter` for more details.
+    - ``JWT_ALLAUTH_TOTP_ISSUER`` - custom TOTP issuer name displayed in authenticator apps like Google Authenticator (default: ``'JWT-Allauth'``). The JWT All-Auth MFA adapter is automatically configured when ``jwt_allauth`` is in ``INSTALLED_APPS``. If not set, defaults to ``'JWT-Allauth'``. Set to empty string to use the current site name instead. See :doc:`jwt_allauth.mfa_totp` for more details.
 
 - Redirection URLs
 
@@ -71,7 +73,7 @@ Configure these variables in the ``settings.py`` file of your project.
 
 - Admin-managed registration
 
-    - ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` - enable admin-only registration endpoint and set-password flow (default: ``False``).
+    - ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` - enable admin-only registration endpoint and set-password flow (default: ``False``). When enabled with ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, the ``/mfa/activate/`` endpoint issues tokens immediately after successful MFA setup.
 
     - ``JWT_ALLAUTH_REGISTRATION_ALLOWED_ROLES`` - list of role codes that can register users when admin-managed registration is enabled. Defaults to ``[STAFF_CODE, SUPER_USER_CODE]``.
 

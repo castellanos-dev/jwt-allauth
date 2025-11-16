@@ -28,7 +28,17 @@ class LoginView(TokenObtainPairView):
         except TokenError as e:
             raise InvalidToken(e.args[0])
 
-        # MFA required branch
+        # MFA setup required branch (REQUIRED mode without MFA configured)
+        if serializer.validated_data.get('mfa_setup_required'):
+            return Response(
+                {
+                    "mfa_setup_required": True,
+                    "setup_challenge_id": serializer.validated_data.get("setup_challenge_id"),
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        # MFA verification required branch (user has MFA enabled)
         if serializer.validated_data.get('mfa_required'):
             return Response(
                 {

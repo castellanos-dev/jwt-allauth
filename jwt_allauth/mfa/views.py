@@ -16,7 +16,7 @@ from jwt_allauth.constants import (
 )
 
 from jwt_allauth.tokens.app_settings import RefreshToken
-from jwt_allauth.utils import build_token_response
+from jwt_allauth.utils import build_token_response, load_user
 from .serializers import (
     MFAActivateSerializer,
     MFAVerifySerializer,
@@ -24,7 +24,7 @@ from .serializers import (
     MFADeactivateSerializer,
     AuthenticatorSerializer,
 )
-from jwt_allauth.utils import load_user
+from jwt_allauth.mfa.permissions import IsAuthenticatedOrHasMFASetupChallenge
 
 
 def get_mfa_totp_mode() -> str:
@@ -57,9 +57,8 @@ except Exception:  # pragma: no cover - optional dependency guard
 
 
 class MFASetupView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrHasMFASetupChallenge]
 
-    @load_user
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
             return Response(
@@ -69,7 +68,17 @@ class MFASetupView(APIView):
             return Response(
                 {"detail": "allauth.mfa is not installed."}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
-        user = request.user
+        # Determine user: JWT auth or MFA setup bootstrap
+        if request.user and request.user.is_authenticated:
+            user = get_user_model().objects.get(id=request.user.id)
+        elif hasattr(request, "mfa_setup_user"):
+            user = request.mfa_setup_user
+        else:
+            return Response(
+                {"detail": "Authentication credentials were not provided."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
         if Authenticator.objects.filter(user_id=user.id, type=Authenticator.Type.TOTP.value).exists():
             return Response({"detail": "TOTP already activated."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -93,10 +102,9 @@ class MFASetupView(APIView):
 
 
 class MFAActivateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrHasMFASetupChallenge]
     serializer_class = MFAActivateSerializer
 
-    @load_user
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
             return Response(
@@ -109,8 +117,19 @@ class MFAActivateView(APIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        # Determine user: JWT auth or MFA setup bootstrap
+        if request.user and request.user.is_authenticated:
+            user = get_user_model().objects.get(id=request.user.id)
+        elif hasattr(request, "mfa_setup_user"):
+            user = request.mfa_setup_user
+        else:
+            return Response(
+                {"detail": "Authentication credentials were not provided."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
         # Retrieve secret from cache
-        cache_key = f"mfa_setup:{request.user.id}"
+        cache_key = f"mfa_setup:{user.id}"
         secret = cache.get(cache_key)
         if not secret:
             return Response({"detail": "Setup not initiated."}, status=status.HTTP_400_BAD_REQUEST)
@@ -118,7 +137,7 @@ class MFAActivateView(APIView):
         code = serializer.validated_data["code"]
 
         # Create temporary TOTP instance to validate the code
-        temp_totp = TOTP.activate(request.user, secret)
+        temp_totp = TOTP.activate(user, secret)
         if not temp_totp.validate_code(code):
             # Delete the authenticator if validation fails
             temp_totp.instance.delete()
@@ -127,9 +146,28 @@ class MFAActivateView(APIView):
         # Delete secret from cache after successful verification
         cache.delete(cache_key)
 
-        recovery = RecoveryCodes.activate(request.user)
+        recovery = RecoveryCodes.activate(user)
         recovery_codes = recovery.get_unused_codes()
 
+        # Clean up setup_challenge if provided
+        setup_challenge_id = serializer.validated_data.get("setup_challenge_id")
+        is_bootstrap = bool(setup_challenge_id)
+        if setup_challenge_id:
+            cache.delete(f"mfa_setup_challenge:{setup_challenge_id}")
+
+        # If this is a bootstrap flow in REQUIRED mode (setup_challenge_id present),
+        # issue tokens for immediate login/registration completion.
+        # This covers both login bootstrap and registration bootstrap flows.
+        if is_bootstrap and get_mfa_totp_mode() == MFA_TOTP_REQUIRED:
+            refresh = RefreshToken.for_user(user)
+            # Use build_token_response to respect cookie configuration
+            return build_token_response(
+                refresh_token=refresh,
+                extra_data={"success": True, "recovery_codes": recovery_codes},
+                http_status=status.HTTP_200_OK
+            )
+
+        # Normal mode: just return success and recovery codes
         return Response({"success": True, "recovery_codes": recovery_codes})
 
 
