@@ -20,11 +20,14 @@ Add to your ``INSTALLED_APPS``:
 
     INSTALLED_APPS = [
         # ...
+        'jwt_allauth',
         'allauth',
         'allauth.account',
         'allauth.mfa',
-        'jwt_allauth',
     ]
+
+The order matters: ``jwt_allauth`` should be listed before ``allauth`` apps so that the custom
+adapter is properly configured.
 
 Run migrations:
 
@@ -35,7 +38,69 @@ Run migrations:
 Configuration
 -------------
 
-MFA TOTP is controlled via the ``JWT_ALLAUTH_MFA_TOTP_MODE`` setting in ``settings.py``. Three modes are available:
+MFA TOTP is controlled via the ``JWT_ALLAUTH_MFA_TOTP_MODE`` setting in ``settings.py``. Three modes are available.
+
+Adapter Configuration
+~~~~~~~~~~~~~~~~~~~~~
+
+Automatic Setup
+^^^^^^^^^^^^^^^
+
+The JWT All-Auth MFA adapter is **automatically configured**. The adapter extends allauth's default MFA adapter with JWT-specific functionality.
+
+During app initialization (in the ``ready()`` method of the AppConfig), the following happens:
+
+1. If no ``MFA_ADAPTER`` is explicitly set in your settings, it automatically configures:
+
+   .. code-block:: python
+
+       MFA_ADAPTER = 'jwt_allauth.mfa.adapter.JWTAllAuthMFAAdapter'
+
+2. This custom adapter manages TOTP (Time-based One-Time Password) configuration
+
+**You do not need to manually set ``MFA_ADAPTER`` in your settings** unless you want to override it
+with your own custom implementation.
+
+Customizing the TOTP Issuer
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The TOTP issuer is the name that appears in authenticator apps like Google Authenticator, Microsoft Authenticator, etc.
+
+To customize it, add this optional setting:
+
+.. code-block:: python
+
+    # settings.py
+    JWT_ALLAUTH_TOTP_ISSUER = "My Application Name"
+
+TOTP Issuer Priority
+^^^^^^^^^^^^^^^^^^^^^
+
+When determining what issuer name to use, the adapter follows this priority:
+
+1. ``JWT_ALLAUTH_TOTP_ISSUER`` (if explicitly set in settings)
+2. ``'JWT-Allauth'`` (default value if setting is not provided)
+3. Current site name (only if ``JWT_ALLAUTH_TOTP_ISSUER`` is explicitly set to empty string or ``None``)
+
+Examples::
+
+    # Default (no custom setting)
+    # Result: TOTP issuer = "JWT-Allauth"
+
+    # Custom issuer
+    JWT_ALLAUTH_TOTP_ISSUER = "Acme Corp"
+    # Result: TOTP issuer = "Acme Corp"
+
+    # Use site name
+    JWT_ALLAUTH_TOTP_ISSUER = ""
+    # Result: TOTP issuer = current site name (from SITE_ID)
+
+For detailed information about the adapter implementation, see :doc:`jwt_allauth.mfa.adapter`.
+
+TOTP Mode Setting
+~~~~~~~~~~~~~~~~~
+
+The ``JWT_ALLAUTH_MFA_TOTP_MODE`` setting controls how TOTP is enforced. Three modes are available:
 
 ``'disabled'`` (default)
 ~~~~~~~~~~~~~~~~~~~~~~~~

@@ -24,8 +24,18 @@ from .serializers import (
     MFADeactivateSerializer,
     AuthenticatorSerializer,
 )
+from jwt_allauth.utils import load_user
 
-MFA_TOTP_MODE = getattr(settings, 'JWT_ALLAUTH_MFA_TOTP_MODE', MFA_TOTP_DISABLED)
+
+def get_mfa_totp_mode() -> str:
+    """
+    Return the current MFA TOTP mode from settings.
+
+    This must be evaluated at call time (not import time) so that
+    Django's `override_settings` used in tests – and any runtime changes
+    – are respected.
+    """
+    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
 
 try:
     from allauth.mfa.models import Authenticator
@@ -39,15 +49,16 @@ except Exception:  # pragma: no cover - optional dependency guard
     TOTP = None  # type: ignore
     get_adapter = None  # type: ignore
 
-    if MFA_TOTP_MODE != MFA_TOTP_DISABLED:
-        raise Exception("MFA TOTP is not available. Please run 'pip install django-jwt-allauth[mfa]'")
+    if get_mfa_totp_mode() != MFA_TOTP_DISABLED:
+        raise Exception('MFA TOTP is not available. Please run `pip install "django-jwt-allauth[mfa]"`')
 
 
 class MFASetupView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @load_user
     def post(self, request: Request) -> Response:
-        if MFA_TOTP_MODE == MFA_TOTP_DISABLED:
+        if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
             return Response(
                 {"detail": "MFA TOTP is disabled."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -56,7 +67,7 @@ class MFASetupView(APIView):
                 {"detail": "allauth.mfa is not installed."}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
         user = request.user
-        if Authenticator.objects.filter(user=user, type=Authenticator.Type.TOTP).exists():
+        if Authenticator.objects.filter(user_id=user.id, type=Authenticator.Type.TOTP.value).exists():
             return Response({"detail": "TOTP already activated."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Generate TOTP secret using django-allauth's native function
@@ -82,7 +93,12 @@ class MFAActivateView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = MFAActivateSerializer
 
+    @load_user
     def post(self, request: Request) -> Response:
+        if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
+            return Response(
+                {"detail": "MFA TOTP is disabled."}, status=status.HTTP_403_FORBIDDEN)
+
         if Authenticator is None or RecoveryCodes is None:
             return Response(
                 {"detail": "allauth.mfa is not installed."}, status=status.HTTP_501_NOT_IMPLEMENTED)
@@ -118,10 +134,14 @@ class MFAListAuthenticatorsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request: Request) -> Response:
+        if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
+            return Response(
+                {"detail": "MFA TOTP is disabled."}, status=status.HTTP_403_FORBIDDEN)
+
         if Authenticator is None:
             return Response({"detail": "allauth.mfa is not installed."}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
-        authenticators = Authenticator.objects.filter(user=request.user).order_by("id")
+        authenticators = Authenticator.objects.filter(user_id=request.user.id).order_by("id")
         serializer = AuthenticatorSerializer(authenticators, many=True)
         return Response(serializer.data)
 
@@ -130,8 +150,12 @@ class MFADeactivateView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = MFADeactivateSerializer
 
+    @load_user
     def post(self, request: Request) -> Response:
-        if MFA_TOTP_MODE == MFA_TOTP_REQUIRED:
+        if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
+            return Response(
+                {"detail": "MFA TOTP is disabled."}, status=status.HTTP_403_FORBIDDEN)
+        if get_mfa_totp_mode() == MFA_TOTP_REQUIRED:
             return Response(
                 {"detail": "MFA TOTP is required and cannot be disabled."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -144,7 +168,16 @@ class MFADeactivateView(APIView):
         if not request.user.check_password(serializer.validated_data["password"]):
             return Response({"detail": "Invalid password."}, status=status.HTTP_400_BAD_REQUEST)
 
-        deleted, _ = Authenticator.objects.filter(user=request.user, type=Authenticator.Type.TOTP).delete()
+        # Delete both TOTP and recovery code authenticators for the user
+        deleted, _ = Authenticator.objects.filter(
+            user_id=request.user.id,
+            type__in=[
+                Authenticator.Type.TOTP.value,
+                getattr(Authenticator.Type, "RECOVERY_CODES", Authenticator.Type.RECOVERY_CODES).value
+                if hasattr(Authenticator.Type, "RECOVERY_CODES") and hasattr(Authenticator.Type.RECOVERY_CODES, "value")
+                else getattr(Authenticator.Type, "RECOVERY_CODES", Authenticator.Type.RECOVERY_CODES)
+            ],
+        ).delete()
         if deleted == 0:
             return Response({"detail": "TOTP not activated."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"success": True})
@@ -154,6 +187,9 @@ class MFAVerifyView(APIView):
     serializer_class = MFAVerifySerializer
 
     def post(self, request: Request) -> Response:
+        if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
+            return Response(
+                {"detail": "MFA TOTP is disabled."}, status=status.HTTP_403_FORBIDDEN)
         if Authenticator is None:
             return Response({"detail": "allauth.mfa is not installed."}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
@@ -175,7 +211,7 @@ class MFAVerifyView(APIView):
         except User.DoesNotExist:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        auth_qs = Authenticator.objects.filter(user=user, type=Authenticator.Type.TOTP)
+        auth_qs = Authenticator.objects.filter(user_id=user.id, type=Authenticator.Type.TOTP.value)
         if not auth_qs.exists():
             return Response({"detail": "TOTP not activated."}, status=status.HTTP_400_BAD_REQUEST)
         authenticator = auth_qs.first()
@@ -196,6 +232,9 @@ class MFAVerifyRecoveryView(APIView):
     serializer_class = MFAVerifyRecoverySerializer
 
     def post(self, request: Request) -> Response:
+        if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
+            return Response(
+                {"detail": "MFA TOTP is disabled."}, status=status.HTTP_403_FORBIDDEN)
         if Authenticator is None or RecoveryCodes is None:
             return Response({"detail": "allauth.mfa is not installed."}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
@@ -219,7 +258,7 @@ class MFAVerifyRecoveryView(APIView):
 
         # Get recovery codes authenticator for the user
         rc_authenticator = Authenticator.objects.filter(
-            user=user, type=Authenticator.Type.RECOVERY_CODES
+            user_id=user.id, type=Authenticator.Type.RECOVERY_CODES.value
         ).first()
         if not rc_authenticator:
             return Response({"detail": "Recovery codes not available."}, status=status.HTTP_400_BAD_REQUEST)

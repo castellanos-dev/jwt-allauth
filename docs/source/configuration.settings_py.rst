@@ -27,6 +27,8 @@ Configure these variables in the ``settings.py`` file of your project.
         - ``'optional'`` - MFA TOTP is optional; users can configure it voluntarily but login does not require it.
         - ``'required'`` - MFA TOTP is mandatory; users must configure it and cannot log in without providing a TOTP code.
 
+    - ``JWT_ALLAUTH_TOTP_ISSUER`` - custom TOTP issuer name displayed in authenticator apps like Google Authenticator (default: ``'JWT-Allauth'``). The JWT All-Auth MFA adapter is automatically configured when ``jwt_allauth`` is in ``INSTALLED_APPS``. If not set, defaults to ``'JWT-Allauth'``. Set to empty string to use the current site name instead. See :doc:`jwt_allauth.mfa.adapter` for more details.
+
 - Redirection URLs
 
     - ``EMAIL_VERIFIED_REDIRECT`` - the url path to be redirected once the email verified can be configured through.
