@@ -24,7 +24,10 @@ try:
 except Exception:  # pragma: no cover - optional dependency guard
     Authenticator = None  # type: ignore
     if MFA_TOTP_MODE != MFA_TOTP_DISABLED:
-        raise Exception("MFA TOTP is not available. Please run 'pip install django-jwt-allauth[mfa]'")
+        raise Exception(
+            "MFA TOTP is not available. Please ensure 'django-jwt-allauth[mfa]' "
+            "is installed and 'allauth.mfa' is added to INSTALLED_APPS."
+        )
 
 
 class LoginSerializer(TokenObtainPairSerializer):

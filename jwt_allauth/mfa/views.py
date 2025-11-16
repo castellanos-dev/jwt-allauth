@@ -50,7 +50,10 @@ except Exception:  # pragma: no cover - optional dependency guard
     get_adapter = None  # type: ignore
 
     if get_mfa_totp_mode() != MFA_TOTP_DISABLED:
-        raise Exception('MFA TOTP is not available. Please run `pip install "django-jwt-allauth[mfa]"`')
+        raise Exception(
+            "MFA TOTP is not available. Please ensure 'django-jwt-allauth[mfa]' "
+            "is installed and 'allauth.mfa' is added to INSTALLED_APPS."
+        )
 
 
 class MFASetupView(APIView):

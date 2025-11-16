@@ -10,7 +10,7 @@ To use MFA TOTP, install ``django-jwt-allauth`` with the ``mfa`` extra:
 
 .. code-block:: bash
 
-    pip install django-jwt-allauth[mfa]
+    pip install "django-jwt-allauth[mfa]"
 
 This will automatically install ``django-allauth[mfa]`` and all required dependencies.
 
