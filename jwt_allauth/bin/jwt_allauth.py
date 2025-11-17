@@ -116,6 +116,18 @@ def _modify_settings(settings_path, email_config):
     with open(settings_path, 'r') as f:
         settings_content = f.read()
 
+    # If email configuration will be added, ensure that the settings file
+    # has access to the `os` and `secrets` modules so that generated email
+    # settings can read credentials from environment variables or generate
+    # dummy defaults without hard-coding real secrets in clear text.
+    imports = []
+    if email_config and "import os" not in settings_content:
+        imports.append("import os")
+    if email_config and "import secrets" not in settings_content:
+        imports.append("import secrets")
+    if imports:
+        settings_content = "\n".join(imports) + "\n" + settings_content
+
     # Detect whether MFA support is available in the current environment.
     # We only configure MFA-related apps and settings when the optional
     # django-allauth[mfa] dependency is actually installed, to avoid
@@ -217,12 +229,12 @@ CACHES = {
 # Email configuration
 EMAIL_VERIFICATION = True
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.example.com'  # Update with your SMTP server
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your-email@example.com'  # Update with your email
-EMAIL_HOST_PASSWORD = 'your-password'  # Update with your password
-DEFAULT_FROM_EMAIL = 'your-email@example.com'  # Update with your email
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.example.com')  # Configure or override via environment
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER') or f'dummy-user-{secrets.token_hex(4)}'
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD') or secrets.token_urlsafe(16)
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'your-email@example.com')
 
 # JWT Allauth settings
 EMAIL_VERIFIED_REDIRECT = None  # URL to redirect after email verification
