@@ -8,6 +8,7 @@ from jwt_allauth.password_change.views import PasswordChangeView
 from jwt_allauth.password_reset.views import PasswordResetView, PasswordResetConfirmView, ResetPasswordView, DefaultPasswordResetView
 from jwt_allauth.registration import urls as registration_urls
 from jwt_allauth.token_refresh.views import TokenRefreshView
+from jwt_allauth.mfa import urls as mfa_urls
 from jwt_allauth.user_details.views import UserDetailsView
 
 
@@ -29,6 +30,8 @@ urlpatterns = [
     path('password/change/', PasswordChangeView.as_view(), name='rest_password_change'),
     # Registration urls
     path('registration/', include(registration_urls)),
+    # MFA urls
+    path('mfa/', include(mfa_urls)),
 ]
 
 if getattr(settings, 'PASSWORD_RESET_REDIRECT', None) is None:

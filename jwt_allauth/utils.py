@@ -1,4 +1,5 @@
 from importlib import import_module
+from typing import Any, Dict, Optional
 
 from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress
@@ -8,10 +9,12 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.conf import settings
 
 from django_user_agents.utils import get_user_agent as get_user_agent_django
+from rest_framework import status
+from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import InvalidToken
 from six import string_types
 
-from jwt_allauth.constants import TEMPLATE_PATHS
+from jwt_allauth.constants import TEMPLATE_PATHS, REFRESH_TOKEN_COOKIE
 from jwt_allauth.exceptions import NotVerifiedEmail, IncorrectCredentials
 
 
@@ -211,3 +214,100 @@ def load_user(f):
         res = f(self, *args, **kwargs)
         return res
     return wrapper
+
+
+def build_token_response(
+    refresh_token: Any,
+    access_token: Optional[str] = None,
+    extra_data: Optional[Dict[str, Any]] = None,
+    http_status: int = status.HTTP_200_OK,
+    cookie_settings: Optional[Dict[str, Any]] = None,
+) -> Response:
+    """
+    Build a standardized token response with optional refresh token as cookie.
+
+    This helper function standardizes the token response format across the application,
+    handling both cookie-based and JSON-based refresh token delivery based on settings.
+
+    Args:
+        refresh_token: RefreshToken instance or string representation
+        access_token: Optional access token string. If not provided, will be extracted from refresh_token
+        extra_data: Optional dictionary of additional data to include in response
+        http_status: HTTP status code for the response (default: 200 OK)
+        cookie_settings: Optional dictionary with custom cookie settings. Keys can include:
+                        - 'key': Cookie name (default: REFRESH_TOKEN_COOKIE)
+                        - 'httponly': Whether cookie is HTTP only (default: True)
+                        - 'secure': Whether cookie requires HTTPS (default: based on DEBUG)
+                        - 'samesite': SameSite policy (default: 'Lax')
+                        - 'max_age': Cookie max age in seconds (default: None)
+
+    Returns:
+        Response: DRF Response object with tokens and optional cookie set
+
+    Example:
+        .. code-block:: python
+
+            from jwt_allauth.utils import build_token_response
+            from jwt_allauth.tokens.app_settings import RefreshToken
+
+            # Basic usage
+            refresh = RefreshToken.for_user(user)
+            response = build_token_response(refresh)
+
+            # With custom data
+            response = build_token_response(
+                refresh,
+                extra_data={"detail": "Login successful"},
+                http_status=status.HTTP_201_CREATED
+            )
+
+            # With custom cookie settings
+            response = build_token_response(
+                refresh,
+                cookie_settings={
+                    'max_age': 86400,  # 24 hours
+                    'samesite': 'Strict'
+                }
+            )
+    """
+    # Extract access token if not provided
+    if access_token is None:
+        if hasattr(refresh_token, 'access_token'):
+            access_token = str(refresh_token.access_token)
+        else:
+            access_token = str(refresh_token)
+
+    # Build response data
+    response_data: Dict[str, Any] = {"access": access_token}
+
+    # Add refresh token to response if not using cookies
+    use_cookie = getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE", True)
+    if not use_cookie:
+        response_data["refresh"] = str(refresh_token)
+
+    # Add extra data if provided
+    if extra_data:
+        response_data.update(extra_data)
+
+    # Create response
+    response = Response(response_data, status=http_status)
+
+    # Set cookie if configured
+    if use_cookie:
+        # Prepare default cookie settings
+        default_settings = {
+            'key': REFRESH_TOKEN_COOKIE,
+            'value': str(refresh_token),
+            'httponly': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_HTTP_ONLY", True),
+            'secure': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SECURE", not settings.DEBUG),
+            'samesite': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SAME_SITE", "Lax"),
+            'max_age': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_MAX_AGE", None),
+        }
+
+        # Override with custom settings if provided
+        if cookie_settings:
+            default_settings.update(cookie_settings)
+
+        response.set_cookie(**default_settings)
+
+    return response

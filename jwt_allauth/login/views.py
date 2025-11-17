@@ -7,7 +7,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.throttling import AnonRateThrottle
 
 from jwt_allauth.app_settings import LoginSerializer
-from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m
+from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m, build_token_response
 from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
 
 
@@ -28,21 +28,27 @@ class LoginView(TokenObtainPairView):
         except TokenError as e:
             raise InvalidToken(e.args[0])
 
-        response_data = {"access": serializer.validated_data['access']}
-
-        # Handle refresh token based on configuration
-        if not getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True):
-            response_data["refresh"] = serializer.validated_data['refresh']
-
-        response = Response(response_data, status=status.HTTP_200_OK)
-
-        if getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True):
-            response.set_cookie(
-                key=REFRESH_TOKEN_COOKIE,
-                value=str(serializer.validated_data['refresh']),
-                httponly=True,
-                secure=not settings.DEBUG if hasattr(settings, 'DEBUG') else True,
-                samesite='Lax'
+        # MFA setup required branch (REQUIRED mode without MFA configured)
+        if serializer.validated_data.get('mfa_setup_required'):
+            return Response(
+                {
+                    "mfa_setup_required": True,
+                    "setup_challenge_id": serializer.validated_data.get("setup_challenge_id"),
+                },
+                status=status.HTTP_200_OK,
             )
 
-        return response
+        # MFA verification required branch (user has MFA enabled)
+        if serializer.validated_data.get('mfa_required'):
+            return Response(
+                {
+                    "mfa_required": True,
+                    "challenge_id": serializer.validated_data.get("challenge_id"),
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        return build_token_response(
+            refresh_token=serializer.validated_data['refresh'],
+            access_token=serializer.validated_data['access']
+        )
