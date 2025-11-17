@@ -1,11 +1,14 @@
 from allauth.account import app_settings as allauth_app_settings
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core import context as allauth_ctx
+from django.conf import settings
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
 
+from jwt_allauth.constants import EMAIL_CONFIRMATION
+from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.utils import get_template_path
 
 
@@ -55,30 +58,55 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
         Returns:
             str: Confirmation key used in the email
         """
+        confirmation_key = emailconfirmation.key
+
+        user = emailconfirmation.email_address.user
         ctx = {
-            "user": emailconfirmation.email_address.user,
+            "user": user,
         }
         if allauth_app_settings.EMAIL_VERIFICATION_BY_CODE_ENABLED:
-            ctx.update({"code": emailconfirmation.key})
+            ctx.update({"code": confirmation_key})
         else:
             ctx.update(
                 {
-                    "key": emailconfirmation.key,
+                    "key": confirmation_key,
                     "activate_url": self.get_email_confirmation_url(
                         request, emailconfirmation
                     ),
                 }
             )
         if signup:
-            email_template = "email/signup/email_signup"
-            template_path = get_template_path(
-                'EMAIL_VERIFICATION',
-                "email/signup/email_message.html"
+            # Decide which templates to use based on whether the user was invited
+            # via admin-managed registration (no usable password yet) or signed
+            # up directly (regular self-registration flow).
+            is_admin_managed = (
+                getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False)
+                and not user.has_usable_password()
             )
-            subject_path = get_template_path(
-                'EMAIL_VERIFICATION_SUBJECT',
-                "email/signup/email_subject.txt"
-            )
+
+            if is_admin_managed:
+                # Admin-managed invitation email: focuses on confirming email and
+                # guiding the user to set their password after verification.
+                email_template = "email/admin_invite/email_admin_invite"
+                template_path = get_template_path(
+                    'ADMIN_EMAIL_VERIFICATION',
+                    "email/admin_invite/email_message.html",
+                )
+                subject_path = get_template_path(
+                    'ADMIN_EMAIL_VERIFICATION_SUBJECT',
+                    "email/admin_invite/email_subject.txt",
+                )
+            else:
+                # Default self-registration verification email.
+                email_template = "email/signup/email_signup"
+                template_path = get_template_path(
+                    'EMAIL_VERIFICATION',
+                    "email/signup/email_message.html",
+                )
+                subject_path = get_template_path(
+                    'EMAIL_VERIFICATION_SUBJECT',
+                    "email/signup/email_subject.txt",
+                )
         else:
             email_template = "account/email/email_confirmation"
             template_path = None
@@ -90,7 +118,21 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
             subject_path=subject_path,
             template_path=template_path
         )
-        return ctx['key']
+
+        # Persist the confirmation key as a generic token so that the verify view
+        # can enforce single-use semantics.
+        if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+            token_serializer = GenericTokenModelSerializer(
+                data={
+                    "token": confirmation_key,
+                    "user": emailconfirmation.email_address.user.id,
+                    "purpose": EMAIL_CONFIRMATION,
+                }
+            )
+            token_serializer.is_valid(raise_exception=True)
+            token_serializer.save()
+
+        return confirmation_key
 
     def send_mail(self, template_prefix, email, context, subject_path=None, template_path=None):
         """

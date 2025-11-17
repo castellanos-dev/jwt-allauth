@@ -3,6 +3,7 @@ import re
 from allauth.account import app_settings as allauth_settings
 from allauth.account.adapter import get_adapter
 from allauth.account.admin import EmailAddress
+from allauth.account.models import get_emailconfirmation_model
 from allauth.account.utils import setup_user_email
 # from allauth.socialaccount.helpers import complete_social_login
 # from allauth.socialaccount.models import SocialAccount
@@ -154,8 +155,13 @@ class UserRegisterSerializer(RegisterSerializer):
         adapter.save_user(request, user, self, commit=False)
         self.custom_signup(request, user)
         user.save()
-        # Register email address but DO NOT confirm here regardless of EMAIL_VERIFICATION setting
         setup_user_email(request, user, [])
+        # Create an EmailConfirmation instance for the user's primary email
+        email_address = EmailAddress.objects.get_primary(user)
+        if email_address is not None:
+            confirmation_model = get_emailconfirmation_model()
+            emailconfirmation = confirmation_model.create(email_address)
+            adapter.send_confirmation_mail(request, emailconfirmation, signup=True)
         return user
 
 #

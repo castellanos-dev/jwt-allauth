@@ -1,11 +1,15 @@
 from allauth.account.models import EmailAddress, EmailConfirmationHMAC
 from django.contrib.auth import get_user_model
 from django.test import override_settings
-from django.urls import reverse, NoReverseMatch, clear_url_caches
+from django.urls import NoReverseMatch, clear_url_caches, reverse
 from rest_framework import status
 
-from jwt_allauth.constants import SET_PASSWORD_COOKIE, PASS_SET_ACCESS, \
-    REFRESH_TOKEN_COOKIE
+from jwt_allauth.constants import (
+    SET_PASSWORD_COOKIE,
+    PASS_SET_ACCESS,
+    REFRESH_TOKEN_COOKIE,
+    EMAIL_CONFIRMATION,
+)
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel
 from .mixins import TestsMixin
@@ -128,6 +132,74 @@ class AdminManagedRegistrationTests(TestsMixin):
         self.assertJSONEqual(resp2.content, {})
         self.assertEqual(EmailAddress.objects.filter(email=self.EMAIL).count(), 1)
 
+    def test_email_confirmation_token_created_on_registration(self):
+        """
+        When a staff user registers an invited user, a confirmation token
+        should be persisted for EMAIL_CONFIRMATION with the correct key.
+        """
+        staff = get_user_model().objects.create_user(
+            'admin_token', email='admin_token@demo.com', password='A-1_strong', is_staff=True
+        )
+        EmailAddress.objects.create(user=staff, email=staff.email, verified=True, primary=True)
+        staff_access = str(RefreshToken.for_user(staff).access_token)
+
+        resp = self.client.post(
+            self.user_register_url,
+            data={"email": self.INVITED_EMAIL, "role": 300},
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {staff_access}',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+        invited = get_user_model().objects.filter(email=self.INVITED_EMAIL).latest('id')
+        email_addr = EmailAddress.objects.filter(user=invited, email=self.INVITED_EMAIL).first()
+        self.assertIsNotNone(email_addr)
+
+        key = EmailConfirmationHMAC(email_addr).key
+
+        token = GenericTokenModel.objects.filter(user=invited, purpose=EMAIL_CONFIRMATION).first()
+        self.assertIsNotNone(token)
+        self.assertEqual(token.token, key)
+
+    def test_email_confirmation_token_single_use(self):
+        """
+        The EMAIL_CONFIRMATION token must be single-use: first GET succeeds,
+        second GET with the same key must fail with 401.
+        """
+        invited = get_user_model().objects.create_user('invited_single_use', email=self.INVITED_EMAIL)
+        email_addr = EmailAddress.objects.create(
+            user=invited, email=self.INVITED_EMAIL, verified=False, primary=True
+        )
+
+        key = EmailConfirmationHMAC(email_addr).key
+        GenericTokenModel.objects.create(user=invited, token=key, purpose=EMAIL_CONFIRMATION)
+
+        verify_url = reverse('account_confirm_email', args=[key])
+
+        # First use: token is valid and should be consumed
+        first_resp = self.client.get(verify_url)
+        self.assertEqual(first_resp.status_code, 302)
+        self.assertIn(SET_PASSWORD_COOKIE, self.client.cookies)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(
+                user=invited, token=key, purpose=EMAIL_CONFIRMATION
+            ).exists()
+        )
+        self.assertTrue(
+            GenericTokenModel.objects.filter(user=invited, purpose=PASS_SET_ACCESS).exists()
+        )
+
+        # Second use: token was consumed, so this must fail
+        before_pass_set_tokens = GenericTokenModel.objects.filter(
+            user=invited, purpose=PASS_SET_ACCESS
+        ).count()
+        second_resp = self.client.get(verify_url)
+        self.assertEqual(second_resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        after_pass_set_tokens = GenericTokenModel.objects.filter(
+            user=invited, purpose=PASS_SET_ACCESS
+        ).count()
+        self.assertEqual(before_pass_set_tokens, after_pass_set_tokens)
+
     def test_set_password_flow(self):
         """
         Simulate the verification GET that issues a one-time access token cookie,
@@ -139,6 +211,8 @@ class AdminManagedRegistrationTests(TestsMixin):
 
         # Simulate clicking the verification link sent by email
         key = EmailConfirmationHMAC(email_addr).key
+        # Persist confirmation token as it would be created by the adapter
+        GenericTokenModel.objects.create(user=invited, token=key, purpose=EMAIL_CONFIRMATION)
         verify_url = reverse('account_confirm_email', args=[key])
         verify_resp = self.client.get(verify_url)
         self.assertEqual(verify_resp.status_code, 302)  # redirected after confirming
@@ -246,6 +320,8 @@ class AdminManagedEmailVerificationOffTests(TestsMixin):
 
         # Simulate verification GET
         key = EmailConfirmationHMAC(email_addr).key
+        # Persist confirmation token as it would be created by the adapter
+        GenericTokenModel.objects.create(user=invited, token=key, purpose=EMAIL_CONFIRMATION)
         verify_url = reverse('account_confirm_email', args=[key])
         verify_resp = self.client.get(verify_url)
         self.assertEqual(verify_resp.status_code, 302)

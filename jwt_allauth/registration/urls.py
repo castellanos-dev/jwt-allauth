@@ -2,11 +2,10 @@ from django.conf import settings
 from django.urls import path
 from django.views.generic import TemplateView
 
-from jwt_allauth.constants import EMAIL_VERIFIED_REDIRECT
+from jwt_allauth.constants import EMAIL_VERIFIED_REDIRECT, PASSWORD_SET_REDIRECT
 from jwt_allauth.registration.email_verification.views import VerifyEmailView
 from jwt_allauth.registration.views import RegisterView, UserRegisterView
-from jwt_allauth.password_reset.views import SetPasswordView
-from jwt_allauth.utils import get_template_path
+from jwt_allauth.password_reset.views import SetPasswordView, DefaultSetPasswordView
 
 urlpatterns = []
 
@@ -17,6 +16,16 @@ if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
         path('set-password/', SetPasswordView.as_view(), name='rest_set_password'),
         path('verification/<str:key>/', VerifyEmailView.as_view(), name='account_confirm_email'),
     ])
+
+    # Only register the built-in HTML UI if no custom PASSWORD_SET_REDIRECT is configured
+    if getattr(settings, PASSWORD_SET_REDIRECT, None) is None:
+        urlpatterns.append(
+            path(
+                'set-password/default/',
+                DefaultSetPasswordView.as_view(),
+                name='jwt_allauth_default_set_password',
+            )
+        )
 
 else:
     urlpatterns.append(path('', RegisterView.as_view(), name='rest_register'))

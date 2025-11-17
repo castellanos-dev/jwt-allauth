@@ -4,7 +4,7 @@ Admin-managed registration
 Overview
 --------
 
-When ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True`` the library enables a closed registration flow where existing admins invite users. In this mode, ``EMAIL_VERIFICATION`` is ignored: the email is verified during the verification GET, and not at the password set step.
+When ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True`` the library enables a closed registration flow where existing admins invite users. In this mode, the ``EMAIL_VERIFICATION`` setting is effectively ignored for invited users: the email is always verified during the verification ``GET`` step, never at the password-set step.
 
 - Admin creates the user via ``POST /registration/user-register/``.
 - The invited user receives a verification email.
@@ -72,10 +72,23 @@ Email verification behavior
 - The verification GET confirms the email in admin-managed mode and issues a one-time token, then redirects to the password set UI.
 - The set-password endpoint does not alter email verification status.
 
+Email templates
+---------------
+
+- The verification email sent for admin-managed invitations uses a dedicated template
+  whose defaults are:
+
+  - Subject: ``email/admin_invite/email_subject.txt``
+  - HTML body: ``email/admin_invite/email_message.html``
+
+- You can override these by configuring ``JWT_ALLAUTH_TEMPLATES`` with
+  ``ADMIN_EMAIL_VERIFICATION_SUBJECT`` and ``ADMIN_EMAIL_VERIFICATION``. See
+  :doc:`configuration.settings_py` for details.
+
 MFA REQUIRED Integration
 ------------------------
 
-When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` and ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``, the admin-managed registration flow is extended to enforce MFA setup and provides immediate token issuance after MFA activation:
+When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` and ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``, the admin-managed registration flow is extended to **enforce MFA setup** and provides **immediate token issuance after MFA activation**. This mirrors the MFA bootstrap behavior described in :doc:`mfa_totp`.
 
 **Flow with MFA REQUIRED:**
 
@@ -94,7 +107,7 @@ When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` and ``JWT_ALLAUTH_ADMIN_MANAGED_
 
 5. User accesses ``POST /mfa/setup/`` with ``setup_challenge_id`` (no authentication required)
 6. User accesses ``POST /mfa/activate/`` with ``setup_challenge_id`` and TOTP code
-7. **Tokens are issued** after successful MFA activation
+7. **Tokens are issued** after successful MFA activation (using the same response helper as login, respecting cookie configuration)
 8. User can now login normally
 
 **Key Differences:**
@@ -102,7 +115,7 @@ When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` and ``JWT_ALLAUTH_ADMIN_MANAGED_
 - ``set-password`` endpoint returns ``mfa_setup_required`` + ``setup_challenge_id`` instead of tokens
 - Users cannot receive tokens until MFA is configured
 - The ``setup_challenge_id`` allows temporary access to MFA setup endpoints without full authentication
-- **After successful MFA activation** (``POST /mfa/activate/``), tokens are issued immediately (unlike self-service registration)
+- **After successful MFA activation** (``POST /mfa/activate/``), tokens are issued immediately (unlike self-service registration, where users must re-login)
 - This ensures all users go through MFA setup before gaining any access, preventing security bypasses
 - Users immediately have access after MFA activation without needing to re-login
 
@@ -123,3 +136,10 @@ When both ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` and ``JWT_ALLAUTH_ADMIN_MAN
 - This improves user experience for invited/admin-managed workflows by providing seamless onboarding
 
 This behavior is **different from self-service registration**, where ``/mfa/activate/`` returns only recovery codes and the user must re-login to obtain tokens.
+
+
+See also
+--------
+
+- :doc:`mfa_totp` — full MFA TOTP configuration and flows (login, self-service registration, and admin-managed registration).
+- :doc:`configuration.settings_py` — details on ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION``, ``JWT_ALLAUTH_MFA_TOTP_MODE``, cookie settings, and template overrides.

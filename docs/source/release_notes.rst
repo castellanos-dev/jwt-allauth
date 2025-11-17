@@ -4,17 +4,10 @@ Release Notes
 Version 1.2.0
 -------------
 
-Released: November 10, 2025
+Released: November 17, 2025
 
 New Features
 ~~~~~~~~~~~~
-
-- **Admin-Managed User Registration**: New registration flow controlled via ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` setting. When enabled:
-    - Self-registration endpoint is disabled
-    - Only users with allowed roles (configurable via ``JWT_ALLAUTH_REGISTRATION_ALLOWED_ROLES``) can register new users
-    - New ``/user-register/`` endpoint for admin registration
-    - Invited users set their own password via email verification link before gaining access
-    - No authentication tokens issued during registration; one-time password setup token issued after email verification
 
 - **MFA TOTP**: Added REST endpoints for TOTP-based multi-factor authentication using ``django-allauth`` MFA:
    - ``POST /mfa/setup/``: returns provisioning URI (otpauth), secret, and QR code (SVG)
@@ -30,6 +23,13 @@ New Features
      - ``'disabled'`` (default): MFA TOTP is disabled
      - ``'optional'``: Users can enable MFA TOTP but it's not required for login
      - ``'required'``: Users must enable MFA TOTP and provide TOTP code during login
+
+- **Admin-Managed User Registration**: New registration flow controlled via ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` setting. When enabled:
+    - Self-registration endpoint is disabled
+    - Only users with allowed roles (configurable via ``JWT_ALLAUTH_REGISTRATION_ALLOWED_ROLES``) can register new users
+    - New ``/user-register/`` endpoint for admin registration
+    - Invited users set their own password via email verification link before gaining access
+    - No authentication tokens issued during registration; one-time password setup token issued after email verification
 
 Version 1.1.1
 -------------

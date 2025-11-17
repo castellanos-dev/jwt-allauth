@@ -20,6 +20,7 @@ from jwt_allauth.app_settings import PasswordResetSerializer
 from jwt_allauth.constants import (
     PASS_RESET, PASSWORD_RESET_REDIRECT, FOR_USER,
     ONE_TIME_PERMISSION, PASS_SET_ACCESS, PASS_RESET_ACCESS, PASS_RESET_COOKIE,
+    SET_PASSWORD_COOKIE,
     MFA_TOKEN_MAX_AGE_SECONDS,
     MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
@@ -79,6 +80,22 @@ class DefaultPasswordResetView(GenericAPIView):
         return render(request, self.template_name, {
             'validlink': PASS_RESET_COOKIE in request.COOKIES,
             'form': None
+        })
+
+
+class DefaultSetPasswordView(GenericAPIView):
+    """
+    Default view for admin-managed registration password set form.
+
+    This renders a minimal HTML UI that posts to the API-based SetPasswordView
+    (rest_set_password) and relies on the SET_PASSWORD_COOKIE for authorization.
+    """
+    permission_classes = (AllowAny,)
+    template_name = 'password/set.html'
+
+    def get(self, request):
+        return render(request, self.template_name, {
+            'validlink': SET_PASSWORD_COOKIE in request.COOKIES,
         })
 
 
@@ -208,7 +225,10 @@ class SetPasswordView(GenericAPIView):
         query_set.delete()  # single use
 
         # Load the user in the request
-        request.user = get_user_model().objects.get(id=self.request.user.id)
+        try:
+            request.user = get_user_model().objects.get(id=self.request.user.id)
+        except get_user_model().DoesNotExist:
+            raise InvalidToken()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
