@@ -5,7 +5,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% trans "Email Verification" %}</title>
+    <title>{% trans "You're invited" %}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -26,10 +26,6 @@
         .header {
             text-align: center;
             margin-bottom: 30px;
-        }
-        .logo {
-            max-width: 150px;
-            margin-bottom: 20px;
         }
         .content {
             margin-bottom: 30px;
@@ -62,21 +58,41 @@
 <body>
     <div class="email-container">
         <div class="header">
-            <h1>{% trans "Welcome to our platform!" %}</h1>
+            <h1>{% trans "You've been invited to join our platform" %}</h1>
         </div>
 
         <div class="content">
-
-            <p>{% trans "Thank you for signing up on our website. To complete your registration, please click the button below to verify your email address:" %}</p>
+            <p>
+                {% blocktrans %}
+                An administrator has created an account for you using this email address.
+                To activate your account and set your password, please confirm your email address.
+                {% endblocktrans %}
+            </p>
 
             <div style="text-align: center;">
-                <a href="{{ activate_url }}" class="button" style="color: #ffffff !important;">{% trans "Verify Email Address" %}</a>
+                <a href="{{ activate_url }}" class="button" style="color: #ffffff !important;">
+                    {% trans "Confirm email and set password" %}
+                </a>
             </div>
 
-            <p>{% trans "If the button above doesn't work, you can also copy and paste the following link into your browser:" %}</p>
+            <p>
+                {% blocktrans %}
+                If the button above does not work, you can also copy and paste the following link
+                into your browser:
+                {% endblocktrans %}
+            </p>
             <p style="word-break: break-all;">{{ activate_url }}</p>
 
-            <p>{% trans "If you did not request this email, you can safely ignore it." %}</p>
+            <p>
+                {% blocktrans %}
+                After confirming your email, you will be redirected to a secure page where you can
+                choose your password and finish activating your account.
+                {% endblocktrans %}
+            </p>
+
+            <p>
+                {% trans "If you did not expect this invitation, you can safely ignore this email." %}
+            </p>
         </div>
 
         <div class="footer">
@@ -86,3 +102,5 @@
     </div>
 </body>
 </html>
+
+

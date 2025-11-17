@@ -22,6 +22,8 @@ class JWTAllauthAppConfig(AppConfig):
         settings.EMAIL_VERIFICATION = getattr(settings, 'EMAIL_VERIFICATION', False)
         if not hasattr(settings, 'ACCOUNT_ADAPTER'):
             settings.ACCOUNT_ADAPTER = 'jwt_allauth.adapter.JWTAllAuthAdapter'
+        if not hasattr(settings, 'MFA_ADAPTER'):
+            settings.MFA_ADAPTER = 'jwt_allauth.mfa.adapter.JWTAllAuthMFAAdapter'
         if hasattr(settings, 'ACCOUNT_LOGIN_METHODS') and settings.ACCOUNT_LOGIN_METHODS != {'email'}:
             raise ValueError('Only login email is supported.')
         settings.ACCOUNT_LOGIN_METHODS = {'email'}

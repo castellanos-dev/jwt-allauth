@@ -3,6 +3,7 @@ import re
 from allauth.account import app_settings as allauth_settings
 from allauth.account.adapter import get_adapter
 from allauth.account.admin import EmailAddress
+from allauth.account.models import get_emailconfirmation_model
 from allauth.account.utils import setup_user_email
 # from allauth.socialaccount.helpers import complete_social_login
 # from allauth.socialaccount.models import SocialAccount
@@ -64,8 +65,10 @@ class RegisterSerializer(serializers.Serializer):
         return " ".join([txt.capitalize() for txt in last_name.split(" ")])
 
     def validate(self, data):
-        if not constant_time_compare(data['password1'], data['password2']):
-            raise serializers.ValidationError(_("The two password fields didn't match."))
+        # Only validate passwords if they exist (not required for admin-managed registration)
+        if 'password1' in data and 'password2' in data:
+            if not constant_time_compare(data['password1'], data['password2']):
+                raise serializers.ValidationError(_("The two password fields didn't match."))
         return data
 
     def custom_signup(self, request, user):
@@ -93,6 +96,72 @@ class RegisterSerializer(serializers.Serializer):
             email = EmailAddress.objects.filter(user=user.id).first()
             if email is not None:
                 adapter.confirm_email(request, email)
+        return user
+
+
+class UserRegisterSerializer(RegisterSerializer):
+    """
+    Registration serializer for admin-managed user creation.
+    - Requires email and role.
+    - Does not accept passwords; user sets password after email verification.
+    - first_name/last_name optional.
+    """
+    # Remove password fields
+    password1 = None  # type: ignore
+    password2 = None  # type: ignore
+
+    # Override optionality of names
+    first_name = serializers.CharField(required=False, write_only=True, max_length=100)
+    last_name = serializers.CharField(required=False, write_only=True, max_length=100)
+
+    # Require explicit role
+    role = serializers.IntegerField(required=True, write_only=True)
+
+    def validate(self, data):
+        if 'role' not in data:
+            raise serializers.ValidationError({"role": _("Role is required")})
+        return super().validate(data)
+
+    def get_cleaned_data(self):
+        base = super().get_cleaned_data()
+        base.update({
+            'role': self.validated_data.get('role'),
+        })
+        return base
+
+    def custom_signup(self, request, user):
+        """
+        Apply role and ensure no password is set at creation time.
+        """
+        cleaned = getattr(self, 'cleaned_data', {}) or {}
+        role = cleaned.get('role')
+        if role is not None:
+            try:
+                user.role = int(role)
+            except (TypeError, ValueError):
+                pass
+        # Prevent login until password is set
+        user.set_unusable_password()
+
+    @transaction.atomic
+    def save(self, request):
+        """
+        Override to ignore EMAIL_VERIFICATION auto-confirm logic and always keep email unverified
+        until the set-password step in admin-managed registration.
+        """
+        adapter = get_adapter()
+        user = adapter.new_user(request)
+        self.cleaned_data = self.get_cleaned_data()
+        adapter.save_user(request, user, self, commit=False)
+        self.custom_signup(request, user)
+        user.save()
+        setup_user_email(request, user, [])
+        # Create an EmailConfirmation instance for the user's primary email
+        email_address = EmailAddress.objects.get_primary(user)
+        if email_address is not None:
+            confirmation_model = get_emailconfirmation_model()
+            emailconfirmation = confirmation_model.create(email_address)
+            adapter.send_confirmation_mail(request, emailconfirmation, signup=True)
         return user
 
 #

@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-jwt-allauth"
-version = "1.1.1"
+version = "1.2.0"
 authors = [
     {name = "Fernando Castellanos", email = "fcastellanos.dev@gmail.com"},
 ]
@@ -49,6 +49,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mfa = ["django-allauth[mfa]>=65.5.0,<=65.10.0"]
 test = ["responses>=0.5.0"]
 
 [project.urls]

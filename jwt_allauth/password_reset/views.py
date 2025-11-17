@@ -1,5 +1,8 @@
+import uuid
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import HttpResponseRedirect, HttpResponseNotFound
 from django.shortcuts import render
@@ -14,15 +17,32 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework_simplejwt.exceptions import InvalidToken
 
 from jwt_allauth.app_settings import PasswordResetSerializer
-from jwt_allauth.constants import PASS_RESET, PASSWORD_RESET_REDIRECT, PASS_RESET_ACCESS, PASS_RESET_COOKIE, FOR_USER, \
-    ONE_TIME_PERMISSION, REFRESH_TOKEN_COOKIE
-from jwt_allauth.password_reset.permissions import ResetPasswordPermission
+from jwt_allauth.constants import (
+    PASS_RESET, PASSWORD_RESET_REDIRECT, FOR_USER,
+    ONE_TIME_PERMISSION, PASS_SET_ACCESS, PASS_RESET_ACCESS, PASS_RESET_COOKIE,
+    SET_PASSWORD_COOKIE,
+    MFA_TOKEN_MAX_AGE_SECONDS,
+    MFA_TOTP_DISABLED,
+    MFA_TOTP_REQUIRED,
+)
+from jwt_allauth.password_reset.permissions import ResetPasswordPermission, SetPasswordPermission
 from jwt_allauth.password_reset.serializers import SetPasswordSerializer
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.tokens.tokens import GenericToken
-from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m
+from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m, build_token_response
+
+
+def get_mfa_totp_mode() -> str:
+    """
+    Return the current MFA TOTP mode from settings.
+
+    This must be evaluated at call time (not import time) so that
+    Django's `override_settings` used in tests – and any runtime changes
+    – are respected.
+    """
+    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
 
 
 class PasswordResetView(GenericAPIView):
@@ -60,6 +80,22 @@ class DefaultPasswordResetView(GenericAPIView):
         return render(request, self.template_name, {
             'validlink': PASS_RESET_COOKIE in request.COOKIES,
             'form': None
+        })
+
+
+class DefaultSetPasswordView(GenericAPIView):
+    """
+    Default view for admin-managed registration password set form.
+
+    This renders a minimal HTML UI that posts to the API-based SetPasswordView
+    (rest_set_password) and relies on the SET_PASSWORD_COOKIE for authorization.
+    """
+    permission_classes = (AllowAny,)
+    template_name = 'password/set.html'
+
+    def get(self, request):
+        return render(request, self.template_name, {
+            'validlink': SET_PASSWORD_COOKIE in request.COOKIES,
         })
 
 
@@ -159,24 +195,68 @@ class ResetPasswordView(GenericAPIView):
             RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
 
         refresh_token = RefreshToken.for_user(request.user)
-        response_data = {
-            "access": str(refresh_token.access_token),
-            "detail": _("Password reset.")
-        }
+        return build_token_response(
+            refresh_token,
+            extra_data={"detail": _("Password reset.")}
+        )
 
-        # Handle refresh token based on configuration
-        if not getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True):
-            response_data["refresh"] = str(refresh_token)
 
-        response = Response(response_data)
+class SetPasswordView(GenericAPIView):
+    """
+    Set password for admin-managed registration.
+    Accepts: new_password1, new_password2
+    Returns: tokens and success message.
+    """
+    serializer_class = SetPasswordSerializer
+    permission_classes = (SetPasswordPermission,)
+    throttle_classes = [UserRateThrottle]
 
-        if getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True):
-            response.set_cookie(
-                key=REFRESH_TOKEN_COOKIE,
-                value=str(refresh_token),
-                httponly=True,
-                secure=not settings.DEBUG if hasattr(settings, 'DEBUG') else True,
-                samesite='Lax'
+    @sensitive_post_parameters_m
+    def dispatch(self, *args, **kwargs):
+        if not getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+            return HttpResponseNotFound()
+        return super(SetPasswordView, self).dispatch(*args, **kwargs)
+
+    def post(self, request):
+        # check the token has not been used
+        query_set = GenericTokenModel.objects.filter(token=request.auth['jti'], purpose=PASS_SET_ACCESS)
+        if len(query_set) != 1:
+            raise InvalidToken()
+        query_set.delete()  # single use
+
+        # Load the user in the request
+        try:
+            request.user = get_user_model().objects.get(id=self.request.user.id)
+        except get_user_model().DoesNotExist:
+            raise InvalidToken()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Revoke old sessions
+        if getattr(settings, 'LOGOUT_ON_PASSWORD_CHANGE', True):
+            RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
+
+        # If MFA TOTP is REQUIRED, return setup challenge instead of tokens
+        if get_mfa_totp_mode() == MFA_TOTP_REQUIRED:
+            setup_challenge_id = str(uuid.uuid4())
+            cache.set(
+                f"mfa_setup_challenge:{setup_challenge_id}",
+                {"user_id": request.user.id},
+                timeout=MFA_TOKEN_MAX_AGE_SECONDS,
             )
 
-        return response
+            return Response(
+                {
+                    "mfa_setup_required": True,
+                    "setup_challenge_id": setup_challenge_id,
+                    "detail": _("Password set. Please configure MFA to complete registration."),
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        refresh_token = RefreshToken.for_user(request.user)
+        return build_token_response(
+            refresh_token,
+            extra_data={"detail": _("Password set.")}
+        )

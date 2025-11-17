@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.mfa',
 ]
 
 MIDDLEWARE = [
@@ -128,17 +129,6 @@ AUTHENTICATION_BACKENDS = (
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
-# REST_FRAMEWORK = {
-#     'DEFAULT_THROTTLE_CLASSES': [
-#         'rest_framework.throttling.AnonRateThrottle',
-#         'rest_framework.throttling.UserRateThrottle'
-#     ],
-#     'DEFAULT_THROTTLE_RATES': {
-#         'anon': '5/day',
-#         'user': '1000/day'
-#     }
-# }
-
 ACCOUNT_RATE_LIMITS = {
     'confirm_email': '1000/180s/key'
 }
@@ -148,3 +138,6 @@ AUTH_USER_MODEL = 'jwt_allauth.JAUser'
 PASSWORD_RESET_REDIRECT = 'password_reset/'
 
 JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE = True
+
+# MFA Configuration
+JWT_ALLAUTH_MFA_TOTP_MODE = 'optional'
