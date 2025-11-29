@@ -63,7 +63,7 @@ This will create a new Django project called "myproject" with JWT Allauth pre-co
 .. code-block:: bash
 
     cd myproject
-    python manage.py makemigrations
+    python manage.py makemigrations jwt_allauth
     python manage.py migrate
     python manage.py runserver
 
