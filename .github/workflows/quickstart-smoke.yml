@@ -37,7 +37,7 @@ jobs:
       - name: Run migrations
         working-directory: myproject
         run: |
-          python manage.py makemigrations
+          python manage.py makemigrations jwt_allauth
           python manage.py migrate
 
       - name: Run Django system checks
