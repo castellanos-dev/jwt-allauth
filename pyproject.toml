@@ -47,7 +47,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-mfa = ["django-allauth[mfa]>=65.5,<66.0", "python-fido2<2.0.0"]
+mfa = ["django-allauth[mfa]>=65.5,<66.0", "fido2<2.0.0"]
 test = ["responses>=0.5.0"]
 
 [project.urls]
