@@ -13,7 +13,7 @@ authors = [
 ]
 description = "Powerful JWT-allauth authentication for Django REST Framework that keeps the device session alive by renewing and whitelisting the refresh token."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "Framework :: Django",
     "Intended Audience :: Developers",
@@ -21,8 +21,6 @@ classifiers = [
     "Operating System :: OS Independent",
     "Topic :: Software Development",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -40,16 +38,16 @@ keywords = [
     "whitelist"
 ]
 dependencies = [
-    "Django>=4.2.16,<=5.2.4",
-    "djangorestframework>=3.15.2,<=3.16.0",
-    "six>=1.9.0",
-    "django-allauth>=65.5.0,<=65.10.0",
-    "djangorestframework-simplejwt>=5.3.1,<=5.5.1",
-    "django-user-agents>=0.4.0",
+    "Django>=4.2,<6.0",
+    "djangorestframework>=3.15,<4.0",
+    "six>=1.9,<2.0",
+    "django-allauth>=65.5,<66.0",
+    "djangorestframework-simplejwt>=5.3.1,<6.0",
+    "django-user-agents>=0.4,<1.0",
 ]
 
 [project.optional-dependencies]
-mfa = ["django-allauth[mfa]>=65.5.0,<=65.10.0"]
+mfa = ["django-allauth[mfa]>=65.5,<66.0"]
 test = ["responses>=0.5.0"]
 
 [project.urls]
