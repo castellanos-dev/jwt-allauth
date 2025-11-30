@@ -1,5 +1,4 @@
 import logging
-import uuid
 
 from allauth.account import app_settings as allauth_settings
 # from allauth.account.adapter import get_adapter
@@ -8,7 +7,6 @@ from allauth.account.utils import complete_signup
 # from allauth.socialaccount.adapter import get_adapter as get_social_adapter
 # from allauth.socialaccount.models import SocialAccount
 from django.conf import settings
-from django.core.cache import cache
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status
 # from rest_framework.exceptions import NotFound
@@ -28,10 +26,10 @@ from jwt_allauth.registration.serializers import UserRegisterSerializer
 #     SocialLoginSerializer, SocialAccountSerializer, SocialConnectSerializer)
 from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m
 from jwt_allauth.constants import (
-    MFA_TOKEN_MAX_AGE_SECONDS,
     MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
 )
+from jwt_allauth.mfa.storage import create_setup_challenge
 
 logger = logging.getLogger(__name__)
 
@@ -102,12 +100,7 @@ class RegisterView(CreateAPIView):
         # If MFA TOTP is REQUIRED, don't emit session tokens here.
         # Instead, create a setup_challenge like in login.
         if get_mfa_totp_mode() == MFA_TOTP_REQUIRED:
-            setup_challenge_id = str(uuid.uuid4())
-            cache.set(
-                f"mfa_setup_challenge:{setup_challenge_id}",
-                {"user_id": user.id},
-                timeout=MFA_TOKEN_MAX_AGE_SECONDS,
-            )
+            setup_challenge_id = create_setup_challenge(user.id)
 
             data = {
                 "mfa_setup_required": True,

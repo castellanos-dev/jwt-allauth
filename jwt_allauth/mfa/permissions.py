@@ -1,9 +1,9 @@
 """
 Permissions for MFA endpoints.
 """
-from django.contrib.auth import get_user_model
-from django.core.cache import cache
 from rest_framework import permissions
+
+from jwt_allauth.mfa.storage import get_setup_challenge_user
 
 
 class IsAuthenticatedOrHasMFASetupChallenge(permissions.BasePermission):
@@ -30,18 +30,9 @@ class IsAuthenticatedOrHasMFASetupChallenge(permissions.BasePermission):
         if not setup_challenge_id:
             return False
 
-        data = cache.get(f"mfa_setup_challenge:{setup_challenge_id}")
-        if not data:
+        user = get_setup_challenge_user(setup_challenge_id)
+        if not user:
             return False
 
-        user_id = data.get("user_id")
-        if not user_id:
-            return False
-
-        User = get_user_model()
-        try:
-            request.mfa_setup_user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return False
-
+        request.mfa_setup_user = user
         return True

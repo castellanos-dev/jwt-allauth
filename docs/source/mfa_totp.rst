@@ -408,21 +408,30 @@ When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, both self-service and admin-man
 
     # User is now fully registered and authenticated
 
-Key Points
-^^^^^^^^^^
+ Key Points
+ ^^^^^^^^^^
 
-- In both registration flows, when MFA is REQUIRED, **no tokens are issued during registration or password setup**
-- Users receive a ``setup_challenge_id`` instead, which allows access to ``/mfa/setup/`` and ``/mfa/activate/`` without authentication
-- After successful MFA activation using ``setup_challenge_id``, **tokens are always issued** via ``/mfa/activate/`` (using ``build_token_response()``), completing login/registration in a single step
-- ``build_token_response()`` respects ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` configuration for token delivery method
-- This prevents bypass of MFA requirements and ensures consistent security posture across all registration methods
+ - In both registration flows, when MFA is REQUIRED, **no tokens are issued during registration or password setup**
+ - Users receive a ``setup_challenge_id`` instead, which allows access to ``/mfa/setup/`` and ``/mfa/activate/`` without authentication
+ - After successful MFA activation using ``setup_challenge_id``, **tokens are always issued** via ``/mfa/activate/`` (using ``build_token_response()``), completing login/registration in a single step
+ - ``build_token_response()`` respects ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` configuration for token delivery method
+ - This prevents bypass of MFA requirements and ensures consistent security posture across all registration methods
 
-Challenge Token TTL
-~~~~~~~~~~~~~~~~~~~
+ Storage Backend
+ ~~~~~~~~~~~~~~~~~~~
 
-Setup challenges expire after 5 minutes (300 seconds). This is controlled by ``MFA_TOKEN_MAX_AGE_SECONDS`` in constants.
+ Setup and login challenges, as well as temporary MFA setup secrets, are stored in the database using ``GenericTokenModel`` instead of Django's cache. This means:
 
-If a user doesn't complete MFA setup within 5 minutes, they must re-login or re-register to get a new challenge.
+ - The library works correctly in multi-process / multi-worker environments without requiring a shared cache backend.
+ - No additional migrations are needed, since it reuses the existing generic token table.
+ - Expiration is enforced by comparing the token creation time with ``MFA_TOKEN_MAX_AGE_SECONDS``; expired tokens are cleaned up on access.
+
+ Challenge Token TTL
+ ~~~~~~~~~~~~~~~~~~~
+
+ Setup challenges expire after 5 minutes (300 seconds). This is controlled by ``MFA_TOKEN_MAX_AGE_SECONDS`` in constants.
+
+ If a user doesn't complete MFA setup within 5 minutes, they must re-login or re-register to get a new challenge.
 
 Security Considerations
 -----------------------
@@ -435,10 +444,10 @@ Security Considerations
 - Self-service and admin-managed registration behave identically
 - Login and registration share the same bootstrap mechanism
 
-✅ **Temporary Access Control:**
-- Setup challenges are single-purpose (MFA setup only)
-- Challenges are stored server-side in cache, not in tokens
-- Challenges expire after 5 minutes
+ ✅ **Temporary Access Control:**
+ - Setup challenges are single-purpose (MFA setup only)
+ - Challenges are stored server-side in the database via ``GenericTokenModel``, not in tokens or client-side storage
+ - Challenges expire after 5 minutes
 
 ✅ **Respects Configuration:**
 - Cookie preferences (HTTP-only, Secure, SameSite) are honored

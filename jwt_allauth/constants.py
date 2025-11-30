@@ -27,3 +27,8 @@ MFA_TOKEN_MAX_AGE_SECONDS = 300
 MFA_TOTP_DISABLED = 'disabled'
 MFA_TOTP_OPTIONAL = 'optional'
 MFA_TOTP_REQUIRED = 'required'
+
+# MFA token purposes
+MFA_PURPOSE_SETUP_CHALLENGE = 'mfa_setup_challenge'
+MFA_PURPOSE_LOGIN_CHALLENGE = 'mfa_login_challenge'
+MFA_PURPOSE_SETUP_SECRET = 'mfa_setup_secret'
