@@ -1,6 +1,27 @@
 Release Notes
 =============
 
+Version 1.2.1
+-------------
+
+Released: November 29, 2025
+
+Bug Fixes
+~~~~~~~~~
+- Minor fix: resolved MFA TOTP failures in production deployments with multiple workers or threads by removing dependency on default cache backend.
+
+Behavior and functionality
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- MFA TOTP challenges and setup secrets are now stored server-side in the existing ``GenericTokenModel`` database table instead of Django's default cache backend. This improves reliability in multi-worker environments without changing the public API or required settings.
+
+Other Changes
+~~~~~~~~~~~~~
+
+- Updated supported Python versions to 3.10+ (dropped 3.8 and 3.9).
+- Extended the ``mfa`` extra to include ``fido2<2.0.0`` for broader hardware key support.
+- Fixed Quick Start documentation and CI smoke test to run ``python manage.py makemigrations jwt_allauth`` before ``migrate`` in projects generated via ``jwt-allauth startproject``, avoiding migration errors involving the ``JAUser`` model.
+
 Version 1.2.0
 -------------
 

@@ -155,11 +155,14 @@ class AdminManagedRegistrationTests(TestsMixin):
         email_addr = EmailAddress.objects.filter(user=invited, email=self.INVITED_EMAIL).first()
         self.assertIsNotNone(email_addr)
 
-        key = EmailConfirmationHMAC(email_addr).key
-
-        token = GenericTokenModel.objects.filter(user=invited, purpose=EMAIL_CONFIRMATION).first()
+        token = GenericTokenModel.objects.filter(
+            user=invited, purpose=EMAIL_CONFIRMATION
+        ).first()
         self.assertIsNotNone(token)
-        self.assertEqual(token.token, key)
+
+        confirmation = EmailConfirmationHMAC.from_key(token.token)
+        self.assertIsNotNone(confirmation)
+        self.assertEqual(confirmation.email_address, email_addr)
 
     def test_email_confirmation_token_single_use(self):
         """
