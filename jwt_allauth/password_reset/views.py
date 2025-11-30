@@ -2,7 +2,6 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import HttpResponseRedirect, HttpResponseNotFound
 from django.shortcuts import render
@@ -32,6 +31,7 @@ from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistMo
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.tokens.tokens import GenericToken
 from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m, build_token_response
+from jwt_allauth.mfa.storage import create_setup_challenge
 
 
 def get_mfa_totp_mode() -> str:
@@ -239,12 +239,7 @@ class SetPasswordView(GenericAPIView):
 
         # If MFA TOTP is REQUIRED, return setup challenge instead of tokens
         if get_mfa_totp_mode() == MFA_TOTP_REQUIRED:
-            setup_challenge_id = str(uuid.uuid4())
-            cache.set(
-                f"mfa_setup_challenge:{setup_challenge_id}",
-                {"user_id": request.user.id},
-                timeout=MFA_TOKEN_MAX_AGE_SECONDS,
-            )
+            setup_challenge_id = create_setup_challenge(request.user.id)
 
             return Response(
                 {

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -10,7 +9,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from jwt_allauth.constants import (
-    MFA_TOKEN_MAX_AGE_SECONDS,
     MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
 )
@@ -25,6 +23,14 @@ from .serializers import (
     AuthenticatorSerializer,
 )
 from jwt_allauth.mfa.permissions import IsAuthenticatedOrHasMFASetupChallenge
+from jwt_allauth.mfa.storage import (
+    delete_login_challenge,
+    delete_setup_challenge,
+    delete_setup_secret,
+    get_login_challenge_user,
+    load_setup_secret,
+    store_setup_secret,
+)
 
 
 def get_mfa_totp_mode() -> str:
@@ -85,9 +91,8 @@ class MFASetupView(APIView):
         # Generate TOTP secret using django-allauth's native function
         secret = generate_totp_secret()
 
-        # Store secret in cache with TTL
-        cache_key = f"mfa_setup:{user.id}"
-        cache.set(cache_key, secret, timeout=MFA_TOKEN_MAX_AGE_SECONDS)
+        # Store secret using MFA storage backend
+        store_setup_secret(user.id, secret)
 
         # Build provisioning URI and QR code using django-allauth's adapter
         adapter = get_adapter()
@@ -128,9 +133,8 @@ class MFAActivateView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        # Retrieve secret from cache
-        cache_key = f"mfa_setup:{user.id}"
-        secret = cache.get(cache_key)
+        # Retrieve secret from MFA storage backend
+        secret = load_setup_secret(user.id)
         if not secret:
             return Response({"detail": "Setup not initiated."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -143,8 +147,8 @@ class MFAActivateView(APIView):
             temp_totp.instance.delete()
             return Response({"detail": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Delete secret from cache after successful verification
-        cache.delete(cache_key)
+        # Delete secret after successful verification
+        delete_setup_secret(user.id)
 
         recovery = RecoveryCodes.activate(user)
         recovery_codes = recovery.get_unused_codes()
@@ -153,7 +157,7 @@ class MFAActivateView(APIView):
         setup_challenge_id = serializer.validated_data.get("setup_challenge_id")
         is_bootstrap = bool(setup_challenge_id)
         if setup_challenge_id:
-            cache.delete(f"mfa_setup_challenge:{setup_challenge_id}")
+            delete_setup_challenge(setup_challenge_id)
 
         # If this is a bootstrap flow in REQUIRED mode (setup_challenge_id present),
         # issue tokens for immediate login/registration completion.
@@ -240,17 +244,10 @@ class MFAVerifyView(APIView):
         challenge_id = serializer.validated_data["challenge_id"]
         code = serializer.validated_data["code"]
 
-        # Retrieve challenge from cache
-        challenge_data = cache.get(f"mfa_challenge:{challenge_id}")
-        if not challenge_data:
+        # Retrieve challenge from MFA storage backend
+        user = get_login_challenge_user(challenge_id)
+        if not user:
             return Response({"detail": "Challenge expired or invalid."}, status=status.HTTP_400_BAD_REQUEST)
-
-        user_id = challenge_data.get("user_id")
-        User = get_user_model()
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
         auth_qs = Authenticator.objects.filter(user_id=user.id, type=Authenticator.Type.TOTP.value)
         if not auth_qs.exists():
@@ -263,7 +260,7 @@ class MFAVerifyView(APIView):
             return Response({"detail": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Delete challenge after successful verification
-        cache.delete(f"mfa_challenge:{challenge_id}")
+        delete_login_challenge(challenge_id)
 
         refresh = RefreshToken.for_user(user)
         return build_token_response(refresh)
@@ -285,17 +282,10 @@ class MFAVerifyRecoveryView(APIView):
         challenge_id = serializer.validated_data["challenge_id"]
         recovery_code = serializer.validated_data["recovery_code"]
 
-        # Retrieve challenge from cache
-        challenge_data = cache.get(f"mfa_challenge:{challenge_id}")
-        if not challenge_data:
+        # Retrieve challenge from MFA storage backend
+        user = get_login_challenge_user(challenge_id)
+        if not user:
             return Response({"detail": "Challenge expired or invalid."}, status=status.HTTP_400_BAD_REQUEST)
-
-        user_id = challenge_data.get("user_id")
-        User = get_user_model()
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
         # Get recovery codes authenticator for the user
         rc_authenticator = Authenticator.objects.filter(
@@ -310,7 +300,7 @@ class MFAVerifyRecoveryView(APIView):
             return Response({"detail": "Invalid recovery code."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Delete challenge after successful verification
-        cache.delete(f"mfa_challenge:{challenge_id}")
+        delete_login_challenge(challenge_id)
 
         refresh = RefreshToken.for_user(user)
         return build_token_response(refresh)

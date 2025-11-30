@@ -10,7 +10,7 @@ These tests comprehensively verify the MFA TOTP implementation, including:
 - Recovery code handling
 - Complete end-to-end flows
 """
-import uuid
+from datetime import timedelta
 from unittest.mock import patch, MagicMock
 
 from allauth.mfa.models import Authenticator
@@ -19,13 +19,21 @@ from django.core.cache import cache
 from django.conf import settings
 from django.test import override_settings
 from django.urls import reverse, clear_url_caches
+from django.utils import timezone
 
 from jwt_allauth.constants import (
     SET_PASSWORD_COOKIE, REFRESH_TOKEN_COOKIE,
     MFA_TOTP_REQUIRED, MFA_TOKEN_MAX_AGE_SECONDS, MFA_TOTP_DISABLED,
-    FOR_USER, ONE_TIME_PERMISSION, PASS_SET_ACCESS
+    FOR_USER, ONE_TIME_PERMISSION, PASS_SET_ACCESS,
+    MFA_PURPOSE_LOGIN_CHALLENGE,
+)
+from jwt_allauth.mfa.storage import (
+    create_login_challenge,
+    get_login_challenge_user,
+    load_setup_secret,
 )
 from jwt_allauth.tokens.app_settings import RefreshToken
+from jwt_allauth.tokens.models import GenericTokenModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from .mixins import TestsMixin
 from allauth.account.models import EmailAddress
@@ -84,12 +92,12 @@ class MFASetupTests(TestsMixin):
 
     def test_setup_caches_secret(self):
         """Test that setup stores secret in cache"""
-        self.post(self.setup_url, data={}, status_code=200)
+        resp = self.post(self.setup_url, data={}, status_code=200)
 
-        # Verify secret is cached with correct key
-        cache_key = f"mfa_setup:{self.USER.id}"
-        cached_secret = cache.get(cache_key)
-        self.assertIsNotNone(cached_secret)
+        # Verify secret is stored and retrievable from MFA storage backend
+        stored_secret = load_setup_secret(self.USER.id)
+        self.assertIsNotNone(stored_secret)
+        self.assertEqual(stored_secret, resp['secret'])
 
     @override_settings(JWT_ALLAUTH_MFA_TOTP_MODE=MFA_TOTP_DISABLED)
     def test_setup_disabled_mode(self):
@@ -220,9 +228,8 @@ class MFAActivateTests(TestsMixin):
         # Setup
         self.post(self.setup_url, data={}, status_code=200)
 
-        # Verify cache exists
-        cache_key = f"mfa_setup:{self.USER.id}"
-        self.assertIsNotNone(cache.get(cache_key))
+        # Verify secret exists in storage
+        self.assertIsNotNone(load_setup_secret(self.USER.id))
 
         # Mock TOTP and recovery
         mock_totp_instance = MagicMock()
@@ -241,8 +248,8 @@ class MFAActivateTests(TestsMixin):
             status_code=200
         )
 
-        # Verify cache is cleared
-        self.assertIsNone(cache.get(cache_key))
+        # Verify secret is cleared from storage
+        self.assertIsNone(load_setup_secret(self.USER.id))
 
     @override_settings(JWT_ALLAUTH_MFA_TOTP_MODE=MFA_TOTP_DISABLED)
     def test_activate_disabled_mode(self):
@@ -481,11 +488,12 @@ class MFAVerifyTests(TestsMixin):
     def test_verify_expired_challenge(self):
         """Test verification fails with expired challenge"""
         # Create a challenge that has already expired
-        challenge_id = str(uuid.uuid4())
-        cache.set(
-            f"mfa_challenge:{challenge_id}",
-            {'user_id': self.USER.id},
-            timeout=0  # Expires immediately
+        challenge_id = create_login_challenge(self.USER.id)
+        GenericTokenModel.objects.filter(
+            token=challenge_id,
+            purpose=MFA_PURPOSE_LOGIN_CHALLENGE,
+        ).update(
+            created=timezone.now() - timedelta(seconds=MFA_TOKEN_MAX_AGE_SECONDS + 1)
         )
 
         # Challenge should already be expired
@@ -496,31 +504,9 @@ class MFAVerifyTests(TestsMixin):
         )
         self.assertEqual(resp['detail'], 'Challenge expired or invalid.')
 
-    def test_verify_invalid_user(self):
-        """Test verification fails with non-existent user"""
-        # Create challenge with non-existent user
-        challenge_id = str(uuid.uuid4())
-        cache.set(
-            f"mfa_challenge:{challenge_id}",
-            {'user_id': 99999},
-            timeout=MFA_TOKEN_MAX_AGE_SECONDS
-        )
-
-        resp = self.post(
-            self.verify_url,
-            data={'challenge_id': challenge_id, 'code': '123456'},
-            status_code=404
-        )
-        self.assertEqual(resp['detail'], 'User not found.')
-
     def test_verify_user_no_totp(self):
         """Test verification fails when user has no TOTP"""
-        challenge_id = str(uuid.uuid4())
-        cache.set(
-            f"mfa_challenge:{challenge_id}",
-            {'user_id': self.USER.id},
-            timeout=MFA_TOKEN_MAX_AGE_SECONDS
-        )
+        challenge_id = create_login_challenge(self.USER.id)
 
         resp = self.post(
             self.verify_url,
@@ -540,12 +526,7 @@ class MFAVerifyTests(TestsMixin):
         )
 
         # Create challenge
-        challenge_id = str(uuid.uuid4())
-        cache.set(
-            f"mfa_challenge:{challenge_id}",
-            {'user_id': self.USER.id},
-            timeout=MFA_TOKEN_MAX_AGE_SECONDS
-        )
+        challenge_id = create_login_challenge(self.USER.id)
 
         # Mock invalid TOTP code
         mock_totp_instance = MagicMock()
@@ -570,12 +551,7 @@ class MFAVerifyTests(TestsMixin):
         )
 
         # Create challenge
-        challenge_id = str(uuid.uuid4())
-        cache.set(
-            f"mfa_challenge:{challenge_id}",
-            {'user_id': self.USER.id},
-            timeout=MFA_TOKEN_MAX_AGE_SECONDS
-        )
+        challenge_id = create_login_challenge(self.USER.id)
 
         # Mock valid TOTP code
         mock_totp_instance = MagicMock()
@@ -602,13 +578,7 @@ class MFAVerifyTests(TestsMixin):
         )
 
         # Create challenge
-        challenge_id = str(uuid.uuid4())
-        challenge_key = f"mfa_challenge:{challenge_id}"
-        cache.set(
-            challenge_key,
-            {'user_id': self.USER.id},
-            timeout=MFA_TOKEN_MAX_AGE_SECONDS
-        )
+        challenge_id = create_login_challenge(self.USER.id)
 
         # Mock valid TOTP code
         mock_totp_instance = MagicMock()
@@ -623,7 +593,7 @@ class MFAVerifyTests(TestsMixin):
         )
 
         # Verify challenge is cleared
-        self.assertIsNone(cache.get(challenge_key))
+        self.assertIsNone(get_login_challenge_user(challenge_id))
 
     @override_settings(JWT_ALLAUTH_MFA_TOTP_MODE=MFA_TOTP_DISABLED)
     def test_verify_disabled_mode(self):
@@ -665,11 +635,12 @@ class MFAVerifyRecoveryTests(TestsMixin):
     def test_verify_recovery_expired_challenge(self):
         """Test recovery verification fails with expired challenge"""
         # Create a challenge that has already expired
-        challenge_id = str(uuid.uuid4())
-        cache.set(
-            f"mfa_challenge:{challenge_id}",
-            {'user_id': self.USER.id},
-            timeout=0  # Expires immediately
+        challenge_id = create_login_challenge(self.USER.id)
+        GenericTokenModel.objects.filter(
+            token=challenge_id,
+            purpose=MFA_PURPOSE_LOGIN_CHALLENGE,
+        ).update(
+            created=timezone.now() - timedelta(seconds=MFA_TOKEN_MAX_AGE_SECONDS + 1)
         )
 
         resp = self.post(
@@ -682,33 +653,9 @@ class MFAVerifyRecoveryTests(TestsMixin):
         )
         self.assertEqual(resp['detail'], 'Challenge expired or invalid.')
 
-    def test_verify_recovery_invalid_user(self):
-        """Test recovery verification fails with non-existent user"""
-        challenge_id = str(uuid.uuid4())
-        cache.set(
-            f"mfa_challenge:{challenge_id}",
-            {'user_id': 99999},
-            timeout=MFA_TOKEN_MAX_AGE_SECONDS
-        )
-
-        resp = self.post(
-            self.verify_recovery_url,
-            data={
-                'challenge_id': challenge_id,
-                'recovery_code': 'TEST-CODE-001'
-            },
-            status_code=404
-        )
-        self.assertEqual(resp['detail'], 'User not found.')
-
     def test_verify_recovery_no_recovery_codes(self):
         """Test recovery verification fails when user has no recovery codes"""
-        challenge_id = str(uuid.uuid4())
-        cache.set(
-            f"mfa_challenge:{challenge_id}",
-            {'user_id': self.USER.id},
-            timeout=MFA_TOKEN_MAX_AGE_SECONDS
-        )
+        challenge_id = create_login_challenge(self.USER.id)
 
         resp = self.post(
             self.verify_recovery_url,
@@ -731,12 +678,7 @@ class MFAVerifyRecoveryTests(TestsMixin):
         )
 
         # Create challenge
-        challenge_id = str(uuid.uuid4())
-        cache.set(
-            f"mfa_challenge:{challenge_id}",
-            {'user_id': self.USER.id},
-            timeout=MFA_TOKEN_MAX_AGE_SECONDS
-        )
+        challenge_id = create_login_challenge(self.USER.id)
 
         # Mock invalid recovery code
         mock_rc_instance = MagicMock()
@@ -764,12 +706,7 @@ class MFAVerifyRecoveryTests(TestsMixin):
         )
 
         # Create challenge
-        challenge_id = str(uuid.uuid4())
-        cache.set(
-            f"mfa_challenge:{challenge_id}",
-            {'user_id': self.USER.id},
-            timeout=MFA_TOKEN_MAX_AGE_SECONDS
-        )
+        challenge_id = create_login_challenge(self.USER.id)
 
         # Mock valid recovery code
         mock_rc_instance = MagicMock()
@@ -799,13 +736,7 @@ class MFAVerifyRecoveryTests(TestsMixin):
         )
 
         # Create challenge
-        challenge_id = str(uuid.uuid4())
-        challenge_key = f"mfa_challenge:{challenge_id}"
-        cache.set(
-            challenge_key,
-            {'user_id': self.USER.id},
-            timeout=MFA_TOKEN_MAX_AGE_SECONDS
-        )
+        challenge_id = create_login_challenge(self.USER.id)
 
         # Mock valid recovery code
         mock_rc_instance = MagicMock()
@@ -823,7 +754,7 @@ class MFAVerifyRecoveryTests(TestsMixin):
         )
 
         # Verify challenge is cleared
-        self.assertIsNone(cache.get(challenge_key))
+        self.assertIsNone(get_login_challenge_user(challenge_id))
 
     @override_settings(JWT_ALLAUTH_MFA_TOTP_MODE=MFA_TOTP_DISABLED)
     def test_verify_recovery_disabled_mode(self):
@@ -1211,12 +1142,7 @@ class MFARequiredModeTests(TestsMixin):
         )
 
         # Create a challenge manually
-        challenge_id = str(uuid.uuid4())
-        cache.set(
-            f"mfa_challenge:{challenge_id}",
-            {'user_id': self.USER.id},
-            timeout=MFA_TOKEN_MAX_AGE_SECONDS
-        )
+        challenge_id = create_login_challenge(self.USER.id)
 
         # Mock and verify recovery code
         with patch('jwt_allauth.mfa.views.RecoveryCodes') as mock_recovery_class:

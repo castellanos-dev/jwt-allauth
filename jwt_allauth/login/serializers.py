@@ -1,18 +1,19 @@
 from typing import Dict, Any
-import uuid
 
 from django.conf import settings
 from django.contrib.auth.models import update_last_login
-from django.core.cache import cache
 from django.db import transaction
 from rest_framework import exceptions
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
 
 from jwt_allauth.constants import (
-    MFA_TOKEN_MAX_AGE_SECONDS,
     MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
+)
+from jwt_allauth.mfa.storage import (
+    create_login_challenge,
+    create_setup_challenge,
 )
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.utils import allauth_authenticate
@@ -85,12 +86,7 @@ class LoginSerializer(TokenObtainPairSerializer):
             # If MFA is REQUIRED, user must have MFA enabled
             # Instead of raising 403, return setup challenge for bootstrap
             if mfa_mode == MFA_TOTP_REQUIRED and not has_mfa:
-                setup_challenge_id = str(uuid.uuid4())
-                cache.set(
-                    f"mfa_setup_challenge:{setup_challenge_id}",
-                    {"user_id": self.user.id},
-                    timeout=MFA_TOKEN_MAX_AGE_SECONDS,
-                )
+                setup_challenge_id = create_setup_challenge(self.user.id)
                 return {
                     "mfa_setup_required": True,
                     "setup_challenge_id": setup_challenge_id,
@@ -98,10 +94,8 @@ class LoginSerializer(TokenObtainPairSerializer):
 
             # If user has MFA enabled (OPTIONAL or REQUIRED mode), request MFA verification
             if has_mfa:
-                # Store MFA challenge server-side in cache with TTL
-                challenge_id = str(uuid.uuid4())
-                challenge_data = {"user_id": self.user.id, "timestamp": None}
-                cache.set(f"mfa_challenge:{challenge_id}", challenge_data, timeout=MFA_TOKEN_MAX_AGE_SECONDS)
+                # Store MFA challenge server-side using MFA storage backend
+                challenge_id = create_login_challenge(self.user.id)
                 return {"mfa_required": True, "challenge_id": challenge_id}
 
         validated_data = super().validate(attrs)
