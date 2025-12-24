@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 1.2.2
+-------------
+
+Released: December 24, 2025
+
+Behavior and functionality
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- **Admin-Managed Registration**: The email confirmation link in the admin-managed registration flow is no longer single-use. It remains valid until the user successfully sets their password. This prevents issues with email security scanners (like Outlook Safe Links) consuming the token before the user can access it. The token is now automatically deleted upon successful password completion.
+
+
 Version 1.2.1
 -------------
 

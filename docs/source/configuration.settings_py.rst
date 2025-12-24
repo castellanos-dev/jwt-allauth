@@ -7,6 +7,8 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``EMAIL_VERIFICATION`` - whether to enable email verification (default: ``False``).
 
+    - ``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS`` - Determines the expiration date of email confirmation mails (# of days) (default: ``3``).
+
     - ``OLD_PASSWORD_FIELD_ENABLED`` - whether to have ``old_password`` field on password change endpoint (default: ``True``).
 
     - ``LOGOUT_ON_PASSWORD_CHANGE`` - whether to logout from the other user sessions on password change (default: ``True``).

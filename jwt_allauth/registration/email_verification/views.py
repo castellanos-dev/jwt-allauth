@@ -47,8 +47,6 @@ class VerifyEmailView(APIView, ConfirmEmailView):
             )
             if len(query_set) != 1:
                 raise InvalidToken()
-            # Single-use confirmation token
-            query_set.delete()
 
             confirmation = self.get_object()
             user = confirmation.email_address.user
