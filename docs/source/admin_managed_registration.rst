@@ -70,6 +70,8 @@ Email verification behavior
 ---------------------------
 
 - The verification GET confirms the email in admin-managed mode and issues a one-time token, then redirects to the password set UI.
+- The verification link allows multiple accesses (e.g. by email scanners) and is only invalidated once the password is successfully set.
+- The verification link validity is determined by ``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS`` (default: 3 days).
 - The set-password endpoint does not alter email verification status.
 
 Email templates
@@ -81,9 +83,16 @@ Email templates
   - Subject: ``email/admin_invite/email_subject.txt``
   - HTML body: ``email/admin_invite/email_message.html``
 
+Error templates
+---------------
+
+- When the verification link is invalid or expired, a friendly error page is shown:
+
+  - HTML body: ``registration/verification_failed.html``
+
 - You can override these by configuring ``JWT_ALLAUTH_TEMPLATES`` with
-  ``ADMIN_EMAIL_VERIFICATION_SUBJECT`` and ``ADMIN_EMAIL_VERIFICATION``. See
-  :doc:`configuration.settings_py` for details.
+  ``ADMIN_EMAIL_VERIFICATION_SUBJECT``, ``ADMIN_EMAIL_VERIFICATION`` and
+  ``EMAIL_VERIFICATION_FAILED_TEMPLATE``. See :doc:`configuration.settings_py` for details.
 
 MFA REQUIRED Integration
 ------------------------

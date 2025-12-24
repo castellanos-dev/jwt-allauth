@@ -1,6 +1,8 @@
 from allauth.account.views import ConfirmEmailView
+from allauth.account.models import EmailAddress
 from django.conf import settings
-from django.http import HttpResponseNotAllowed, HttpResponseRedirect
+from django.http import Http404, HttpResponseNotAllowed, HttpResponseRedirect
+from django.shortcuts import render
 from django.urls import reverse
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -14,11 +16,13 @@ from jwt_allauth.constants import (
     PASS_SET_ACCESS,
     SET_PASSWORD_COOKIE,
     EMAIL_CONFIRMATION,
+    EMAIL_VERIFICATION_FAILED_TEMPLATE,
 )
 from jwt_allauth.registration.email_verification.serializers import VerifyEmailSerializer
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
+from jwt_allauth.utils import get_template_path
 
 
 class VerifyEmailView(APIView, ConfirmEmailView):
@@ -41,19 +45,35 @@ class VerifyEmailView(APIView, ConfirmEmailView):
                 raise NotImplementedError('`PASSWORD_SET_REDIRECT` must be configured in settings.py')
 
             # Check that the email confirmation token has not been used already
-            query_set = GenericTokenModel.objects.filter(
-                token=kwargs['key'],
-                purpose=EMAIL_CONFIRMATION,
-            )
-            if len(query_set) != 1:
-                raise InvalidToken()
-            # Single-use confirmation token
-            query_set.delete()
+            # Note: For admin-managed registration, we allow multi-use until password is set.
+            try:
+                token_entry = GenericTokenModel.objects.get(
+                    token=kwargs['key'],
+                    purpose=EMAIL_CONFIRMATION,
+                )
+            except GenericTokenModel.DoesNotExist:
+                return render(
+                    request,
+                    get_template_path(EMAIL_VERIFICATION_FAILED_TEMPLATE, 'registration/verification_failed.html'),
+                    status=400
+                )
 
-            confirmation = self.get_object()
-            user = confirmation.email_address.user
-            # Confirm the email now
-            confirmation.confirm(self.request)
+            user = token_entry.user
+
+            try:
+                confirmation = self.get_object()
+                confirmation.confirm(self.request)
+            except (Http404, InvalidToken):
+                # If allauth fails to verify (e.g. expired or already verified state issues),
+                # check if the user is already verified. If so, allow proceeding (multi-use).
+                # If not verified, then it's a genuine error/expiration.
+                # Note: We use the user from our GenericTokenModel which we know is valid.
+                if not EmailAddress.objects.filter(user=user, verified=True).exists():
+                    return render(
+                        request,
+                        get_template_path(EMAIL_VERIFICATION_FAILED_TEMPLATE, 'registration/verification_failed.html'),
+                        status=400
+                    )
 
             # Create one-time access token to allow setting the password
             refresh_token = RefreshToken()

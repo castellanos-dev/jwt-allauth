@@ -23,6 +23,7 @@ from jwt_allauth.constants import (
     MFA_TOKEN_MAX_AGE_SECONDS,
     MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
+    EMAIL_CONFIRMATION,
 )
 from jwt_allauth.password_reset.permissions import ResetPasswordPermission, SetPasswordPermission
 from jwt_allauth.password_reset.serializers import SetPasswordSerializer
@@ -236,6 +237,9 @@ class SetPasswordView(GenericAPIView):
         # Revoke old sessions
         if getattr(settings, 'LOGOUT_ON_PASSWORD_CHANGE', True):
             RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
+
+        # Invalidate the email confirmation token now that the password has been set
+        GenericTokenModel.objects.filter(user=request.user, purpose=EMAIL_CONFIRMATION).delete()
 
         # If MFA TOTP is REQUIRED, return setup challenge instead of tokens
         if get_mfa_totp_mode() == MFA_TOTP_REQUIRED:

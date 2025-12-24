@@ -164,12 +164,12 @@ class AdminManagedRegistrationTests(TestsMixin):
         self.assertIsNotNone(confirmation)
         self.assertEqual(confirmation.email_address, email_addr)
 
-    def test_email_confirmation_token_single_use(self):
+    def test_email_confirmation_token_multi_use_until_password_set(self):
         """
-        The EMAIL_CONFIRMATION token must be single-use: first GET succeeds,
-        second GET with the same key must fail with 401.
+        The EMAIL_CONFIRMATION token allows multiple GET requests (e.g. link scanners).
+        It should only be invalidated after the password is set.
         """
-        invited = get_user_model().objects.create_user('invited_single_use', email=self.INVITED_EMAIL)
+        invited = get_user_model().objects.create_user('invited_multi_use', email=self.INVITED_EMAIL)
         email_addr = EmailAddress.objects.create(
             user=invited, email=self.INVITED_EMAIL, verified=False, primary=True
         )
@@ -179,29 +179,67 @@ class AdminManagedRegistrationTests(TestsMixin):
 
         verify_url = reverse('account_confirm_email', args=[key])
 
-        # First use: token is valid and should be consumed
+        # First use: token is valid and should NOT be consumed
         first_resp = self.client.get(verify_url)
         self.assertEqual(first_resp.status_code, 302)
         self.assertIn(SET_PASSWORD_COOKIE, self.client.cookies)
+        self.assertTrue(
+            GenericTokenModel.objects.filter(
+                user=invited, token=key, purpose=EMAIL_CONFIRMATION
+            ).exists()
+        )
+
+        # Second use: token is still valid
+        second_resp = self.client.get(verify_url)
+        self.assertEqual(second_resp.status_code, 302)
+
+        # Now set the password
+        self.client.post(
+            self.set_password_url,
+            data={"new_password1": "A-1_newpass", "new_password2": "A-1_newpass"},
+            content_type='application/json'
+        )
+
+        # Now the token should be gone
         self.assertFalse(
             GenericTokenModel.objects.filter(
                 user=invited, token=key, purpose=EMAIL_CONFIRMATION
             ).exists()
         )
-        self.assertTrue(
-            GenericTokenModel.objects.filter(user=invited, purpose=PASS_SET_ACCESS).exists()
+
+    def test_email_confirmation_invalid_token_renders_error_page(self):
+        """
+        If the token is invalid or does not exist, show a friendly error page
+        instead of a raw 401/404 or JSON error.
+        """
+        invalid_url = reverse('account_confirm_email', args=['invalid-key'])
+        resp = self.client.get(invalid_url)
+        self.assertEqual(resp.status_code, 400)
+        self.assertTemplateUsed(resp, 'registration/verification_failed.html')
+
+    def test_email_confirmation_expired_token_renders_error_page(self):
+        """
+        If the token is expired according to allauth settings, show the error page.
+        """
+        invited = get_user_model().objects.create_user('invited_expired', email='expired@demo.com')
+        email_addr = EmailAddress.objects.create(
+            user=invited, email='expired@demo.com', verified=False, primary=True
         )
 
-        # Second use: token was consumed, so this must fail
-        before_pass_set_tokens = GenericTokenModel.objects.filter(
-            user=invited, purpose=PASS_SET_ACCESS
-        ).count()
-        second_resp = self.client.get(verify_url)
-        self.assertEqual(second_resp.status_code, status.HTTP_401_UNAUTHORIZED)
-        after_pass_set_tokens = GenericTokenModel.objects.filter(
-            user=invited, purpose=PASS_SET_ACCESS
-        ).count()
-        self.assertEqual(before_pass_set_tokens, after_pass_set_tokens)
+        key = EmailConfirmationHMAC(email_addr).key
+        GenericTokenModel.objects.create(user=invited, token=key, purpose=EMAIL_CONFIRMATION)
+
+        # Simulate expiration by overriding the setting to 0 days (or -1 if possible, but 0 usually means
+        # immediate expiration)
+        # However, HMAC is stateless, it embeds timestamp. We need to create a key in the past or fast forward time.
+        # Since we can't easily mock time for HMAC generation without patching django-allauth internal,
+        # we'll try setting ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS to 0.
+
+        with override_settings(ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS=0):
+            verify_url = reverse('account_confirm_email', args=[key])
+            resp = self.client.get(verify_url)
+            self.assertEqual(resp.status_code, 400)
+            self.assertTemplateUsed(resp, 'registration/verification_failed.html')
 
     def test_set_password_flow(self):
         """
