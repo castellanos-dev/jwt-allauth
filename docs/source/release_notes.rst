@@ -11,6 +11,8 @@ Behavior and functionality
 
 - **Admin-Managed Registration**: The email confirmation link in the admin-managed registration flow is no longer single-use. It remains valid until the user successfully sets their password. This prevents issues with email security scanners (like Outlook Safe Links) consuming the token before the user can access it. The token is now automatically deleted upon successful password completion.
 
+- **Configurable Verification Error Page**: When an invalid or expired email verification link is accessed in the admin-managed flow, a user-friendly HTML error page is now shown instead of a 400/401 API error. This template can be customized via the `EMAIL_VERIFICATION_FAILED_TEMPLATE` key in `JWT_ALLAUTH_TEMPLATES` setting.
+
 
 Version 1.2.1
 -------------

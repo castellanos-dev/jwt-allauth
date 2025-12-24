@@ -207,6 +207,40 @@ class AdminManagedRegistrationTests(TestsMixin):
             ).exists()
         )
 
+    def test_email_confirmation_invalid_token_renders_error_page(self):
+        """
+        If the token is invalid or does not exist, show a friendly error page
+        instead of a raw 401/404 or JSON error.
+        """
+        invalid_url = reverse('account_confirm_email', args=['invalid-key'])
+        resp = self.client.get(invalid_url)
+        self.assertEqual(resp.status_code, 400)
+        self.assertTemplateUsed(resp, 'registration/verification_failed.html')
+
+    def test_email_confirmation_expired_token_renders_error_page(self):
+        """
+        If the token is expired according to allauth settings, show the error page.
+        """
+        invited = get_user_model().objects.create_user('invited_expired', email='expired@demo.com')
+        email_addr = EmailAddress.objects.create(
+            user=invited, email='expired@demo.com', verified=False, primary=True
+        )
+
+        key = EmailConfirmationHMAC(email_addr).key
+        GenericTokenModel.objects.create(user=invited, token=key, purpose=EMAIL_CONFIRMATION)
+
+        # Simulate expiration by overriding the setting to 0 days (or -1 if possible, but 0 usually means
+        # immediate expiration)
+        # However, HMAC is stateless, it embeds timestamp. We need to create a key in the past or fast forward time.
+        # Since we can't easily mock time for HMAC generation without patching django-allauth internal,
+        # we'll try setting ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS to 0.
+
+        with override_settings(ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS=0):
+            verify_url = reverse('account_confirm_email', args=[key])
+            resp = self.client.get(verify_url)
+            self.assertEqual(resp.status_code, 400)
+            self.assertTemplateUsed(resp, 'registration/verification_failed.html')
+
     def test_set_password_flow(self):
         """
         Simulate the verification GET that issues a one-time access token cookie,

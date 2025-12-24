@@ -51,6 +51,7 @@ Configure these variables in the ``settings.py`` file of your project.
         - ``EMAIL_VERIFICATION`` - template of the signup email verification sent for self-registration (default: ``email/signup/email_message.html``).
         - ``ADMIN_EMAIL_VERIFICATION_SUBJECT`` - subject of the email verification sent for admin-managed invitations (default: ``email/admin_invite/email_subject.txt``).
         - ``ADMIN_EMAIL_VERIFICATION`` - template of the email verification sent for admin-managed invitations (default: ``email/admin_invite/email_message.html``).
+        - ``EMAIL_VERIFICATION_FAILED_TEMPLATE`` - template rendered when an invalid or expired verification link is accessed (default: ``registration/verification_failed.html``).
 
     Example:
 

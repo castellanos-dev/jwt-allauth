@@ -83,9 +83,16 @@ Email templates
   - Subject: ``email/admin_invite/email_subject.txt``
   - HTML body: ``email/admin_invite/email_message.html``
 
+Error templates
+---------------
+
+- When the verification link is invalid or expired, a friendly error page is shown:
+
+  - HTML body: ``registration/verification_failed.html``
+
 - You can override these by configuring ``JWT_ALLAUTH_TEMPLATES`` with
-  ``ADMIN_EMAIL_VERIFICATION_SUBJECT`` and ``ADMIN_EMAIL_VERIFICATION``. See
-  :doc:`configuration.settings_py` for details.
+  ``ADMIN_EMAIL_VERIFICATION_SUBJECT``, ``ADMIN_EMAIL_VERIFICATION`` and
+  ``EMAIL_VERIFICATION_FAILED_TEMPLATE``. See :doc:`configuration.settings_py` for details.
 
 MFA REQUIRED Integration
 ------------------------
