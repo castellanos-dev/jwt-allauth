@@ -86,9 +86,11 @@ def main():
             print("\n✅ JWT Allauth project successfully created!")
             print("📋 Next steps:")
             print(f"   1. cd {target_dir}")
-            print(f"   2. python manage.py makemigrations")
-            print(f"   3. python manage.py migrate")
-            print(f"   4. python manage.py runserver")
+            print(f"   2. python manage.py migrate")
+            print(f"   3. python manage.py runserver")
+            print("\nℹ️  Custom user model:")
+            print("   - If you create a custom user model, it must inherit from jwt_allauth.models.JAUser")
+            print("   - Then set AUTH_USER_MODEL to your model and run: python manage.py makemigrations <your_app>")
 
             if email_config:
                 print("\n⚠️ Email configuration is enabled. Please update your email settings in settings.py")

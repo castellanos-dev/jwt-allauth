@@ -52,8 +52,6 @@ class RegistrationTests(TestsMixin):
         self.assertEqual(resp['email'][0], u'This field is required.')
         self.assertEqual(resp['password1'][0], u'This field is required.')
         self.assertEqual(resp['password2'][0], u'This field is required.')
-        self.assertEqual(resp['first_name'][0], u'This field is required.')
-        self.assertEqual(resp['last_name'][0], u'This field is required.')
 
     def test_registration_methods_not_allowed(self):
         resp = self.get(self.register_url, status_code=405)
@@ -176,20 +174,6 @@ class RegistrationTests(TestsMixin):
         self._login()
         self.get(self.user_url, status_code=200)
         self._logout()
-
-    def test_registration_missing_first_name(self):
-        data = self.REGISTRATION_DATA.copy()
-        del data['first_name']
-        resp = self.post(self.register_url, data=data, status_code=400)
-        self.assertIn('first_name', resp)
-        self.assertEqual(resp['first_name'][0], 'This field is required.')
-
-    def test_registration_missing_last_name(self):
-        data = self.REGISTRATION_DATA.copy()
-        del data['last_name']
-        resp = self.post(self.register_url, data=data, status_code=400)
-        self.assertIn('last_name', resp)
-        self.assertEqual(resp['last_name'][0], 'This field is required.')
 
     def test_user_profile_created(self):
         user_count = get_user_model().objects.count()

@@ -59,10 +59,13 @@ Documentation = "https://jwt-allauth.readthedocs.io/"
 jwt-allauth = "jwt_allauth.bin.jwt_allauth:main"
 
 [tool.setuptools]
-include-package-data = true
+include-package-data = false
+
+[tool.setuptools.exclude-package-data]
+"*" = ["*.py[cod]", "__pycache__/*"]
 
 [tool.setuptools.packages.find]
-exclude = ["tests*", "jwt_allauth.migrations*"]
+exclude = ["tests*", "__pycache__", "*.__pycache__"]
 include = ["jwt_allauth*"]
 
 [tool.setuptools.package-data]

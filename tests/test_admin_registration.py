@@ -54,7 +54,6 @@ class AdminManagedRegistrationTests(TestsMixin):
         with self.assertRaises(NoReverseMatch):
             reverse('rest_register')
 
-
     def test_user_register_requires_allowed_role_by_default(self):
         # Non-staff/non-superuser cannot register others by default
         self.token = self.ACCESS  # auth as default regular user

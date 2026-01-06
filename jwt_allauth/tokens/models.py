@@ -26,8 +26,6 @@ class BaseToken(models.Model):
 
     class Meta:
         abstract = True
-        verbose_name = _("refresh token")
-        verbose_name_plural = _("refresh tokens")
 
 
 class AbstractRefreshToken(BaseToken):

@@ -29,15 +29,11 @@ New Features
     - Replaces the legacy ``EMAIL_VERIFICATION`` setting.
     - ``EMAIL_VERIFICATION`` remains supported for backward compatibility but is deprecated and will be removed in a future release.
 
-Breaking Change
-~~~~~~~~~~~~~~~
-
-- **Admin-Managed Registration (Email only)**: ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION=True`` is no longer compatible with ``JWT_ALLAUTH_AUTHENTICATION_METHOD='phone'``. The application will raise a ``ValueError`` during startup.
-
 Database migrations
 ~~~~~~~~~~~~~~~~~~~
 
-- **No migrations shipped**: ``jwt_allauth`` does not ship Django migration files. Projects must create/apply migrations (or sync the schema) when upgrading.
+- **Migration files shipped**: ``jwt_allauth`` now ships Django migration files as part of the distribution.
+  This fixes installation issues where ``python manage.py migrate`` could fail with ``sqlite3.OperationalError: no such table: jwt_allauth_jauser``.
 
 - **New models for phone auth**: this version introduces two new database tables:
 
@@ -48,8 +44,10 @@ Database migrations
 
   Recommended approach:
 
-  - Run ``python manage.py makemigrations jwt_allauth``
   - Run ``python manage.py migrate``
+
+  If you use a custom user model, it must inherit from ``jwt_allauth.models.JAUser`` and you should run
+  ``python manage.py makemigrations <your_app>`` before running ``migrate``.
 
   Alternative (if you prefer not to create migration files in your project):
 

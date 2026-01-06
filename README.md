@@ -44,9 +44,14 @@ You can quickly start a new Django project with JWT Allauth pre-configured using
 This will create a new Django project called `myproject` with JWT Allauth pre-configured. Then:
 
     cd myproject
-    python manage.py makemigrations
     python manage.py migrate
     python manage.py runserver
+
+If you want to use a custom user model, it **must inherit from** `jwt_allauth.models.JAUser`.
+After defining your model (for example `users.CustomUser`), set `AUTH_USER_MODEL = 'users.CustomUser'` and run:
+
+    python manage.py makemigrations users
+    python manage.py migrate
 
 Available options:
 - `--email=True` - Enables email configuration in the project
