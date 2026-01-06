@@ -13,8 +13,8 @@ Features
 - Token whitelisting system: Implements a refresh token whitelist tied to specific device sessions.
 - **Enhanced security**: Enables revoking access to specific devices or all devices simultaneously.
 - Automatic token renewal: Active sessions for extended periods without reauthentication, ideal for **mobile apps**.
-- Email verification: Includes a full **REST email verification** system during user registration.
-- Comprehensive user management: Features password recovery, email-based authentication, and session logout.
+- Email and Phone verification: Includes a full **REST email/SMS verification** system during user registration.
+- Comprehensive user management: Features password recovery, email/phone-based authentication, and session logout.
 - **Effortless setup**: Get your project up and running with a single command.
 
 
@@ -65,6 +65,23 @@ To enable the email verification, configure the email provider in your ``setting
     EMAIL_HOST_PASSWORD = ...
     EMAIL_USE_TLS = ...
     DEFAULT_FROM_EMAIL = ...
+
+
+Phone verification
+------------------
+
+To enable phone authentication and verification, configure the following in your ``settings.py`` file:
+
+    # Set phone as the primary authentication method
+    JWT_ALLAUTH_AUTHENTICATION_METHOD = 'phone'
+
+    # Configure SMS backend (defaults to Console backend for development)
+    JWT_ALLAUTH_SMS_BACKEND = 'jwt_allauth.sms.backends.console.ConsoleSMSBackend'
+
+    # Optional: SMS backend options (API keys, etc.)
+    JWT_ALLAUTH_SMS_OPTS = {
+        'API_KEY': 'your-api-key',
+    }
 
 
 Redirection URLs

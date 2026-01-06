@@ -5,13 +5,25 @@ Configure these variables in the ``settings.py`` file of your project.
 
 - Modules configuration
 
-    - ``EMAIL_VERIFICATION`` - whether to enable email verification (default: ``False``).
+    - ``JWT_ALLAUTH_IDENTIFIER_VERIFICATION`` - whether to enable verification for the primary identifier used by ``JWT_ALLAUTH_AUTHENTICATION_METHOD`` (default: ``False``). When ``JWT_ALLAUTH_AUTHENTICATION_METHOD = 'email'`` this enables email verification; when set to ``'phone'`` this enables SMS verification.
+
+    - ``EMAIL_VERIFICATION`` - deprecated alias for ``JWT_ALLAUTH_IDENTIFIER_VERIFICATION`` (default: ``False``). This will be removed in a future release.
 
     - ``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS`` - Determines the expiration date of email confirmation mails (# of days) (default: ``3``).
 
     - ``OLD_PASSWORD_FIELD_ENABLED`` - whether to have ``old_password`` field on password change endpoint (default: ``True``).
 
     - ``LOGOUT_ON_PASSWORD_CHANGE`` - whether to logout from the other user sessions on password change (default: ``True``).
+
+    - ``JWT_ALLAUTH_AUTHENTICATION_METHOD`` - Primary authentication method (default: ``'email'``). Options: ``'email'``, ``'phone'``. When set to ``'phone'``, users register and login using their phone number, and verification is done via SMS.
+
+    - ``JWT_ALLAUTH_SMS_BACKEND`` - The backend class to use for sending SMS messages (default: ``'jwt_allauth.sms.backends.console.ConsoleSMSBackend'``).
+
+    - ``JWT_ALLAUTH_SMS_OPTS`` - Dictionary of options passed to the SMS backend constructor (default: ``{}``). Useful for API keys and sender IDs.
+
+    - ``JWT_ALLAUTH_SMS_VERIFICATION_MESSAGE`` - formatting string for the SMS verification message (default: ``'Your verification code is: {code}'``). Must include ``{code}`` placeholder.
+
+    - ``JWT_ALLAUTH_PHONE_CONFIRMATION_EXPIRE_SECONDS`` - Expiration time in seconds for phone confirmation codes (default: ``300``).
 
     - ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` - whether to enable admin-only registration endpoint and set-password flow (default: ``False``). The user will receive a verification email and will need to set their password before they can login.
 

@@ -6,9 +6,8 @@ DefaultMFAAdapter, allowing override of specific MFA behavior such as the
 TOTP issuer configuration.
 """
 
-from django.conf import settings
-
 from allauth.mfa.adapter import DefaultMFAAdapter
+from jwt_allauth import app_settings
 
 
 class JWTAllAuthMFAAdapter(DefaultMFAAdapter):
@@ -92,7 +91,7 @@ class JWTAllAuthMFAAdapter(DefaultMFAAdapter):
                 'My App'
         """
         # Check for JWT_ALLAUTH_TOTP_ISSUER with 'JWT-Allauth' as default
-        issuer = getattr(settings, "JWT_ALLAUTH_TOTP_ISSUER", 'JWT-Allauth')
+        issuer = app_settings.TOTP_ISSUER
         if not issuer:
             issuer = self._get_site_name()
         return issuer

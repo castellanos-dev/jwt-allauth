@@ -1,4 +1,3 @@
-from datetime import timedelta
 from importlib import reload
 
 import allauth.app_settings
@@ -13,13 +12,21 @@ class JWTAllauthAppConfig(AppConfig):
 
     def ready(self):
         from django.conf import settings
+        from jwt_allauth import app_settings
 
-        if not getattr(settings, 'ROTATE_REFRESH_TOKENS', True):
+        if not app_settings.ROTATE_REFRESH_TOKENS:
             raise ValueError('Refresh token rotation is compulsory.')
-        if getattr(settings, 'BLACKLIST_AFTER_ROTATION', False):
+        if app_settings.BLACKLIST_AFTER_ROTATION:
             raise ValueError('Token blacklist is not supported.')
 
+        if app_settings.ADMIN_MANAGED_REGISTRATION and app_settings.AUTHENTICATION_METHOD == 'phone':
+            raise ValueError(
+                "JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION=True is not compatible with "
+                "JWT_ALLAUTH_AUTHENTICATION_METHOD='phone'. Use email for admin-managed invitations."
+            )
         settings.EMAIL_VERIFICATION = getattr(settings, 'EMAIL_VERIFICATION', False)
+        if app_settings.AUTHENTICATION_METHOD == 'email':
+            settings.EMAIL_VERIFICATION = app_settings.IDENTIFIER_VERIFICATION
         if not hasattr(settings, 'ACCOUNT_ADAPTER'):
             settings.ACCOUNT_ADAPTER = 'jwt_allauth.adapter.JWTAllAuthAdapter'
         if not hasattr(settings, 'MFA_ADAPTER'):
@@ -48,7 +55,7 @@ class JWTAllauthAppConfig(AppConfig):
             "UPDATE_LAST_LOGIN": True,
 
             "ALGORITHM": "HS256",
-            "SIGNING_KEY": getattr(settings, 'JWT_SECRET_KEY', settings.SECRET_KEY),
+            "SIGNING_KEY": app_settings.JWT_SECRET_KEY,
             "VERIFYING_KEY": "",
             "AUDIENCE": None,
             "ISSUER": None,
@@ -68,8 +75,8 @@ class JWTAllauthAppConfig(AppConfig):
             "JTI_CLAIM": "jti",
 
             'ROTATE_REFRESH_TOKENS': True,
-            'ACCESS_TOKEN_LIFETIME': getattr(settings, 'JWT_ACCESS_TOKEN_LIFETIME', timedelta(minutes=30)),
-            'REFRESH_TOKEN_LIFETIME': getattr(settings, 'JWT_REFRESH_TOKEN_LIFETIME', timedelta(days=90))
+            'ACCESS_TOKEN_LIFETIME': app_settings.JWT_ACCESS_TOKEN_LIFETIME,
+            'REFRESH_TOKEN_LIFETIME': app_settings.JWT_REFRESH_TOKEN_LIFETIME
         }
         if not hasattr(settings, 'SIMPLE_JWT'):
             settings.SIMPLE_JWT = simple_jwt_settings

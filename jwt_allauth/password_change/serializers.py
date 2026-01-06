@@ -1,9 +1,9 @@
-from django.conf import settings
 from django.contrib.auth.forms import SetPasswordForm
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
+from jwt_allauth import app_settings
 
 
 class PasswordChangeSerializer(serializers.Serializer):
@@ -14,12 +14,8 @@ class PasswordChangeSerializer(serializers.Serializer):
     set_password_form_class = SetPasswordForm
 
     def __init__(self, *args, **kwargs):
-        self.old_password_field_enabled = getattr(
-            settings, 'OLD_PASSWORD_FIELD_ENABLED', True
-        )
-        self.logout_on_password_change = getattr(
-            settings, 'LOGOUT_ON_PASSWORD_CHANGE', True
-        )
+        self.old_password_field_enabled = app_settings.OLD_PASSWORD_FIELD_ENABLED
+        self.logout_on_password_change = app_settings.LOGOUT_ON_PASSWORD_CHANGE
         super(PasswordChangeSerializer, self).__init__(*args, **kwargs)
 
         if not self.old_password_field_enabled:

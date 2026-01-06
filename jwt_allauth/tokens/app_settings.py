@@ -1,6 +1,4 @@
-from django.conf import settings
+from jwt_allauth._importing import import_callable
+from jwt_allauth import app_settings
 
-from jwt_allauth.tokens.tokens import RefreshToken as DefaultRefreshToken
-from jwt_allauth.utils import import_callable
-
-RefreshToken = import_callable(getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN', DefaultRefreshToken))
+RefreshToken = import_callable(app_settings.REFRESH_TOKEN_CLASS)

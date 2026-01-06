@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 
 from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress
+from jwt_allauth.models import PhoneAddress
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
@@ -12,32 +13,10 @@ from django_user_agents.utils import get_user_agent as get_user_agent_django
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import InvalidToken
-from six import string_types
 
 from jwt_allauth.constants import TEMPLATE_PATHS, REFRESH_TOKEN_COOKIE
 from jwt_allauth.exceptions import NotVerifiedEmail, IncorrectCredentials
-
-
-def import_callable(path_or_callable):
-    """
-    Convert a Python path string to a callable object or return the input if already callable.
-
-    Args:
-        path_or_callable (str|callable): Either a Python path string (module.attribute)
-                                        or an already callable object
-
-    Returns:
-        callable: The resolved callable object
-
-    Raises:
-        AssertionError: If input is string but not valid Python path
-    """
-    if hasattr(path_or_callable, '__call__'):
-        return path_or_callable
-    else:
-        assert isinstance(path_or_callable, string_types)
-        package, attr = path_or_callable.rsplit('.', 1)
-        return getattr(import_module(package), attr)
+from jwt_allauth import app_settings
 
 
 def get_client_ip(request):
@@ -78,7 +57,7 @@ def get_user_agent(f):
         function: Decorated view method
     """
     def user_agent(self, request, *args, **kwargs):
-        if getattr(settings, 'JWT_ALLAUTH_COLLECT_USER_AGENT', False):
+        if app_settings.COLLECT_USER_AGENT:
             request.user_agent = get_user_agent_django(request)
             request.ip = get_client_ip(request)
         else:
@@ -170,6 +149,40 @@ def is_email_verified(user, raise_exception=False):
     return True
 
 
+def is_identifier_verified(user, raise_exception=False):
+    """
+    Check if the user's login identifier is verified.
+
+    This function routes to either email or phone verification depending on
+    ``JWT_ALLAUTH_AUTHENTICATION_METHOD``.
+    """
+    if app_settings.AUTHENTICATION_METHOD == 'phone':
+        return is_phone_verified(user, raise_exception=raise_exception)
+    return is_email_verified(user, raise_exception=raise_exception)
+
+
+def is_phone_verified(user, raise_exception=False):
+    """
+    Check if user has a verified phone number.
+
+    Args:
+        user (User): User object to check
+        raise_exception (bool): Whether to raise NotVerifiedEmail (reused) or similar if unverified
+
+    Returns:
+        bool: True if verified, False otherwise
+
+    Raises:
+        NotVerifiedEmail: If raise_exception=True and phone is unverified (reusing exception for now or create new one)
+    """
+    if not PhoneAddress.objects.filter(user=user.id, verified=True).exists():
+        if raise_exception:
+            # We might want a specific exception for phone, but for now reuse or generic
+            raise NotVerifiedEmail()
+        return False
+    return True
+
+
 def allauth_authenticate(**kwargs):
     """
     Authenticate user using allauth's adapter with enhanced verification.
@@ -182,12 +195,14 @@ def allauth_authenticate(**kwargs):
 
     Raises:
         IncorrectCredentials: If authentication fails
-        NotVerifiedEmail: If email is not verified
+        NotVerifiedEmail: If email/phone is not verified
     """
     user = get_adapter().authenticate(**kwargs)
     if user is None:
         raise IncorrectCredentials()
-    is_email_verified(user, raise_exception=True)
+
+    is_identifier_verified(user, raise_exception=True)
+
     return user
 
 
@@ -281,7 +296,7 @@ def build_token_response(
     response_data: Dict[str, Any] = {"access": access_token}
 
     # Add refresh token to response if not using cookies
-    use_cookie = getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE", True)
+    use_cookie = app_settings.REFRESH_TOKEN_AS_COOKIE
     if not use_cookie:
         response_data["refresh"] = str(refresh_token)
 
@@ -298,10 +313,10 @@ def build_token_response(
         default_settings = {
             'key': REFRESH_TOKEN_COOKIE,
             'value': str(refresh_token),
-            'httponly': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_HTTP_ONLY", True),
-            'secure': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SECURE", not settings.DEBUG),
-            'samesite': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SAME_SITE", "Lax"),
-            'max_age': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_MAX_AGE", None),
+            'httponly': app_settings.REFRESH_TOKEN_COOKIE_HTTP_ONLY,
+            'secure': app_settings.REFRESH_TOKEN_COOKIE_SECURE,
+            'samesite': app_settings.REFRESH_TOKEN_COOKIE_SAME_SITE,
+            'max_age': app_settings.REFRESH_TOKEN_COOKIE_MAX_AGE,
         }
 
         # Override with custom settings if provided

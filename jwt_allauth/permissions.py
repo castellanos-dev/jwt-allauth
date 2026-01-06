@@ -1,7 +1,7 @@
 from rest_framework.permissions import BasePermission as DefaultBasePermission
 
-from django.conf import settings
 from jwt_allauth.roles import STAFF_CODE, SUPER_USER_CODE
+from jwt_allauth import app_settings
 
 
 class BasePermission(DefaultBasePermission):
@@ -117,11 +117,7 @@ class RegisterUsersPermission(BasePermissionStaffExcluded):
 
     def has_permission(self, request, view):
         # Resolve allowed roles from settings with sensible defaults
-        allowed = getattr(
-            settings,
-            'JWT_ALLAUTH_REGISTRATION_ALLOWED_ROLES',
-            [STAFF_CODE, SUPER_USER_CODE]
-        )
+        allowed = app_settings.REGISTRATION_ALLOWED_ROLES
         # Ensure list type
         self.accepted_roles = list(allowed)
         # Do NOT auto-include staff/superuser here; the setting is authoritative

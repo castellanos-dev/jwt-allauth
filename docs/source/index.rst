@@ -21,8 +21,8 @@ Features
 - Token whitelisting system: Implements a refresh token whitelist tied to specific device sessions.
 - **Enhanced security**: Enables revoking access to specific devices or all devices simultaneously. Refresh tokens can be sent as secure HTTP-only cookies by default, protecting against XSS attacks.
 - Automatic token renewal: Active sessions for extended periods without reauthentication, ideal for **mobile apps**.
-- Email verification: Includes a full **REST email verification** system during user registration.
-- Comprehensive user management: Features password recovery, email-based authentication, and session logout.
+- Email and Phone verification: Includes a full **REST email/SMS verification** system during user registration.
+- Comprehensive user management: Features password recovery, email/phone-based authentication, and session logout.
 - **Effortless setup**: Get your project up and running with a single command.
 
 

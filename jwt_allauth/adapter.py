@@ -1,7 +1,6 @@
 from allauth.account import app_settings as allauth_app_settings
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core import context as allauth_ctx
-from django.conf import settings
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.template import TemplateDoesNotExist
@@ -10,6 +9,8 @@ from django.template.loader import render_to_string
 from jwt_allauth.constants import EMAIL_CONFIRMATION
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.utils import get_template_path
+from jwt_allauth.sms.backend import get_sms_backend
+from jwt_allauth import app_settings
 
 
 class JWTAllAuthAdapter(DefaultAccountAdapter):
@@ -26,6 +27,20 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
         - Dual template support (HTML/text) with fallback handling
         - Integration with JWT verification workflows
     """
+    def send_confirmation_sms(self, request, confirmation):
+        """
+        Send SMS confirmation code.
+        """
+        backend = get_sms_backend()
+        phone_number = confirmation.phone_address.phone_number
+        code = confirmation.key
+
+        # Get message template or default
+        message_template = app_settings.SMS_VERIFICATION_MESSAGE
+        message = message_template.format(code=code)
+
+        backend.send_sms(phone_number, message)
+
     def clean_email(self, email):
         """
         Normalize email addresses by trimming whitespace and converting to lowercase.
@@ -39,6 +54,37 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
         email = super().clean_email(email)
         email = email.strip().lower()
         return email
+
+    def clean_phone(self, phone_number):
+        """
+        Normalize phone numbers.
+
+        This is a hook for subclasses to implement custom normalization logic
+        (e.g. E.164 formatting). By default, it just strips whitespace.
+
+        Args:
+            phone_number (str): Raw phone number input
+
+        Returns:
+            str: Normalized phone number
+        """
+        return phone_number.strip()
+
+    def clean_phone_number(self, phone_number):
+        return self.clean_phone(phone_number)
+
+    def save_user(self, request, user, form, commit=True):
+        cleaned_data = getattr(form, 'cleaned_data', {}) or {}
+        if app_settings.AUTHENTICATION_METHOD == 'phone':
+            phone_number = cleaned_data.get('phone_number')
+            if phone_number and not cleaned_data.get('username'):
+                cleaned_data = dict(cleaned_data)
+                cleaned_data['username'] = phone_number
+                form.cleaned_data = cleaned_data
+                if not getattr(user, 'username', None):
+                    user.username = phone_number
+
+        return super().save_user(request, user, form, commit=commit)
 
     def send_confirmation_mail(self, request, emailconfirmation, signup):
         """
@@ -80,7 +126,7 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
             # via admin-managed registration (no usable password yet) or signed
             # up directly (regular self-registration flow).
             is_admin_managed = (
-                getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False)
+                app_settings.ADMIN_MANAGED_REGISTRATION
                 and not user.has_usable_password()
             )
 
@@ -121,7 +167,7 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
 
         # Persist the confirmation key as a generic token so that the verify view
         # can enforce single-use semantics.
-        if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        if app_settings.ADMIN_MANAGED_REGISTRATION:
             token_serializer = GenericTokenModelSerializer(
                 data={
                     "token": confirmation_key,

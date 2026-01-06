@@ -9,7 +9,6 @@ from allauth.account.utils import setup_user_email
 # from allauth.socialaccount.models import SocialAccount
 # from allauth.socialaccount.providers.base import AuthProcess
 from allauth.utils import get_username_max_length
-from django.conf import settings as django_settings
 # from django.contrib.auth import get_user_model
 from django.db import transaction
 # from django.http import HttpRequest
@@ -18,39 +17,31 @@ from django.utils.translation import gettext_lazy as _
 # from requests.exceptions import HTTPError
 from rest_framework import serializers
 
+from jwt_allauth import app_settings
+from jwt_allauth.models import PhoneAddress
 
-class RegisterSerializer(serializers.Serializer):
+
+class BaseRegisterSerializer(serializers.Serializer):
     username = serializers.CharField(
         max_length=get_username_max_length(),
         min_length=allauth_settings.USERNAME_MIN_LENGTH,
         required=False
     )
-    email = serializers.EmailField(required=True, max_length=100)
     password1 = serializers.CharField(write_only=True)
     password2 = serializers.CharField(write_only=True)
-    first_name = serializers.CharField(required=True, write_only=True, max_length=100)
-    last_name = serializers.CharField(required=True, write_only=True, max_length=100)
-
-    _has_phone_field = False
+    first_name = serializers.CharField(required=False, write_only=True, max_length=100, allow_blank=True)
+    last_name = serializers.CharField(required=False, write_only=True, max_length=100, allow_blank=True)
 
     def validate_username(self, username):
         username = get_adapter().clean_username(username)
         return username
 
-    def validate_email(self, email):
-        email = get_adapter().clean_email(email)
-        if allauth_settings.UNIQUE_EMAIL:
-            if EmailAddress.objects.filter(email=email, verified=True).exists():
-                raise serializers.ValidationError(
-                    _("A user is already registered with this e-mail address."))
-            # delete previous non-verified registration attempts
-            EmailAddress.objects.filter(email=email, verified=False).delete()
-        return email
-
     def validate_password1(self, password):
         return get_adapter().clean_password(password)
 
     def validate_first_name(self, first_name):
+        if not first_name:
+            return first_name
         pattern = r'^[A-Za-zÀ-ÖØ-öø-ÿ ]+$'
         if not re.match(pattern, first_name):
             raise serializers.ValidationError('Incorrect format')
@@ -58,6 +49,8 @@ class RegisterSerializer(serializers.Serializer):
         return " ".join([txt.capitalize() for txt in first_name.split(" ")])
 
     def validate_last_name(self, last_name):
+        if not last_name:
+            return last_name
         pattern = r'^[A-Za-zÀ-ÖØ-öø-ÿ ]+$'
         if not re.match(pattern, last_name):
             raise serializers.ValidationError('Incorrect format')
@@ -75,31 +68,91 @@ class RegisterSerializer(serializers.Serializer):
         pass
 
     def get_cleaned_data(self):
-        return {
+        data = {
             'username': self.validated_data.get('username', ''),
             'password1': self.validated_data.get('password1', ''),
-            'email': self.validated_data.get('email', ''),
             'first_name': self.validated_data.get('first_name', ''),
             'last_name': self.validated_data.get('last_name', ''),
         }
+        return data
+
+    def _post_user_save(self, request, user):
+        return
 
     @transaction.atomic
     def save(self, request):
         adapter = get_adapter()
         user = adapter.new_user(request)
         self.cleaned_data = self.get_cleaned_data()
+
         adapter.save_user(request, user, self, commit=False)
         self.custom_signup(request, user)
         user.save()
-        setup_user_email(request, user, [])
-        if not bool(django_settings.EMAIL_VERIFICATION):
-            email = EmailAddress.objects.filter(user=user.id).first()
-            if email is not None:
-                adapter.confirm_email(request, email)
+
+        self._post_user_save(request, user)
+
         return user
 
 
-class UserRegisterSerializer(RegisterSerializer):
+class EmailRegisterSerializer(BaseRegisterSerializer):
+    email = serializers.EmailField(required=True, max_length=100)
+
+    def validate_email(self, email):
+        email = get_adapter().clean_email(email)
+        if allauth_settings.UNIQUE_EMAIL:
+            if EmailAddress.objects.filter(email=email, verified=True).exists():
+                raise serializers.ValidationError(
+                    _("A user is already registered with this e-mail address."))
+            # delete previous non-verified registration attempts
+            EmailAddress.objects.filter(email=email, verified=False).delete()
+        return email
+
+    def get_cleaned_data(self):
+        data = super().get_cleaned_data()
+        data['email'] = self.validated_data.get('email', '')
+        return data
+
+    def _post_user_save(self, request, user):
+        adapter = get_adapter()
+        setup_user_email(request, user, [])
+        if not bool(app_settings.IDENTIFIER_VERIFICATION):
+            email = EmailAddress.objects.filter(user=user.id).first()
+            if email is not None:
+                adapter.confirm_email(request, email)
+
+
+class PhoneRegisterSerializer(BaseRegisterSerializer):
+    phone_number = serializers.CharField(required=True, max_length=32)
+
+    def validate_phone_number(self, phone_number):
+        phone_number = get_adapter().clean_phone_number(phone_number)
+        # Basic uniqueness check
+        if PhoneAddress.objects.filter(phone_number=phone_number, verified=True).exists():
+            raise serializers.ValidationError(
+                _("A user is already registered with this phone number."))
+        # Delete previous non-verified attempts
+        PhoneAddress.objects.filter(phone_number=phone_number, verified=False).delete()
+        return phone_number
+
+    def get_cleaned_data(self):
+        data = super().get_cleaned_data()
+        data['phone_number'] = self.validated_data.get('phone_number', '')
+        return data
+
+    def _post_user_save(self, request, user):
+        phone_number = self.cleaned_data.get('phone_number')
+        if phone_number:
+            PhoneAddress.objects.create(
+                user=user,
+                phone_number=phone_number,
+                verified=not bool(app_settings.IDENTIFIER_VERIFICATION)
+            )
+
+
+RegisterSerializer = EmailRegisterSerializer
+
+
+class UserRegisterSerializer(EmailRegisterSerializer):
     """
     Registration serializer for admin-managed user creation.
     - Requires email and role.
@@ -152,9 +205,11 @@ class UserRegisterSerializer(RegisterSerializer):
         adapter = get_adapter()
         user = adapter.new_user(request)
         self.cleaned_data = self.get_cleaned_data()
+
         adapter.save_user(request, user, self, commit=False)
         self.custom_signup(request, user)
         user.save()
+
         setup_user_email(request, user, [])
         # Create an EmailConfirmation instance for the user's primary email
         email_address = EmailAddress.objects.get_primary(user)

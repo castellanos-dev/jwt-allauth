@@ -17,8 +17,8 @@ Authentication
      - Field
      - Description
    * - Body (JSON)
-     - ``email``
-     - User's email address.
+     - ``email`` / ``phone_number``
+     - User's email address or phone number (depending on ``JWT_ALLAUTH_AUTHENTICATION_METHOD``).
    * - Body (JSON)
      - ``password``
      - User's password.
@@ -365,8 +365,8 @@ Registration
      - Field
      - Description
    * - Body (JSON)
-     - ``email``
-     - Email address for the new user.
+     - ``email`` / ``phone_number``
+     - Email address or phone number for the new user (depending on ``JWT_ALLAUTH_AUTHENTICATION_METHOD``).
    * - Body (JSON)
      - ``password1``
      - Password.
@@ -389,15 +389,15 @@ Registration
    * - Location
      - Field
      - Description
-   * - Body (JSON, optional)
-     - ``key``
-     - Authentication token when email verification is disabled.
    * - Body (JSON)
-     - ``email``
-     - Registered email address.
+     - ``refresh``
+     - Refresh token. When ``JWT_ALLAUTH_IDENTIFIER_VERIFICATION = True``, this token is stored server-side as disabled until the identifier is verified.
+   * - Body (JSON, optional)
+     - ``access``
+     - Access token returned only when ``JWT_ALLAUTH_IDENTIFIER_VERIFICATION = False``.
    * - Body (JSON)
      - ``detail``
-     - Message indicating that a verification e-mail has been sent when email verification is enabled.
+     - Message indicating that a verification e-mail/SMS has been sent when identifier verification is enabled.
 
 **URL Name:** ``rest_register``
 
@@ -443,6 +443,67 @@ Registration
 
 .. note:: Enabled when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. Keeps the default ``/registration/`` endpoint unchanged unless you enable this setting.
 
+**/registration/verify-phone/** (POST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Request**
+
+.. list-table::
+   :widths: 20 20 60
+   :header-rows: 1
+
+   * - Location
+     - Field
+     - Description
+   * - Body (JSON)
+     - ``phone_number``
+     - The phone number being verified.
+   * - Body (JSON)
+     - ``code``
+     - The 6-digit SMS verification code.
+
+**Response**
+
+.. list-table::
+   :widths: 25 75
+   :header-rows: 1
+
+   * - Status
+     - Description
+   * - ``200 OK``
+     - Phone verification successful. Returns JWT tokens (access/refresh) to log the user in immediately.
+
+**URL Name:** ``verify_phone``
+
+**/registration/resend-phone/** (POST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Request**
+
+.. list-table::
+   :widths: 20 20 60
+   :header-rows: 1
+
+   * - Location
+     - Field
+     - Description
+   * - Body (JSON)
+     - ``phone_number``
+     - Phone number to resend the verification SMS to.
+
+**Response**
+
+.. list-table::
+   :widths: 25 75
+   :header-rows: 1
+
+   * - Status
+     - Description
+   * - ``200 OK``
+     - Verification SMS sent (only if there is no currently valid code).
+
+**URL Name:** ``resend_phone``
+
 **/registration/verification/<str:key>/** (GET)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -459,7 +520,7 @@ Registration
 
 **URL Name:** ``account_confirm_email``
 
-.. note:: Disabled when ``EMAIL_VERIFICATION = False``.
+.. note:: Disabled when ``JWT_ALLAUTH_IDENTIFIER_VERIFICATION = False``.
 
 **/registration/set-password/** (POST) ``[Cookie]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -514,7 +575,7 @@ Registration
 
 **URL Name:** ``account_email_verification_sent``
 
-.. note:: Disabled when ``EMAIL_VERIFICATION = False``.
+.. note:: Disabled when ``JWT_ALLAUTH_IDENTIFIER_VERIFICATION = False``.
 
 **/registration/verified/** (GET)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -532,7 +593,7 @@ Registration
 
 **URL Name:** ``jwt_allauth_email_verified``
 
-.. note:: Disabled if ``EMAIL_VERIFIED_REDIRECT`` is defined or ``EMAIL_VERIFICATION = False``.
+.. note:: Disabled if ``EMAIL_VERIFIED_REDIRECT`` is defined or ``JWT_ALLAUTH_IDENTIFIER_VERIFICATION = False``.
 
 Multi-Factor Authentication (MFA)
 ----------------------------------

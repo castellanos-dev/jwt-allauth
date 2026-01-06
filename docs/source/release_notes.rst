@@ -1,6 +1,62 @@
 Release Notes
 =============
 
+Version 1.3.0
+-------------
+
+Released: TBD
+
+New Features
+~~~~~~~~~~~~
+
+- **Phone Number Authentication**: Added support for phone number as the primary authentication method.
+    - Configurable via ``JWT_ALLAUTH_AUTHENTICATION_METHOD`` setting (values: ``'email'`` or ``'phone'``).
+    - When enabled, users register and login with their phone number instead of email.
+    - Includes SMS verification flow with 6-digit OTP codes.
+    - Flexible SMS backend system with a default console backend for development.
+    - New endpoint ``/registration/verify-phone/`` for verifying phone numbers.
+    - New endpoint ``/registration/resend-phone/`` for requesting a new verification code after expiry.
+
+- **SMS Backend System**: New pluggable backend system for sending SMS.
+    - Configure via ``JWT_ALLAUTH_SMS_BACKEND`` (default: ``'jwt_allauth.sms.backends.console.ConsoleSMSBackend'``).
+    - Custom backends can be implemented by extending ``BaseSMSBackend``.
+    - Configurable verification message via ``JWT_ALLAUTH_SMS_VERIFICATION_MESSAGE``.
+
+- **Phone code expiry setting**: Phone verification codes now expire in seconds (recommended for production).
+    - Configure via ``JWT_ALLAUTH_PHONE_CONFIRMATION_EXPIRE_SECONDS`` (default: ``300`` = 5 minutes).
+
+- **Identifier Verification Setting**: Added a new generic verification setting ``JWT_ALLAUTH_IDENTIFIER_VERIFICATION`` to control verification for the configured primary identifier.
+    - Replaces the legacy ``EMAIL_VERIFICATION`` setting.
+    - ``EMAIL_VERIFICATION`` remains supported for backward compatibility but is deprecated and will be removed in a future release.
+
+Breaking Change
+~~~~~~~~~~~~~~~
+
+- **Admin-Managed Registration (Email only)**: ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION=True`` is no longer compatible with ``JWT_ALLAUTH_AUTHENTICATION_METHOD='phone'``. The application will raise a ``ValueError`` during startup.
+
+Database migrations
+~~~~~~~~~~~~~~~~~~~
+
+- **No migrations shipped**: ``jwt_allauth`` does not ship Django migration files. Projects must create/apply migrations (or sync the schema) when upgrading.
+
+- **New models for phone auth**: this version introduces two new database tables:
+
+  - ``PhoneAddress`` (one-to-one with the user)
+  - ``PhoneConfirmation`` (stores the 6-digit confirmation codes)
+
+  When enabling phone authentication (``JWT_ALLAUTH_AUTHENTICATION_METHOD='phone'``), make sure these tables exist in your database.
+
+  Recommended approach:
+
+  - Run ``python manage.py makemigrations jwt_allauth``
+  - Run ``python manage.py migrate``
+
+  Alternative (if you prefer not to create migration files in your project):
+
+  - Run ``python manage.py migrate --run-syncdb``
+
+
+
 Version 1.2.2
 -------------
 

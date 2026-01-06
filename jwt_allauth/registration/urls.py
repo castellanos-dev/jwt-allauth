@@ -4,13 +4,16 @@ from django.views.generic import TemplateView
 
 from jwt_allauth.constants import EMAIL_VERIFIED_REDIRECT, PASSWORD_SET_REDIRECT
 from jwt_allauth.registration.email_verification.views import VerifyEmailView
+from jwt_allauth.registration.phone_verification.views import VerifyPhoneView, ResendPhoneView
 from jwt_allauth.registration.views import RegisterView, UserRegisterView
 from jwt_allauth.password_reset.views import SetPasswordView, DefaultSetPasswordView
+
+from jwt_allauth import app_settings
 
 urlpatterns = []
 
 
-if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+if app_settings.ADMIN_MANAGED_REGISTRATION:
     urlpatterns.extend([
         path('user-register/', UserRegisterView.as_view(), name='rest_user_register'),
         path('set-password/', SetPasswordView.as_view(), name='rest_set_password'),
@@ -18,7 +21,7 @@ if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
     ])
 
     # Only register the built-in HTML UI if no custom PASSWORD_SET_REDIRECT is configured
-    if getattr(settings, PASSWORD_SET_REDIRECT, None) is None:
+    if app_settings.PASSWORD_SET_REDIRECT is None:
         urlpatterns.append(
             path(
                 'set-password/default/',
@@ -30,7 +33,11 @@ if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
 else:
     urlpatterns.append(path('', RegisterView.as_view(), name='rest_register'))
 
-    if getattr(settings, 'EMAIL_VERIFICATION', False):
+    # Phone verification endpoint always available if configured, but primarily logic driven by settings
+    urlpatterns.append(path('verify-phone/', VerifyPhoneView.as_view(), name='verify_phone'))
+    urlpatterns.append(path('resend-phone/', ResendPhoneView.as_view(), name='resend_phone'))
+
+    if app_settings.IDENTIFIER_VERIFICATION:
         urlpatterns.extend([
             path('verification/<str:key>/', VerifyEmailView.as_view(), name='account_confirm_email'),
 
@@ -48,8 +55,12 @@ else:
             path('account_email_verification_sent/', TemplateView.as_view(), name='account_email_verification_sent'),
         ])
 
-        if getattr(settings, EMAIL_VERIFIED_REDIRECT, None) is None:
-            urlpatterns.append(
-                path('verified/', TemplateView.as_view(
-                    template_name='email/verified.html'), name='jwt_allauth_email_verified'),
-            )
+    if (
+        app_settings.AUTHENTICATION_METHOD == 'email'
+        and app_settings.IDENTIFIER_VERIFICATION
+        and getattr(settings, EMAIL_VERIFIED_REDIRECT, None) is None
+    ):
+        urlpatterns.append(
+            path('verified/', TemplateView.as_view(
+                template_name='email/verified.html'), name='jwt_allauth_email_verified'),
+        )

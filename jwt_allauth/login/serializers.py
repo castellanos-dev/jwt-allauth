@@ -1,6 +1,5 @@
 from typing import Dict, Any
 
-from django.conf import settings
 from django.contrib.auth.models import update_last_login
 from django.db import transaction
 from rest_framework import exceptions
@@ -17,6 +16,7 @@ from jwt_allauth.mfa.storage import (
 )
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.utils import allauth_authenticate
+from jwt_allauth import app_settings
 
 
 def get_mfa_totp_mode() -> str:
@@ -27,7 +27,7 @@ def get_mfa_totp_mode() -> str:
     Django's `override_settings` used in tests – and any runtime changes
     – are respected.
     """
-    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
+    return app_settings.MFA_TOTP_MODE
 
 try:
     from allauth.mfa.models import Authenticator  # type: ignore
@@ -40,10 +40,12 @@ except Exception:  # pragma: no cover - optional dependency guard
         )
 
 
-class LoginSerializer(TokenObtainPairSerializer):
+class BaseLoginSerializer(TokenObtainPairSerializer):
     token_class = RefreshToken
-    username_field = getattr(settings, 'ACCOUNT_AUTHENTICATION_METHOD', 'email')
     user = None
+
+    def build_authenticate_kwargs(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        raise NotImplementedError
 
     @classmethod
     def get_token(cls, user) -> RefreshToken:
@@ -55,11 +57,8 @@ class LoginSerializer(TokenObtainPairSerializer):
 
     @transaction.atomic
     def validate(self, attrs: Dict[str, Any]) -> Dict[Any, Any]:
-        # Get the email and password information
-        authenticate_kwargs = {
-            self.username_field: attrs[self.username_field],
-            "password": attrs["password"],
-        }
+        authenticate_kwargs = self.build_authenticate_kwargs(attrs)
+
         try:
             authenticate_kwargs["request"] = self.context["request"]
         except KeyError:
@@ -110,3 +109,29 @@ class LoginSerializer(TokenObtainPairSerializer):
             update_last_login(None, self.user)
 
         return validated_data
+
+
+class EmailLoginSerializer(BaseLoginSerializer):
+    username_field = 'email'
+
+    def build_authenticate_kwargs(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            self.username_field: attrs[self.username_field],
+            "password": attrs["password"],
+        }
+
+
+class PhoneLoginSerializer(BaseLoginSerializer):
+    username_field = 'phone_number'
+
+    def build_authenticate_kwargs(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        # Map phone_number to username for authentication backend since we store phone in username field
+        return {
+            "username": attrs[self.username_field],
+            "password": attrs["password"],
+        }
+
+
+# Backwards compatibility: keep the original name pointing to the email serializer.
+# The default selection is handled via app_settings.LoginSerializer.
+LoginSerializer = EmailLoginSerializer
