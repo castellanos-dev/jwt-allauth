@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -31,6 +30,7 @@ from jwt_allauth.mfa.storage import (
     load_setup_secret,
     store_setup_secret,
 )
+from jwt_allauth import app_settings
 
 
 def get_mfa_totp_mode() -> str:
@@ -41,7 +41,7 @@ def get_mfa_totp_mode() -> str:
     Django's `override_settings` used in tests – and any runtime changes
     – are respected.
     """
-    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
+    return app_settings.MFA_TOTP_MODE
 
 try:
     from allauth.mfa.models import Authenticator

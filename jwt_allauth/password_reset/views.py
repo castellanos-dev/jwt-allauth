@@ -1,6 +1,3 @@
-import uuid
-
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import HttpResponseRedirect, HttpResponseNotFound
@@ -15,15 +12,10 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework_simplejwt.exceptions import InvalidToken
 
-from jwt_allauth.app_settings import PasswordResetSerializer
 from jwt_allauth.constants import (
-    PASS_RESET, PASSWORD_RESET_REDIRECT, FOR_USER,
+    PASS_RESET, FOR_USER,
     ONE_TIME_PERMISSION, PASS_SET_ACCESS, PASS_RESET_ACCESS, PASS_RESET_COOKIE,
-    SET_PASSWORD_COOKIE,
-    MFA_TOKEN_MAX_AGE_SECONDS,
-    MFA_TOTP_DISABLED,
-    MFA_TOTP_REQUIRED,
-    EMAIL_CONFIRMATION,
+    SET_PASSWORD_COOKIE, MFA_TOTP_REQUIRED, EMAIL_CONFIRMATION,
 )
 from jwt_allauth.password_reset.permissions import ResetPasswordPermission, SetPasswordPermission
 from jwt_allauth.password_reset.serializers import SetPasswordSerializer
@@ -33,17 +25,7 @@ from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.tokens.tokens import GenericToken
 from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m, build_token_response
 from jwt_allauth.mfa.storage import create_setup_challenge
-
-
-def get_mfa_totp_mode() -> str:
-    """
-    Return the current MFA TOTP mode from settings.
-
-    This must be evaluated at call time (not import time) so that
-    Django's `override_settings` used in tests – and any runtime changes
-    – are respected.
-    """
-    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
+from jwt_allauth import app_settings
 
 
 class PasswordResetView(GenericAPIView):
@@ -53,9 +35,11 @@ class PasswordResetView(GenericAPIView):
     Accepts the following POST parameters: email
     Returns the success/fail message.
     """
-    serializer_class = PasswordResetSerializer
     permission_classes = (AllowAny,)
     throttle_classes = [AnonRateThrottle]
+
+    def get_serializer_class(self):
+        return app_settings.PasswordResetSerializer
 
     @get_user_agent
     def post(self, request):
@@ -101,7 +85,7 @@ class DefaultSetPasswordView(GenericAPIView):
 
 
 class PasswordResetConfirmView(GenericAPIView):
-    form_url = getattr(settings, PASSWORD_RESET_REDIRECT, None)
+    form_url = app_settings.PASSWORD_RESET_REDIRECT
 
     @get_user_agent
     def get(self, *_, **kwargs):
@@ -126,10 +110,10 @@ class PasswordResetConfirmView(GenericAPIView):
                 response.set_cookie(
                     key=PASS_RESET_COOKIE,
                     value=str(access_token),
-                    httponly=getattr(settings, 'PASSWORD_RESET_COOKIE_HTTP_ONLY', True),
-                    secure=getattr(settings, 'PASSWORD_RESET_COOKIE_SECURE', not settings.DEBUG),
-                    samesite=getattr(settings, 'PASSWORD_RESET_COOKIE_SAME_SITE', 'Lax'),
-                    max_age=getattr(settings, 'PASSWORD_RESET_COOKIE_MAX_AGE', 3600)
+                    httponly=app_settings.PASSWORD_RESET_COOKIE_HTTP_ONLY,
+                    secure=app_settings.PASSWORD_RESET_COOKIE_SECURE,
+                    samesite=app_settings.PASSWORD_RESET_COOKIE_SAME_SITE,
+                    max_age=app_settings.PASSWORD_RESET_COOKIE_MAX_AGE
                 )
 
                 token_serializer = GenericTokenModelSerializer(data={
@@ -192,7 +176,7 @@ class ResetPasswordView(GenericAPIView):
         serializer.save()
 
         # Revoke old sessions
-        if getattr(settings, 'LOGOUT_ON_PASSWORD_CHANGE', True):
+        if app_settings.LOGOUT_ON_PASSWORD_CHANGE:
             RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
 
         refresh_token = RefreshToken.for_user(request.user)
@@ -214,7 +198,7 @@ class SetPasswordView(GenericAPIView):
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
-        if not getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        if not app_settings.ADMIN_MANAGED_REGISTRATION:
             return HttpResponseNotFound()
         return super(SetPasswordView, self).dispatch(*args, **kwargs)
 
@@ -235,14 +219,14 @@ class SetPasswordView(GenericAPIView):
         serializer.save()
 
         # Revoke old sessions
-        if getattr(settings, 'LOGOUT_ON_PASSWORD_CHANGE', True):
+        if app_settings.LOGOUT_ON_PASSWORD_CHANGE:
             RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
 
         # Invalidate the email confirmation token now that the password has been set
         GenericTokenModel.objects.filter(user=request.user, purpose=EMAIL_CONFIRMATION).delete()
 
         # If MFA TOTP is REQUIRED, return setup challenge instead of tokens
-        if get_mfa_totp_mode() == MFA_TOTP_REQUIRED:
+        if app_settings.MFA_TOTP_MODE == MFA_TOTP_REQUIRED:
             setup_challenge_id = create_setup_challenge(request.user.id)
 
             return Response(

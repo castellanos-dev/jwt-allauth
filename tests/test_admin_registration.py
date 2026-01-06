@@ -14,6 +14,9 @@ from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel
 from .mixins import TestsMixin
 
+import jwt_allauth
+from jwt_allauth.apps import JWTAllauthAppConfig
+
 
 @override_settings(
     JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION=True,
@@ -283,6 +286,16 @@ class AdminManagedRegistrationTests(TestsMixin):
         )
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
         self.assertIn('access', login_response.json())
+
+
+@override_settings(
+    JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION=True,
+    JWT_ALLAUTH_AUTHENTICATION_METHOD='phone',
+    ROOT_URLCONF='tests.django_urls')
+class AdminManagedRegistrationPhoneNotSupportedTests(TestsMixin):
+    def test_admin_managed_registration_not_supported_for_phone(self):
+        with self.assertRaises(ValueError):
+            JWTAllauthAppConfig('jwt_allauth', jwt_allauth).ready()
 
 
 @override_settings(

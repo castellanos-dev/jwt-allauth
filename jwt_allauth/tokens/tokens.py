@@ -1,5 +1,4 @@
 import hashlib
-from django.conf import settings
 from uuid import uuid4
 from inspect import getattr_static
 
@@ -11,6 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken as DefaultRefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel
 from jwt_allauth.tokens.serializers import RefreshTokenWhitelistSerializer, GenericTokenModelSerializer
 from jwt_allauth.utils import user_agent_dict
+from jwt_allauth import app_settings
 
 
 class RefreshToken(DefaultRefreshToken):
@@ -30,7 +30,7 @@ class RefreshToken(DefaultRefreshToken):
         output claim names to dot-paths on the user object.
         Example: {'organization_id': 'organization.id', 'area_id': 'area.id'}
         """
-        configured_attributes = getattr(settings, 'JWT_ALLAUTH_USER_ATTRIBUTES', {})
+        configured_attributes = app_settings.USER_ATTRIBUTES
 
         # Accept legacy list format for backward compatibility but prefer dict.
         # In legacy mode, the final attribute name is used as the claim key.

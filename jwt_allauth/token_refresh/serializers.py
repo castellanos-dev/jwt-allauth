@@ -6,7 +6,7 @@ from rest_framework_simplejwt.exceptions import InvalidToken
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import RefreshTokenWhitelistSerializer
-from jwt_allauth.utils import is_email_verified
+from jwt_allauth.utils import is_identifier_verified
 
 
 class TokenRefreshSerializer(serializers.Serializer):
@@ -23,7 +23,7 @@ class TokenRefreshSerializer(serializers.Serializer):
             RefreshTokenWhitelistModel.objects.filter(session=refresh.payload["session"]).delete()
             raise InvalidToken()
         if not query_set[0].enabled:
-            is_email_verified(query_set[0].user, raise_exception=True)
+            is_identifier_verified(query_set[0].user, raise_exception=True)
             raise InvalidToken()
 
         data = {"access": str(refresh.access_token)}

@@ -21,7 +21,6 @@ This will create a new Django project called "myproject" with JWT Allauth pre-co
 .. code-block:: bash
 
     cd myproject
-    python manage.py makemigrations jwt_allauth
     python manage.py migrate
     python manage.py runserver
 
@@ -56,6 +55,12 @@ Set the ``AUTH_USER_MODEL`` setting in the ``settings.py`` file:
 .. code-block:: python
 
     AUTH_USER_MODEL = 'jwt_allauth.JAUser'
+
+If you want to use a custom user model, it **must inherit from** :class:`~jwt_allauth.models.JAUser`.
+JWT Allauth expects fields and behavior provided by ``JAUser`` (notably the ``role`` field used in JWT claims and
+permissions).
+In that case, set ``AUTH_USER_MODEL`` to your model (for example ``users.CustomUser``) and run
+``python manage.py makemigrations users`` before running ``migrate``.
 
 Add the following to your ``MIDDLEWARE`` setting in the ``settings.py`` file:
 
@@ -95,7 +100,6 @@ Run migrations.
 
 .. code-block:: python
 
-    python manage.py makemigrations jwt_allauth
     python manage.py migrate
 
 Done! ``django-jwt-allauth`` will configure ``django-allauth`` and ``djangorestframework-simplejwt`` for you.

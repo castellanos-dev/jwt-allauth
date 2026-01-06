@@ -6,7 +6,6 @@ from allauth.account.utils import complete_signup
 # from allauth.socialaccount import signals
 # from allauth.socialaccount.adapter import get_adapter as get_social_adapter
 # from allauth.socialaccount.models import SocialAccount
-from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status
 # from rest_framework.exceptions import NotFound
@@ -18,38 +17,31 @@ from django.http import HttpResponseNotFound
 # from jwt_allauth.login.views import LoginView
 from jwt_allauth.tokens.models import TokenModel
 from jwt_allauth.registration.app_settings import register_permission_classes
-from jwt_allauth.app_settings import RegisterSerializer
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.permissions import RegisterUsersPermission
-from jwt_allauth.registration.serializers import UserRegisterSerializer
+from jwt_allauth.registration.serializers import (
+    UserRegisterSerializer,
+)
 # from jwt_allauth.registration.serializers import (
 #     SocialLoginSerializer, SocialAccountSerializer, SocialConnectSerializer)
 from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m
 from jwt_allauth.constants import (
-    MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
 )
+from jwt_allauth import app_settings
 from jwt_allauth.mfa.storage import create_setup_challenge
+from jwt_allauth.models import PhoneAddress
 
 logger = logging.getLogger(__name__)
 
 
-def get_mfa_totp_mode() -> str:
-    """
-    Return the current MFA TOTP mode from settings.
-
-    This must be evaluated at call time (not import time) so that
-    Django's `override_settings` used in tests – and any runtime changes
-    – are respected.
-    """
-    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
-
-
 class RegisterView(CreateAPIView):
-    serializer_class = RegisterSerializer
     permission_classes = register_permission_classes()
     token_model = TokenModel
     jwt_token = RefreshToken
+
+    def get_serializer_class(self):
+        return app_settings.RegisterSerializer
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
@@ -57,9 +49,14 @@ class RegisterView(CreateAPIView):
 
     @staticmethod
     def get_response_data(token):
-        if settings.EMAIL_VERIFICATION:
+        if app_settings.IDENTIFIER_VERIFICATION:
+            authentication_method = app_settings.AUTHENTICATION_METHOD
             return {
-                "detail": _("Verification e-mail sent."),
+                "detail": (
+                    _("Verification SMS sent.")
+                    if authentication_method == 'phone'
+                    else _("Verification e-mail sent.")
+                ),
                 'refresh': str(token)
             }
 
@@ -72,7 +69,7 @@ class RegisterView(CreateAPIView):
     @get_user_agent
     def create(self, request, *args, **kwargs):
         # If admin-managed registration is enabled, disable open registration endpoint
-        if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        if app_settings.ADMIN_MANAGED_REGISTRATION:
             return HttpResponseNotFound()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -92,14 +89,24 @@ class RegisterView(CreateAPIView):
     def perform_create(self, serializer):
         user = serializer.save(self.request)
 
-        # Complete allauth signup flow (email verification, etc.)
-        complete_signup(self.request._request, user,
-                        allauth_settings.EMAIL_VERIFICATION,
-                        None)
+        authentication_method = app_settings.AUTHENTICATION_METHOD
+
+        if authentication_method == 'phone':
+            # For phone-based identification, mirror the email flow:
+            # if verification is enabled, issue an SMS confirmation.
+            if app_settings.IDENTIFIER_VERIFICATION:
+                phone_address = PhoneAddress.objects.filter(user=user).first()
+                if phone_address is not None and not phone_address.verified:
+                    phone_address.send_confirmation(self.request)
+        else:
+            # Complete allauth signup flow (email verification, etc.)
+            complete_signup(self.request._request, user,
+                            allauth_settings.EMAIL_VERIFICATION,
+                            None)
 
         # If MFA TOTP is REQUIRED, don't emit session tokens here.
         # Instead, create a setup_challenge like in login.
-        if get_mfa_totp_mode() == MFA_TOTP_REQUIRED:
+        if app_settings.MFA_TOTP_MODE == MFA_TOTP_REQUIRED:
             setup_challenge_id = create_setup_challenge(user.id)
 
             data = {
@@ -107,14 +114,17 @@ class RegisterView(CreateAPIView):
                 "setup_challenge_id": setup_challenge_id,
             }
             # If email verification is enabled, include the informative message
-            if settings.EMAIL_VERIFICATION:
-                data["detail"] = _("Verification e-mail sent.")
+            if app_settings.IDENTIFIER_VERIFICATION:
+                data["detail"] = (
+                    _("Verification SMS sent.") if authentication_method == 'phone'
+                    else _("Verification e-mail sent.")
+                )
 
             return data
 
         # Normal behavior when MFA is not REQUIRED:
         refresh = self.jwt_token.for_user(
-            user, self.request, enabled=not bool(settings.EMAIL_VERIFICATION))
+            user, self.request, enabled=not bool(app_settings.IDENTIFIER_VERIFICATION))
 
         return refresh
 
@@ -136,7 +146,7 @@ class UserRegisterView(CreateAPIView):
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
-        if not getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        if not app_settings.ADMIN_MANAGED_REGISTRATION:
             return HttpResponseNotFound()
         return super(UserRegisterView, self).dispatch(*args, **kwargs)
 

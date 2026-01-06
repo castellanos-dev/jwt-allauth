@@ -12,6 +12,7 @@ Modules
    jwt_allauth.password_change
    jwt_allauth.password_reset
    jwt_allauth.registration
+   jwt_allauth.sms
    jwt_allauth.token
    jwt_allauth.token_refresh
    jwt_allauth.user_details
@@ -31,6 +32,14 @@ jwt\_allauth.exceptions module
 ------------------------------
 
 .. automodule:: jwt_allauth.exceptions
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+jwt\_allauth.models module
+--------------------------
+
+.. automodule:: jwt_allauth.models
    :members:
    :show-inheritance:
    :undoc-members:

@@ -1,5 +1,4 @@
 from django.urls import path, include
-from django.conf import settings
 from django.views.generic import TemplateView
 
 from jwt_allauth.login.views import LoginView
@@ -10,6 +9,7 @@ from jwt_allauth.registration import urls as registration_urls
 from jwt_allauth.token_refresh.views import TokenRefreshView
 from jwt_allauth.mfa import urls as mfa_urls
 from jwt_allauth.user_details.views import UserDetailsView
+from jwt_allauth import app_settings
 
 
 urlpatterns = [
@@ -34,7 +34,7 @@ urlpatterns = [
     path('mfa/', include(mfa_urls)),
 ]
 
-if getattr(settings, 'PASSWORD_RESET_REDIRECT', None) is None:
+if app_settings.PASSWORD_RESET_REDIRECT is None:
     urlpatterns.append(
         path('password/reset/default/', DefaultPasswordResetView.as_view(), name='default_password_reset')
     )

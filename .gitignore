@@ -109,6 +109,7 @@ venv.bak/
 # migrations
 **/migrations/*
 !**/migrations/__init__.py
+!jwt_allauth/migrations/*.py
 
 .idea/*
 .idea/
@@ -119,3 +120,6 @@ testing.env
 
 .DS_Store
 **/.DS_Store
+
+notas.md
+agents.md

@@ -1,6 +1,5 @@
 from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress
-from django.conf import settings
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.sites.requests import RequestSite
 from rest_framework import serializers
@@ -9,6 +8,7 @@ from jwt_allauth.constants import PASS_RESET
 from jwt_allauth.password_change.serializers import PasswordChangeSerializer
 from jwt_allauth.tokens.tokens import GenericToken
 from jwt_allauth.utils import get_template_path
+from jwt_allauth import app_settings
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -37,7 +37,7 @@ class PasswordResetSerializer(serializers.Serializer):
 
         opts = {
             'use_https': request.is_secure(),
-            'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL'),
+            'from_email': app_settings.DEFAULT_FROM_EMAIL,
             'request': request,
             'domain_override': RequestSite(request).domain,
             'token_generator': GenericToken(request=request, purpose=PASS_RESET),

@@ -1,5 +1,4 @@
 from django.utils.translation import gettext_lazy as _
-from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -9,6 +8,7 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from jwt_allauth.logout.serializers import RemoveRefreshTokenSerializer
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
+from jwt_allauth import app_settings
 
 
 class LogoutView(APIView):
@@ -29,8 +29,8 @@ class LogoutView(APIView):
     @staticmethod
     def logout(request):
         data = request.data.copy()
-        
-        if getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', False):
+
+        if app_settings.REFRESH_TOKEN_AS_COOKIE:
             refresh_token = request.COOKIES.get(REFRESH_TOKEN_COOKIE)
             if refresh_token:
                 data['refresh'] = refresh_token
@@ -39,7 +39,7 @@ class LogoutView(APIView):
                     {"detail": _("Refresh token cookie not found.")},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        
+
         try:
             RemoveRefreshTokenSerializer(
                 data=data,

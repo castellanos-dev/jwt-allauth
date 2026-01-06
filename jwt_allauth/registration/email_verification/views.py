@@ -25,12 +25,15 @@ from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.utils import get_template_path
 
 
+from jwt_allauth import app_settings
+
+
 class VerifyEmailView(APIView, ConfirmEmailView):
     permission_classes = (AllowAny,)
     allowed_methods = ('GET',)
     # URL where the frontend password-set flow is implemented (admin-managed registration)
     # By default, point to the built-in HTML UI provided by this library.
-    form_url = getattr(settings, PASSWORD_SET_REDIRECT, '/registration/set-password/default/')
+    form_url = app_settings.PASSWORD_SET_REDIRECT
 
     @staticmethod
     def get_serializer(*args, **kwargs):
@@ -39,7 +42,7 @@ class VerifyEmailView(APIView, ConfirmEmailView):
     def get(self, request, *args, **kwargs):
         # If admin-managed registration is enabled, validate the confirmation key and
         # issue a one-time token to allow the user to set their password.
-        if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        if app_settings.ADMIN_MANAGED_REGISTRATION:
             # Ensure PASSWORD_SET_REDIRECT has been configured
             if self.form_url is None:
                 raise NotImplementedError('`PASSWORD_SET_REDIRECT` must be configured in settings.py')
@@ -85,10 +88,10 @@ class VerifyEmailView(APIView, ConfirmEmailView):
             response.set_cookie(
                 key=SET_PASSWORD_COOKIE,
                 value=str(access_token),
-                httponly=getattr(settings, 'PASSWORD_SET_COOKIE_HTTP_ONLY', True),
-                secure=getattr(settings, 'PASSWORD_SET_COOKIE_SECURE', not settings.DEBUG),
-                samesite=getattr(settings, 'PASSWORD_SET_COOKIE_SAME_SITE', 'Lax'),
-                max_age=getattr(settings, 'PASSWORD_SET_COOKIE_MAX_AGE', 3600 * 24),
+                httponly=app_settings.PASSWORD_SET_COOKIE_HTTP_ONLY,
+                secure=app_settings.PASSWORD_SET_COOKIE_SECURE,
+                samesite=app_settings.PASSWORD_SET_COOKIE_SAME_SITE,
+                max_age=app_settings.PASSWORD_SET_COOKIE_MAX_AGE,
             )
 
             token_serializer = GenericTokenModelSerializer(

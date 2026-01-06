@@ -17,6 +17,11 @@
 .. toctree::
    :maxdepth: 1
 
+   phone_verification
+
+.. toctree::
+   :maxdepth: 1
+
    password_reset
 
 .. toctree::

@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
-from jwt_allauth.app_settings import PasswordChangeSerializer
+from jwt_allauth import app_settings
 from jwt_allauth.utils import sensitive_post_parameters_m
 
 
@@ -16,9 +16,11 @@ class PasswordChangeView(GenericAPIView):
     Accepts the following POST parameters: new_password1, new_password2
     Returns the success/fail message.
     """
-    serializer_class = PasswordChangeSerializer
     permission_classes = (IsAuthenticated,)
     throttle_classes = [UserRateThrottle]
+
+    def get_serializer_class(self):
+        return app_settings.PasswordChangeSerializer
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):

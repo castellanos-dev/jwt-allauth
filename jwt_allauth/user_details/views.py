@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 
-from jwt_allauth.app_settings import UserDetailsSerializer
+from jwt_allauth import app_settings
 
 
 class UserDetailsView(RetrieveUpdateAPIView):
@@ -16,9 +16,11 @@ class UserDetailsView(RetrieveUpdateAPIView):
 
     Returns UserModel fields.
     """
-    serializer_class = UserDetailsSerializer
     permission_classes = (IsAuthenticated,)
     http_method_names = ['get', 'patch', 'head', 'options']
+
+    def get_serializer_class(self):
+        return app_settings.UserDetailsSerializer
 
     def get_object(self):
         return get_user_model().objects.get(id=self.request.user.id)

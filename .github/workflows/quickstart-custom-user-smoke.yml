@@ -1,4 +1,4 @@
-name: Quickstart (jwt-allauth startproject)
+name: Quickstart (custom user model)
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  quickstart:
+  quickstart-custom-user:
     runs-on: ubuntu-latest
     environment:
       name: quickstart
@@ -34,9 +34,42 @@ jobs:
         run: |
           jwt-allauth startproject myproject
 
-      - name: Run migrations
+      - name: Create custom user model
         working-directory: myproject
         run: |
+          python manage.py startapp accounts
+
+          python - <<'PY'
+          from pathlib import Path
+
+          settings_path = Path('myproject/settings.py')
+          settings = settings_path.read_text(encoding='utf-8')
+
+          needle = "INSTALLED_APPS = [\n"
+          if needle not in settings:
+              raise SystemExit("Could not find INSTALLED_APPS in settings.py")
+
+          if "'accounts'," not in settings:
+              settings = settings.replace(needle, needle + "    'accounts',\n", 1)
+
+          if "AUTH_USER_MODEL" not in settings:
+              settings += "\nAUTH_USER_MODEL = 'accounts.CustomUser'\n"
+
+          settings_path.write_text(settings, encoding='utf-8')
+          PY
+
+          cat > accounts/models.py <<'PY'
+          from jwt_allauth.models import JAUser
+
+
+          class CustomUser(JAUser):
+              pass
+          PY
+
+      - name: Make migrations and migrate
+        working-directory: myproject
+        run: |
+          python manage.py makemigrations accounts
           python manage.py migrate
 
       - name: Run Django system checks

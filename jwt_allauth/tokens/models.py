@@ -1,12 +1,11 @@
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from rest_framework.authtoken.models import Token as DefaultTokenModel
 
-from jwt_allauth.utils import import_callable
+from jwt_allauth._importing import import_callable
+from jwt_allauth import app_settings
 
-TokenModel = import_callable(
-    getattr(settings, 'REST_AUTH_TOKEN_MODEL', DefaultTokenModel))
+TokenModel = import_callable(app_settings.REST_AUTH_TOKEN_MODEL)
 
 
 class BaseToken(models.Model):
@@ -27,8 +26,6 @@ class BaseToken(models.Model):
 
     class Meta:
         abstract = True
-        verbose_name = _("refresh token")
-        verbose_name_plural = _("refresh tokens")
 
 
 class AbstractRefreshToken(BaseToken):

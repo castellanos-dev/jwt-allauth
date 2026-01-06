@@ -7,6 +7,10 @@ Set the ``AUTH_USER_MODEL`` setting in the ``settings.py`` file:
 
     AUTH_USER_MODEL = 'jwt_allauth.JAUser'
 
+If you want to use a custom user model, it **must inherit from** :class:`~jwt_allauth.models.JAUser`.
+JWT Allauth depends on fields and behavior provided by ``JAUser`` (for example the ``role`` field used in JWT claims
+and permissions).
+
 User profile details extension
 ------------------------------
 
@@ -15,9 +19,11 @@ The user model can be extended with the desired profile details. The new fields 
 .. code-block:: python
 
     from django.db import models
-    from django.contrib.auth.models import User
+    from django.contrib.auth import get_user_model
     from django.db.models.signals import post_save
     from django.dispatch import receiver
+
+    User = get_user_model()
 
     class Profile(models.Model):
         user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -89,7 +95,14 @@ This configuration substitutes the default users model, generating a new table.
 
 .. warning::
 
-    :class:`~jwt_allauth.models.JAUser` must be inherited.
+    If you set ``AUTH_USER_MODEL`` to a custom model, that model **must inherit from**
+    :class:`~jwt_allauth.models.JAUser`.
+
+    Do **not** create a brand new user model inheriting from ``AbstractUser``/``AbstractBaseUser``.
+    If you do, JWT Allauth will break at runtime because it expects ``role`` to exist.
+
+    This approach uses Django multi-table inheritance: Django will create the base table for ``JAUser`` and a second
+    table for your custom user model.
 
 .. code-block:: python
 
@@ -101,6 +114,17 @@ This configuration substitutes the default users model, generating a new table.
 
         class Meta:
             app_label = 'users'
+
+After defining the model, configure settings and run migrations:
+
+.. code-block:: python
+
+    AUTH_USER_MODEL = 'users.CustomUser'
+
+.. code-block:: bash
+
+    python manage.py makemigrations users
+    python manage.py migrate
 
 Configuration of the serializers:
 

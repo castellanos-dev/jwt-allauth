@@ -4,24 +4,97 @@ Admin-managed registration
 Overview
 --------
 
-When ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True`` the library enables a closed registration flow where existing admins invite users. In this mode, the ``EMAIL_VERIFICATION`` setting is effectively ignored for invited users: the email is always verified during the verification ``GET`` step, never at the password-set step.
+When ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True`` the library enables a closed registration flow where existing admins invite users.
 
-- Admin creates the user via ``POST /registration/user-register/``.
-- The invited user receives a verification email.
-- Upon clicking the verification link (``GET /registration/verification/<key>/``), a one-time access token is stored in an HTTP-only cookie and the user is redirected to the UI path configured in ``PASSWORD_SET_REDIRECT``.
-- The UI submits ``POST /registration/set-password/`` with ``new_password1``/``new_password2`` to set the password and receive tokens.
+**Registration Flow:**
+
+#. Admin creates the user via ``POST /registration/user-register/``.
+#. The invited user receives a verification email.
+#. Upon clicking the verification link (``GET /registration/verification/<key>/``), a token is stored in an HTTP-only cookie and the user is redirected to the UI path configured in ``PASSWORD_SET_REDIRECT``.
+#. The UI submits ``POST /registration/set-password/`` with ``new_password1``/``new_password2`` to set the password and receive tokens.
+
+.. rubric:: Admin-Managed Registration Flow
+
+The admin-managed flow is designed for invitations:
+
+- Admin creates a user (no tokens are issued)
+- The invited user verifies their email
+- The invited user sets a password using a token
+
+**Step 1: Admin creates the user**
+
+.. code-block:: bash
+
+    POST /registration/user-register/
+    {
+        "email": "inviteduser@example.com",
+        "role": 300,
+        "first_name": "Optional",
+        "last_name": "Optional"
+    }
+
+    Response (201 Created):
+    {}
+
+**Step 2: User verifies and receives a token**
+
+The invited user receives a verification link:
+
+.. code-block:: text
+
+    GET /registration/verification/<key>/
+
+In admin-managed mode, this endpoint:
+
+- Confirms the email address
+- Redirects to ``PASSWORD_SET_REDIRECT``
+- Sets an HTTP-only cookie named ``set_password_access_token``
+
+**Step 3: User sets password**
+
+The frontend submits:
+
+.. code-block:: bash
+
+    POST /registration/set-password/
+    {
+        "new_password1": "new_password",
+        "new_password2": "new_password"
+    }
+
+    Response (200 OK):
+    {
+        "access": "...",
+        "detail": "Password set."
+    }
+
+Depending on configuration, the refresh token is returned either:
+
+- As an HTTP-only cookie (default, ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE = True``)
+- Or in the JSON response body (``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE = False``)
+
+.. note::
+
+   The one-time token used by ``/registration/set-password/`` can be provided via the cookie
+   or via the Authorization header (Bearer), depending on your frontend architecture.
+
+
+.. rubric:: MFA REQUIRED (optional)
+
+When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` the set-password step returns an MFA bootstrap challenge instead of tokens.
+This is fully described in :doc:`mfa_totp`.
 
 Endpoints
 ---------
 
 - ``POST /registration/user-register/`` (name: ``rest_user_register``) — Allowed to roles defined by ``JWT_ALLAUTH_REGISTRATION_ALLOWED_ROLES`` (defaults to ``[STAFF_CODE, SUPER_USER_CODE]``).
 - ``GET /registration/verification/<key>/`` (name: ``account_confirm_email``) — Confirms the email and drops a ``set_password_access_token`` cookie when admin-managed is enabled.
-- ``POST /registration/set-password/`` (name: ``rest_set_password``) — Reads the one-time token from cookie, sets password, returns tokens. Throttled with ``UserRateThrottle``.
+- ``POST /registration/set-password/`` (name: ``rest_set_password``) — Reads the one-time token (from cookie or header), sets password, returns tokens. Throttled with ``UserRateThrottle``.
 
 Payloads
 --------
 
-- Admin creates a user:
+- Admin creates a user (Email):
 
   .. code-block:: json
 
@@ -45,6 +118,7 @@ Behavior
 --------
 
 - Duplicate email:
+
   - If an existing verified ``EmailAddress`` is found for the email, registration fails with 400 on ``email``.
   - If only non-verified entries exist, they are removed and a new user is created (previous user loses the associated ``EmailAddress``), allowing coexistence.
 
