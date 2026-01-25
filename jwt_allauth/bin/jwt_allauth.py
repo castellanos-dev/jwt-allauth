@@ -68,13 +68,16 @@ def main():
             settings_path = os.path.join(target_dir, project_name, 'settings.py')
 
             # Modify settings.py to include JWT-allauth configuration
-            _modify_settings(settings_path, email_config)
+            _modify_settings(settings_path, email_config, project_name)
             print("✅ Added JWT Allauth configuration to settings.py")
 
             # Add urls.py configuration
             urls_path = os.path.join(target_dir, project_name, 'urls.py')
             _modify_urls(urls_path)
             print("✅ Added JWT Allauth URLs to urls.py")
+
+            _ensure_local_migration_modules(target_dir, project_name)
+            print("✅ Configured local migration modules")
 
             # Create templates directory if needed
             if email_config:
@@ -86,7 +89,7 @@ def main():
             print("\n✅ JWT Allauth project successfully created!")
             print("📋 Next steps:")
             print(f"   1. cd {target_dir}")
-            print(f"   2. python manage.py makemigrations")
+            print(f"   2. python manage.py makemigrations jwt_allauth")
             print(f"   3. python manage.py migrate")
             print(f"   4. python manage.py runserver")
 
@@ -111,7 +114,21 @@ def main():
 
     return 0
 
-def _modify_settings(settings_path, email_config):
+
+def _ensure_local_migration_modules(target_dir, project_name):
+    migrations_dir = os.path.join(target_dir, project_name, 'migrations_external', 'jwt_allauth')
+    os.makedirs(migrations_dir, exist_ok=True)
+
+    init_files = [
+        os.path.join(target_dir, project_name, 'migrations_external', '__init__.py'),
+        os.path.join(target_dir, project_name, 'migrations_external', 'jwt_allauth', '__init__.py'),
+    ]
+    for init_file in init_files:
+        if not os.path.exists(init_file):
+            with open(init_file, 'w') as f:
+                f.write('')
+
+def _modify_settings(settings_path, email_config, project_module=None):
     """Modify Django settings.py to include JWT Allauth configuration"""
     with open(settings_path, 'r') as f:
         settings_content = f.read()
@@ -241,6 +258,15 @@ EMAIL_VERIFIED_REDIRECT = None  # URL to redirect after email verification
 PASSWORD_RESET_REDIRECT = None  # URL for password reset form
 """
         settings_content += email_settings
+
+    if project_module and "MIGRATION_MODULES" not in settings_content:
+        migration_modules = f"""
+
+MIGRATION_MODULES = {{
+    'jwt_allauth': '{project_module}.migrations_external.jwt_allauth',
+}}
+"""
+        settings_content += migration_modules
 
     with open(settings_path, 'w') as f:
         f.write(settings_content)

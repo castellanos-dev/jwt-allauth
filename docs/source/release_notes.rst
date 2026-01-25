@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 1.2.3
+-------------
+
+Released: January 25, 2026
+
+Behavior and functionality
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Projects generated via ``jwt-allauth startproject`` now configure Django's ``MIGRATION_MODULES`` so that ``jwt_allauth`` migrations are stored inside the project codebase (under ``<project_module>/migrations_external/jwt_allauth``). This improves reliability in Docker/containerized deployments where ``site-packages`` is ephemeral.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Updated installation documentation to explain how to configure ``MIGRATION_MODULES`` manually in existing projects to persist ``jwt_allauth`` migrations in version control.
+
 Version 1.2.2
 -------------
 

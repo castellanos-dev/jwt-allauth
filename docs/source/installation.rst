@@ -25,6 +25,19 @@ This will create a new Django project called "myproject" with JWT Allauth pre-co
     python manage.py migrate
     python manage.py runserver
 
+Projects created via ``jwt-allauth startproject`` are configured to store ``jwt_allauth`` migrations inside your project codebase via Django's ``MIGRATION_MODULES`` setting. This is especially useful in Docker environments where your project source code is persisted (and committed to git) but ``site-packages`` is ephemeral.
+
+The generated migration files will live under:
+
+.. code-block:: text
+
+    myproject/
+        myproject/
+            migrations_external/
+                jwt_allauth/
+                    0001_initial.py
+                    ...
+
 Available options:
 
 - ``--email=True`` - Enables email configuration in the project
@@ -93,7 +106,30 @@ Add the following to your ``urls.py`` file.
 
 Run migrations.
 
+To make migrations persistent across environments (recommended for Docker), configure local migration modules for ``jwt_allauth`` using ``MIGRATION_MODULES``.
+
+1) Create the local migrations package inside your Django project module (replace ``myproject`` with your project module name):
+
+.. code-block:: text
+
+    myproject/
+        myproject/
+            migrations_external/
+                __init__.py
+                jwt_allauth/
+                    __init__.py
+
+2) Add this to your ``settings.py``:
+
 .. code-block:: python
+
+    MIGRATION_MODULES = {
+        'jwt_allauth': 'myproject.migrations_external.jwt_allauth',
+    }
+
+3) Generate and apply migrations:
+
+.. code-block:: bash
 
     python manage.py makemigrations jwt_allauth
     python manage.py migrate
