@@ -43,7 +43,7 @@ MIDDLEWARE = [
             """)
 
         # Modify settings
-        _modify_settings(settings_path, email_config=True)
+        _modify_settings(settings_path, email_config=True, project_module='testproject')
 
         # Read the modified settings
         with open(settings_path, 'r') as f:
@@ -78,6 +78,10 @@ MIDDLEWARE = [
         self.assertIn("EMAIL_HOST_USER", content)
         self.assertIn("EMAIL_HOST_PASSWORD", content)
         self.assertIn("DEFAULT_FROM_EMAIL", content)
+
+        # Check if migration modules are configured
+        self.assertIn("MIGRATION_MODULES", content)
+        self.assertIn("testproject.migrations_external.jwt_allauth", content)
 
     def test_modify_urls(self):
         # Create a temporary urls file
@@ -138,6 +142,16 @@ urlpatterns = [
         self.assertEqual(args[0][2], self.project_name)
         self.assertEqual(args[0][3], self.project_dir)
 
+        # Check if local migration modules were created
+        migrations_dir = os.path.join(self.project_dir, self.project_name, 'migrations_external', 'jwt_allauth')
+        self.assertTrue(os.path.exists(migrations_dir))
+
+        # Check if settings.py includes MIGRATION_MODULES configuration
+        with open(settings_path, 'r') as f:
+            content = f.read()
+            self.assertIn("MIGRATION_MODULES", content)
+            self.assertIn("testproject.migrations_external.jwt_allauth", content)
+
     @patch('subprocess.run')
     def test_startproject_with_email(self, mock_run):
         # Mock subprocess.run to simulate django-admin startproject
@@ -172,6 +186,10 @@ urlpatterns = [
             content = f.read()
             self.assertIn("EMAIL_VERIFICATION = True", content)
             self.assertIn("EMAIL_BACKEND", content)
+
+        # Check if local migration modules were created
+        migrations_dir = os.path.join(self.project_dir, self.project_name, 'migrations_external', 'jwt_allauth')
+        self.assertTrue(os.path.exists(migrations_dir))
 
     @patch('subprocess.run')
     def test_startproject_error(self, mock_run):
