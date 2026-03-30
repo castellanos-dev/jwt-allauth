@@ -1,6 +1,40 @@
 Release Notes
 =============
 
+Version 1.2.4
+-------------
+
+Released: TBD
+
+Security
+~~~~~~~~
+
+- **Encrypted TOTP setup secrets**: TOTP secrets generated during MFA setup are now encrypted at rest using Fernet symmetric encryption (derived from ``SECRET_KEY``) before being stored in the database. Previously, secrets were stored in plaintext in ``GenericTokenModel``. This change is fully backward compatible — any in-flight plaintext secrets from a prior version are automatically detected and handled during read.
+
+- **JWT signing key warning**: A runtime warning is now emitted when ``JWT_ALLAUTH_SECRET_KEY`` is not configured and ``DEBUG=False``. Using Django's ``SECRET_KEY`` as the JWT signing key is insecure for production — a dedicated ``JWT_ALLAUTH_SECRET_KEY`` is strongly recommended.
+
+- **Reduced default refresh token lifetime** from 90 days to **14 days**. The previous 90-day window was excessively long in case of token leakage. Existing installations using the old ``JWT_REFRESH_TOKEN_LIFETIME`` setting are not affected — it continues to work.
+
+- **Forced secure cookies in production**: The refresh token cookie ``secure`` flag is now forced to ``True`` when ``DEBUG=False``, regardless of the ``JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SECURE`` setting. If the setting is explicitly ``False`` while in production, a warning is emitted. This prevents accidental cookie exposure over plain HTTP.
+
+- **Rate limiting on MFA verification**: ``MFAVerifyView`` and ``MFAVerifyRecoveryView`` now enforce ``AnonRateThrottle``. Additionally, the login challenge is automatically invalidated after 5 consecutive failed verification attempts, preventing brute-force attacks on TOTP codes and recovery codes.
+
+New Features
+~~~~~~~~~~~~
+
+- **RS256 default for new projects**: ``jwt-allauth startproject`` now generates a 4096-bit RSA key pair and configures ``SIMPLE_JWT`` with RS256 asymmetric signing by default. Keys are stored in a ``keys/`` directory (excluded from version control). If key generation is not possible, the project falls back to HS256 with a commented-out ``JWT_ALLAUTH_SECRET_KEY`` placeholder. Existing installations are not affected.
+
+- **Configurable refresh token cookie**: ``TokenRefreshView`` now reads cookie settings (``httponly``, ``secure``, ``samesite``, ``max_age``, ``path``) from the same ``JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_*`` settings used by ``build_token_response()``, fixing an inconsistency where the refresh endpoint ignored user configuration. A new ``JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_PATH`` setting (default ``'/'``) allows restricting the cookie scope.
+
+Deprecations
+~~~~~~~~~~~~
+
+- **Settings renamed** to the ``JWT_ALLAUTH_*`` naming convention. The old names continue to work but emit a ``DeprecationWarning`` and will be removed in a future release:
+
+  - ``JWT_SECRET_KEY`` → ``JWT_ALLAUTH_SECRET_KEY``
+  - ``JWT_ACCESS_TOKEN_LIFETIME`` → ``JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME``
+  - ``JWT_REFRESH_TOKEN_LIFETIME`` → ``JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME``
+
 Version 1.2.3
 -------------
 

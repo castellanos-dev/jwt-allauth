@@ -15,13 +15,29 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` - whether to enable admin-only registration endpoint and set-password flow (default: ``False``). The user will receive a verification email and will need to set their password before they can login.
 
-    - ``JWT_ACCESS_TOKEN_LIFETIME`` - access token lifetime (default: ``timedelta(minutes=30)``).
+    - ``JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME`` - access token lifetime (default: ``timedelta(minutes=30)``).
 
-    - ``JWT_REFRESH_TOKEN_LIFETIME`` - refresh token lifetime (default: ``timedelta(days=90)``).
+    - ``JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME`` - refresh token lifetime (default: ``timedelta(days=14)``).
 
     - ``JWT_ALLAUTH_COLLECT_USER_AGENT`` - whether to collect user agent and IP information (default: ``False``).
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` - whether to send refresh tokens as HTTP-only cookies instead of in the JSON response payload (default: ``True``).
+
+    - ``JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_HTTP_ONLY`` - whether the refresh token cookie is HTTP-only (default: ``True``).
+
+    - ``JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SECURE`` - whether the refresh token cookie requires HTTPS (default: ``not DEBUG``).
+
+    - ``JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SAME_SITE`` - SameSite policy for the refresh token cookie (default: ``'Lax'``).
+
+    - ``JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_MAX_AGE`` - max age of the refresh token cookie in seconds (default: derived from ``SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]`` so the cookie expires in sync with the JWT it carries). Set to ``None`` explicitly to create a session cookie instead.
+
+    - ``JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_PATH`` - URL path scope for the refresh token cookie (default: ``'/'``). Restrict to the auth API path (e.g. ``'/jwt-allauth/'``) to avoid sending the cookie on unrelated requests.
+
+    - ``JWT_ALLAUTH_CLIENT_IP_RESOLVER`` - optional dotted path to a callable that receives a Django ``request`` and returns the client IP address (default: ``None`` — uses built-in ``X-Forwarded-For`` / ``REMOTE_ADDR`` logic). Use this to integrate libraries like `django-ipware <https://pypi.org/project/django-ipware/>`_ that handle proxy chains more robustly. Example: ``'ipware.ip.get_client_ip'``.
+
+    .. warning::
+
+        The built-in IP resolver trusts the ``X-Forwarded-For`` header without validation. This header can be spoofed by any client. It is only reliable behind a **trusted** reverse proxy that overwrites or sanitises the header. If you are not behind such a proxy, provide a custom resolver or strip untrusted headers at the web-server level.
 
     - ``JWT_ALLAUTH_USER_ATTRIBUTES`` - dictionary mapping output claim names to dot-separated user attribute paths to include in refresh tokens (default: ``{}``). Example: ``{"organization_id": "organization.id", "area_id": "area.id"}``. The 'role' attribute is automatically included and should not be specified, and output claim names must be unique.
 
@@ -32,6 +48,51 @@ Configure these variables in the ``settings.py`` file of your project.
         - ``'required'`` - MFA TOTP is mandatory; users must configure it and cannot log in without providing a TOTP code.
 
     - ``JWT_ALLAUTH_TOTP_ISSUER`` - custom TOTP issuer name displayed in authenticator apps like Google Authenticator (default: ``'JWT-Allauth'``). The JWT All-Auth MFA adapter is automatically configured when ``jwt_allauth`` is in ``INSTALLED_APPS``. If not set, defaults to ``'JWT-Allauth'``. Set to empty string to use the current site name instead. See :doc:`mfa_totp` for more details.
+
+- JWT signing
+
+    New projects created via ``jwt-allauth startproject`` are automatically configured with **RS256** asymmetric signing and a freshly generated 4096-bit RSA key pair (stored in ``keys/``, excluded from version control via ``.gitignore``). This is the recommended setup for production.
+
+    If RSA key generation is not possible during project creation (e.g. ``cryptography`` not installed and ``openssl`` not available), the project falls back to **HS256** symmetric signing.
+
+    - ``JWT_ALLAUTH_SECRET_KEY`` — *(HS256 only)* a dedicated secret key used exclusively for signing JWT tokens. If not set, Django's ``SECRET_KEY`` is used as a fallback. **It is strongly recommended to set this in production** — a warning is emitted at startup when running with ``DEBUG=False`` without it. This setting has no effect when using RS256/ES256 (the signing key is configured in ``SIMPLE_JWT``).
+
+    .. warning::
+
+        When using HS256, using ``SECRET_KEY`` for JWT signing means that a leak of ``SECRET_KEY`` (e.g. via CSRF or session internals) would also compromise all JWTs. Always set ``JWT_ALLAUTH_SECRET_KEY`` to a separate, dedicated secret, or preferably switch to RS256.
+
+- Configuring JWT signing manually
+
+    Projects created via ``jwt-allauth startproject`` include a ready-to-use ``SIMPLE_JWT`` configuration. For existing projects or custom setups, configure ``SIMPLE_JWT`` directly in ``settings.py``:
+
+    **RS256 (recommended):**
+
+    .. code-block:: python
+
+        # settings.py — asymmetric signing
+        SIMPLE_JWT = {
+            "ALGORITHM": "RS256",
+            "SIGNING_KEY": (BASE_DIR / "keys" / "private.pem").read_text(),
+            "VERIFYING_KEY": (BASE_DIR / "keys" / "public.pem").read_text(),
+        }
+
+    To generate an RSA key pair manually:
+
+    .. code-block:: bash
+
+        mkdir -p keys
+        openssl genrsa -out keys/private.pem 4096
+        openssl rsa -in keys/private.pem -pubout -out keys/public.pem
+        echo '*.pem' > keys/.gitignore
+
+    **HS256 (simpler, single-server deployments):**
+
+    .. code-block:: python
+
+        # settings.py — symmetric signing
+        JWT_ALLAUTH_SECRET_KEY = 'your-dedicated-jwt-secret-here'
+
+    ``jwt-allauth`` respects any values already present in ``SIMPLE_JWT`` and will not overwrite them.
 
 - Redirection URLs
 

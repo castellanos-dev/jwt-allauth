@@ -1,5 +1,6 @@
 from typing import Dict, Any
 
+from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import InvalidToken
 
@@ -47,7 +48,10 @@ class TokenRefreshSerializer(serializers.Serializer):
         }
 
         refresh_serializer = RefreshTokenWhitelistSerializer(data=serializer_data)
-        if refresh_serializer.is_valid():
+        refresh_serializer.is_valid(raise_exception=True)
+        try:
             refresh_serializer.save()
+        except IntegrityError as exc:
+            raise InvalidToken("Failed to persist rotated refresh token.") from exc
 
         return data

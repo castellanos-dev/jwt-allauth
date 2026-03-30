@@ -67,8 +67,18 @@ def main():
             # Path to settings file
             settings_path = os.path.join(target_dir, project_name, 'settings.py')
 
+            # Generate RSA keys for RS256 JWT signing
+            keys_dir = os.path.join(target_dir, 'keys')
+            rs256_ok = _generate_rsa_keys(keys_dir)
+            if rs256_ok:
+                print("✅ Generated RSA key pair for RS256 JWT signing (keys/)")
+            else:
+                print("⚠️  Could not generate RSA keys (cryptography not installed and openssl not found).")
+                print("   The project will use HS256 symmetric signing as fallback.")
+                print("   To switch to RS256 later, see: https://jwt-allauth.readthedocs.io/")
+
             # Modify settings.py to include JWT-allauth configuration
-            _modify_settings(settings_path, email_config, project_name)
+            _modify_settings(settings_path, email_config, project_name, rs256_ok)
             print("✅ Added JWT Allauth configuration to settings.py")
 
             # Add urls.py configuration
@@ -128,7 +138,7 @@ def _ensure_local_migration_modules(target_dir, project_name):
             with open(init_file, 'w') as f:
                 f.write('')
 
-def _modify_settings(settings_path, email_config, project_module=None):
+def _modify_settings(settings_path, email_config, project_module=None, rs256_ok=False):
     """Modify Django settings.py to include JWT Allauth configuration"""
     with open(settings_path, 'r') as f:
         settings_content = f.read()
@@ -215,8 +225,25 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 # JWT settings
-JWT_ACCESS_TOKEN_LIFETIME = timedelta(minutes=30)
-JWT_REFRESH_TOKEN_LIFETIME = timedelta(days=90)
+JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME = timedelta(minutes=30)
+JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME = timedelta(days=14)
+"""
+    # Add RS256 SIMPLE_JWT config if keys were generated successfully
+    if rs256_ok:
+        auth_backends += """
+# JWT asymmetric signing (RS256)
+# Keys are stored in keys/ directory (excluded from version control)
+SIMPLE_JWT = {
+    "ALGORITHM": "RS256",
+    "SIGNING_KEY": (BASE_DIR / "keys" / "private.pem").read_text(),
+    "VERIFYING_KEY": (BASE_DIR / "keys" / "public.pem").read_text(),
+}
+"""
+    else:
+        auth_backends += """
+# JWT symmetric signing (HS256) — consider upgrading to RS256 for production.
+# See https://jwt-allauth.readthedocs.io/ for details.
+# JWT_ALLAUTH_SECRET_KEY = 'your-dedicated-jwt-secret-here'
 """
     settings_content += auth_backends
 
@@ -270,6 +297,52 @@ MIGRATION_MODULES = {{
 
     with open(settings_path, 'w') as f:
         f.write(settings_content)
+
+def _generate_rsa_keys(keys_dir):
+    """Generate RSA 4096-bit key pair for RS256 JWT signing."""
+    os.makedirs(keys_dir, exist_ok=True)
+
+    try:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=4096,
+        )
+
+        with open(os.path.join(keys_dir, 'private.pem'), 'wb') as f:
+            f.write(private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption(),
+            ))
+
+        with open(os.path.join(keys_dir, 'public.pem'), 'wb') as f:
+            f.write(private_key.public_key().public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            ))
+    except ImportError:
+        try:
+            subprocess.run(
+                ['openssl', 'genrsa', '-out', os.path.join(keys_dir, 'private.pem'), '4096'],
+                capture_output=True, check=True,
+            )
+            subprocess.run(
+                ['openssl', 'rsa', '-in', os.path.join(keys_dir, 'private.pem'),
+                 '-pubout', '-out', os.path.join(keys_dir, 'public.pem')],
+                capture_output=True, check=True,
+            )
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            return False
+
+    # Prevent keys from being committed to version control
+    with open(os.path.join(keys_dir, '.gitignore'), 'w') as f:
+        f.write('*.pem\n')
+
+    return True
+
 
 def _modify_urls(urls_path):
     """Modify Django urls.py to include JWT Allauth URLs"""

@@ -18,7 +18,7 @@ class RemoveRefreshTokenSerializer(serializers.Serializer):
         user_id = self.context.get('user')
         if user_id is None or 'session' not in refresh.payload:
             raise InvalidToken()
-        if not constant_time_compare(user_id, refresh.payload['user_id']):
+        if not constant_time_compare(str(user_id), str(refresh.payload['user_id'])):
             raise InvalidToken()
         query = RefreshTokenWhitelistModel.objects.filter(
             Q(jti=refresh.payload["jti"]) | Q(session=refresh.payload["session"])

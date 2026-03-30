@@ -1,3 +1,5 @@
+import time
+
 from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress
 from django.conf import settings
@@ -34,6 +36,7 @@ class PasswordResetSerializer(serializers.Serializer):
 
     def save(self):
         request = self.context.get('request')
+        start = time.monotonic()
 
         opts = {
             'use_https': request.is_secure(),
@@ -49,6 +52,14 @@ class PasswordResetSerializer(serializers.Serializer):
         # Check if the email is verified
         if EmailAddress.objects.filter(email=self.validated_data['email'], verified=True).count() > 0:
             self.reset_form.save(**opts)
+
+        # Constant-time floor: ensure the response always takes at least
+        # this long so that an attacker cannot distinguish "email exists"
+        # (sends mail, slower) from "email unknown" (no-op, faster).
+        elapsed = time.monotonic() - start
+        min_duration = 0.5  # seconds
+        if elapsed < min_duration:
+            time.sleep(min_duration - elapsed)
 
 class SetPasswordSerializer(PasswordChangeSerializer):
     old_password = None

@@ -42,7 +42,7 @@ class RegisterSerializer(serializers.Serializer):
         if allauth_settings.UNIQUE_EMAIL:
             if EmailAddress.objects.filter(email=email, verified=True).exists():
                 raise serializers.ValidationError(
-                    _("A user is already registered with this e-mail address."))
+                    _("Unable to complete registration with the provided information."))
             # delete previous non-verified registration attempts
             EmailAddress.objects.filter(email=email, verified=False).delete()
         return email
