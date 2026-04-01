@@ -6,7 +6,7 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.views import TokenRefreshView as DefaultTokenRefreshView
 from rest_framework.throttling import UserRateThrottle
 from jwt_allauth.token_refresh.serializers import TokenRefreshSerializer
-from jwt_allauth.utils import get_user_agent, user_agent_dict
+from jwt_allauth.utils import get_user_agent, user_agent_dict, _get_cookie_secure, _get_cookie_max_age
 from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
 
 
@@ -47,9 +47,11 @@ class TokenRefreshView(DefaultTokenRefreshView):
             response.set_cookie(
                 key=REFRESH_TOKEN_COOKIE,
                 value=str(serializer.validated_data['refresh']),
-                httponly=True,
-                secure=not settings.DEBUG if hasattr(settings, 'DEBUG') else True,
-                samesite='Lax'
+                httponly=getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_HTTP_ONLY", True),
+                secure=_get_cookie_secure(),
+                samesite=getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SAME_SITE", "Lax"),
+                max_age=_get_cookie_max_age(),
+                path=getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_PATH", "/"),
             )
 
         return response

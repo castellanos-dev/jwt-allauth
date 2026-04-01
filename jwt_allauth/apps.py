@@ -1,3 +1,4 @@
+import warnings
 from datetime import timedelta
 from importlib import reload
 
@@ -10,6 +11,40 @@ class JWTAllauthAppConfig(AppConfig):
     name = 'jwt_allauth'
     verbose_name = "JWT Allauth"
     default_auto_field = 'django.db.models.BigAutoField'
+
+    @staticmethod
+    def _get_signing_key(settings):
+        if hasattr(settings, 'JWT_ALLAUTH_SECRET_KEY'):
+            return settings.JWT_ALLAUTH_SECRET_KEY
+        if hasattr(settings, 'JWT_SECRET_KEY'):
+            warnings.warn(
+                "jwt-allauth: JWT_SECRET_KEY is deprecated. Use JWT_ALLAUTH_SECRET_KEY instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            return settings.JWT_SECRET_KEY
+        if not settings.DEBUG:
+            warnings.warn(
+                "jwt-allauth: JWT_ALLAUTH_SECRET_KEY is not set. Falling back to SECRET_KEY for JWT signing. "
+                "This is insecure for production — a leak of SECRET_KEY (e.g. via CSRF or session "
+                "internals) would compromise all JWTs. Set JWT_ALLAUTH_SECRET_KEY to a dedicated secret.",
+                stacklevel=2,
+            )
+        return settings.SECRET_KEY
+
+    @staticmethod
+    def _get_setting(settings, new_name, old_name, default):
+        """Read a setting preferring the new JWT_ALLAUTH_* name, falling back to the deprecated name."""
+        if hasattr(settings, new_name):
+            return getattr(settings, new_name)
+        if hasattr(settings, old_name):
+            warnings.warn(
+                f"jwt-allauth: {old_name} is deprecated. Use {new_name} instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            return getattr(settings, old_name)
+        return default
 
     def ready(self):
         from django.conf import settings
@@ -48,7 +83,7 @@ class JWTAllauthAppConfig(AppConfig):
             "UPDATE_LAST_LOGIN": True,
 
             "ALGORITHM": "HS256",
-            "SIGNING_KEY": getattr(settings, 'JWT_SECRET_KEY', settings.SECRET_KEY),
+            "SIGNING_KEY": self._get_signing_key(settings),
             "VERIFYING_KEY": "",
             "AUDIENCE": None,
             "ISSUER": None,
@@ -68,8 +103,10 @@ class JWTAllauthAppConfig(AppConfig):
             "JTI_CLAIM": "jti",
 
             'ROTATE_REFRESH_TOKENS': True,
-            'ACCESS_TOKEN_LIFETIME': getattr(settings, 'JWT_ACCESS_TOKEN_LIFETIME', timedelta(minutes=30)),
-            'REFRESH_TOKEN_LIFETIME': getattr(settings, 'JWT_REFRESH_TOKEN_LIFETIME', timedelta(days=90))
+            'ACCESS_TOKEN_LIFETIME': self._get_setting(
+                settings, 'JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME', 'JWT_ACCESS_TOKEN_LIFETIME', timedelta(minutes=30)),
+            'REFRESH_TOKEN_LIFETIME': self._get_setting(
+                settings, 'JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME', 'JWT_REFRESH_TOKEN_LIFETIME', timedelta(days=14))
         }
         if not hasattr(settings, 'SIMPLE_JWT'):
             settings.SIMPLE_JWT = simple_jwt_settings

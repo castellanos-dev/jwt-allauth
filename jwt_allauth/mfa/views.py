@@ -6,9 +6,11 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
 from jwt_allauth.constants import (
+    MFA_PURPOSE_LOGIN_ATTEMPT,
     MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
 )
@@ -31,6 +33,7 @@ from jwt_allauth.mfa.storage import (
     load_setup_secret,
     store_setup_secret,
 )
+from jwt_allauth.tokens.models import GenericTokenModel
 
 
 def get_mfa_totp_mode() -> str:
@@ -64,6 +67,7 @@ except Exception:  # pragma: no cover - optional dependency guard
 
 class MFASetupView(APIView):
     permission_classes = [IsAuthenticatedOrHasMFASetupChallenge]
+    throttle_classes = [AnonRateThrottle, UserRateThrottle]
 
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
@@ -109,6 +113,7 @@ class MFASetupView(APIView):
 class MFAActivateView(APIView):
     permission_classes = [IsAuthenticatedOrHasMFASetupChallenge]
     serializer_class = MFAActivateSerializer
+    throttle_classes = [AnonRateThrottle, UserRateThrottle]
 
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
@@ -228,8 +233,33 @@ class MFADeactivateView(APIView):
         return Response({"success": True})
 
 
+MFA_CHALLENGE_MAX_ATTEMPTS = 5
+
+
+def _record_failed_attempt(challenge_id: str, user) -> bool:
+    """Record a failed MFA attempt in the DB. Returns True if the challenge is now invalidated."""
+    GenericTokenModel.objects.create(
+        user=user,
+        token=challenge_id,
+        purpose=MFA_PURPOSE_LOGIN_ATTEMPT,
+    )
+    count = GenericTokenModel.objects.filter(
+        token=challenge_id,
+        purpose=MFA_PURPOSE_LOGIN_ATTEMPT,
+    ).count()
+    if count >= MFA_CHALLENGE_MAX_ATTEMPTS:
+        delete_login_challenge(challenge_id)
+        GenericTokenModel.objects.filter(
+            token=challenge_id,
+            purpose=MFA_PURPOSE_LOGIN_ATTEMPT,
+        ).delete()
+        return True
+    return False
+
+
 class MFAVerifyView(APIView):
     serializer_class = MFAVerifySerializer
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
@@ -257,6 +287,8 @@ class MFAVerifyView(APIView):
         # Validate TOTP code using django-allauth's TOTP class
         totp = TOTP(authenticator)
         if not totp.validate_code(code):
+            if _record_failed_attempt(challenge_id, user):
+                return Response({"detail": "Too many failed attempts. Challenge invalidated."}, status=status.HTTP_400_BAD_REQUEST)
             return Response({"detail": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Delete challenge after successful verification
@@ -268,6 +300,7 @@ class MFAVerifyView(APIView):
 
 class MFAVerifyRecoveryView(APIView):
     serializer_class = MFAVerifyRecoverySerializer
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
@@ -297,6 +330,8 @@ class MFAVerifyRecoveryView(APIView):
         # Validate recovery code using django-allauth's RecoveryCodes class
         rc = RecoveryCodes(rc_authenticator)
         if not rc.validate_code(recovery_code):
+            if _record_failed_attempt(challenge_id, user):
+                return Response({"detail": "Too many failed attempts. Challenge invalidated."}, status=status.HTTP_400_BAD_REQUEST)
             return Response({"detail": "Invalid recovery code."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Delete challenge after successful verification
