@@ -50,8 +50,7 @@ class LoginSerializer(TokenObtainPairSerializer):
         """
         Instantiates a new TokenObtainPairSerializer object, sets a token for the given user and returns the token.
         """
-        cls.token = cls.token_class.for_user(user)
-        return cls.token  # type: ignore
+        return cls.token_class.for_user(user)  # type: ignore
 
     @transaction.atomic
     def validate(self, attrs: Dict[str, Any]) -> Dict[Any, Any]:

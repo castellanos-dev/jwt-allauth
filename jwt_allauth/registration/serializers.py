@@ -38,13 +38,14 @@ class RegisterSerializer(serializers.Serializer):
         return username
 
     def validate_email(self, email):
-        email = get_adapter().clean_email(email)
+        adapter = get_adapter()
+        email = adapter.clean_email(email)
         if allauth_settings.UNIQUE_EMAIL:
-            if EmailAddress.objects.filter(email=email, verified=True).exists():
+            if EmailAddress.objects.filter(email__iexact=email, verified=True).exists():
                 raise serializers.ValidationError(
                     _("A user is already registered with this e-mail address."))
             # delete previous non-verified registration attempts
-            EmailAddress.objects.filter(email=email, verified=False).delete()
+            EmailAddress.objects.filter(email__iexact=email, verified=False).delete()
         return email
 
     def validate_password1(self, password):

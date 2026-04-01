@@ -1,3 +1,4 @@
+import warnings
 from importlib import import_module
 from typing import Any, Dict, Optional
 
@@ -12,10 +13,51 @@ from django_user_agents.utils import get_user_agent as get_user_agent_django
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import InvalidToken
-from six import string_types
 
 from jwt_allauth.constants import TEMPLATE_PATHS, REFRESH_TOKEN_COOKIE
 from jwt_allauth.exceptions import NotVerifiedEmail, IncorrectCredentials
+
+string_types = (str,)
+
+
+def _get_cookie_max_age():
+    """Resolve the 'max_age' for refresh token cookies.
+
+    Defaults to REFRESH_TOKEN_LIFETIME (in seconds) from SIMPLE_JWT so that
+    the cookie expires in sync with the JWT it carries.  Returns None only if
+    the user explicitly sets JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_MAX_AGE to None.
+    """
+    explicit = getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_MAX_AGE", ...)
+    if explicit is not ...:
+        return explicit
+    # Derive from SIMPLE_JWT's REFRESH_TOKEN_LIFETIME
+    simple_jwt = getattr(settings, "SIMPLE_JWT", {})
+    lifetime = simple_jwt.get("REFRESH_TOKEN_LIFETIME", None)
+    if lifetime is not None:
+        return int(lifetime.total_seconds())
+    return None
+
+
+def _get_cookie_secure():
+    """Resolve the 'secure' flag for refresh token cookies.
+
+    In production (DEBUG=False) the flag is forced to True.  If the user
+    explicitly set it to False while DEBUG is off, a warning is emitted.
+    """
+    explicit = getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SECURE", None)
+    if not settings.DEBUG:
+        if explicit is False:
+            warnings.warn(
+                "jwt-allauth: JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SECURE is False while "
+                "DEBUG=False. Forcing secure=True to prevent cookie interception over "
+                "plain HTTP in production.",
+                stacklevel=2,
+            )
+        return True
+    # In DEBUG mode, honour the setting (default False)
+    if explicit is not None:
+        return explicit
+    return False
 
 
 def import_callable(path_or_callable):
@@ -44,10 +86,20 @@ def get_client_ip(request):
     """
     Extract client IP address from request metadata.
 
-    Priority:
+    If ``JWT_ALLAUTH_CLIENT_IP_RESOLVER`` is set in Django settings, it is
+    called instead of the built-in logic.  This allows integrating libraries
+    like `django-ipware <https://pypi.org/project/django-ipware/>`_ that
+    handle proxy chains more robustly.
 
-        1. X-Forwarded-For header (first entry if multiple)
-        2. REMOTE_ADDR meta value
+    .. warning::
+
+        The built-in implementation trusts the ``X-Forwarded-For`` header
+        without validation.  This header can be spoofed by any client.  It
+        is only reliable when the application sits behind a **trusted**
+        reverse proxy that overwrites or sanitises the header.  If you are
+        not behind such a proxy, consider providing a custom resolver via
+        ``JWT_ALLAUTH_CLIENT_IP_RESOLVER`` or stripping untrusted headers
+        at the web-server level.
 
     Args:
         request (HttpRequest): Django request object
@@ -55,9 +107,18 @@ def get_client_ip(request):
     Returns:
         str: Client IP address or None if not found
     """
+    custom_resolver = getattr(settings, "JWT_ALLAUTH_CLIENT_IP_RESOLVER", None)
+    if custom_resolver is not None:
+        resolver = import_callable(custom_resolver)
+        result = resolver(request)
+        # django-ipware returns (ip, is_routable) tuple; handle both formats
+        if isinstance(result, tuple):
+            return result[0]
+        return result
+
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
+        ip = x_forwarded_for.split(',')[0].strip()
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
@@ -299,9 +360,10 @@ def build_token_response(
             'key': REFRESH_TOKEN_COOKIE,
             'value': str(refresh_token),
             'httponly': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_HTTP_ONLY", True),
-            'secure': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SECURE", not settings.DEBUG),
+            'secure': _get_cookie_secure(),
             'samesite': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SAME_SITE", "Lax"),
-            'max_age': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_MAX_AGE", None),
+            'max_age': _get_cookie_max_age(),
+            'path': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_PATH", "/"),
         }
 
         # Override with custom settings if provided
