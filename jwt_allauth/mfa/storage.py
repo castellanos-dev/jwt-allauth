@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-import base64
-import hashlib
 import logging
 from datetime import timedelta
 from typing import Optional
 
-from cryptography.fernet import Fernet, InvalidToken as FernetInvalidToken
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core import signing
 from django.utils import timezone
 
 from uuid import uuid4
 
 from jwt_allauth.constants import (
+    MFA_SALT,
     MFA_TOKEN_MAX_AGE_SECONDS,
     MFA_PURPOSE_LOGIN_ATTEMPT,
     MFA_PURPOSE_LOGIN_CHALLENGE,
@@ -25,25 +24,44 @@ from jwt_allauth.tokens.models import GenericTokenModel
 logger = logging.getLogger(__name__)
 
 
-def _get_fernet() -> Fernet:
-    """Derive a Fernet key from the Django SECRET_KEY."""
-    key_material = settings.SECRET_KEY.encode()
-    digest = hashlib.sha256(key_material).digest()
-    return Fernet(base64.urlsafe_b64encode(digest))
+def _allauth_encrypt(text: str) -> str:
+    try:
+        from allauth.mfa.adapter import get_adapter
+    except Exception:
+        return text
+    try:
+        return get_adapter().encrypt(text)
+    except Exception:
+        return text
+
+
+def _allauth_decrypt(text: str) -> str:
+    try:
+        from allauth.mfa.adapter import get_adapter
+    except Exception:
+        return text
+    try:
+        return get_adapter().decrypt(text)
+    except Exception:
+        return text
 
 
 def _encrypt_secret(plaintext: str) -> str:
     """Encrypt a TOTP secret for storage."""
-    return _get_fernet().encrypt(plaintext.encode()).decode()
+    signed = signing.dumps(plaintext, key=settings.SECRET_KEY, salt=MFA_SALT)
+    return _allauth_encrypt(signed)
 
 
 def _decrypt_secret(stored: str) -> str:
     """Decrypt a TOTP secret, falling back to plaintext for backward compatibility."""
+    stored = _allauth_decrypt(stored)
     try:
-        return _get_fernet().decrypt(stored.encode()).decode()
-    except (FernetInvalidToken, Exception):
+        return signing.loads(stored, key=settings.SECRET_KEY, salt=MFA_SALT)
+    except Exception:
         # Backward compatibility: pre-encryption secrets are stored as plaintext.
         logger.debug("Failed to decrypt TOTP secret; assuming legacy plaintext value.")
+        if stored.startswith("gAAAAA"):
+            return ""
         return stored
 
 
