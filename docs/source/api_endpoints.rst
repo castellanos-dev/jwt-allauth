@@ -257,6 +257,9 @@ Authentication
    * - Cookie (HTTP-only)
      - ``password_reset_access_token``
      - One-time access token set as a secure cookie when the user follows the reset link.
+   * - Header
+     - ``X-CSRFToken``
+     - CSRF token, from the ``csrftoken`` cookie set on the same redirect. Not required when ``JWT_ALLAUTH_CAPABILITY_COOKIE_CSRF = False``.
    * - Body (JSON)
      - ``new_password1``
      - New password.
@@ -274,6 +277,10 @@ Authentication
      - Description
    * - ``200 OK``
      - Password updated successfully. Returns new JWT tokens and a ``detail`` message.
+   * - ``401 Unauthorized``
+     - The cookie is missing, expired, already used, or the account it names has been deactivated or deleted.
+   * - ``403 Forbidden``
+     - Missing or invalid CSRF token.
 
 **URL Name:** ``password_reset_confirm``
 
@@ -511,6 +518,9 @@ Registration
    * - Cookie (HTTP-only)
      - ``set_password_access_token``
      - One-time access token set as a secure cookie after the invited user clicks the verification link.
+   * - Header
+     - ``X-CSRFToken``
+     - CSRF token, from the ``csrftoken`` cookie set on the same redirect. Not required when ``JWT_ALLAUTH_CAPABILITY_COOKIE_CSRF = False``.
    * - Body (JSON)
      - ``new_password1``
      - Password.
@@ -528,6 +538,10 @@ Registration
      - Description
    * - ``200 OK``
      - Password set successfully. Returns JWT tokens or an MFA setup challenge depending on the MFA configuration.
+   * - ``401 Unauthorized``
+     - The cookie is missing, expired, already used, or the account it names has been deactivated or deleted.
+   * - ``403 Forbidden``
+     - Missing or invalid CSRF token.
 
 **URL Name:** ``rest_set_password``
 

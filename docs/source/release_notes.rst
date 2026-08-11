@@ -27,6 +27,10 @@ Security
 
 - **Password reset and password set capabilities are consumed atomically**: both endpoints looked the single-use token up, checked it and deleted it afterwards, so two simultaneous requests carrying the same cookie both set a password and the last writer won. The deletion is the claim now, and only the request that removed the row proceeds; the same applies when a reset link is exchanged for a capability. ``PasswordResetConfirmView`` also used to mint a capability without invalidating the previous ones, leaving one alive per reset request — only the most recent one is valid now.
 
+- **Password reset and password set rejected for deactivated accounts**: both endpoints trusted the capability alone and never looked the account up again, so deactivating an account did not invalidate a capability already issued for it — and setting a password ends by opening a session. The account is re-read when the capability is used and a deactivated one is rejected with ``401``; the reset link and the email confirmation refuse to hand a capability out for it in the first place. The reset endpoint also let a ``DoesNotExist`` escape as a ``500`` when the account had been deleted in the meantime, where the set-password endpoint already answered ``401``.
+
+- **CSRF enforced on the flows authenticated by a capability cookie**: ``/password/reset/set-new/`` and ``/registration/set-password/`` authenticate from a cookie, and DRF runs no CSRF check for them — it exempts its views from ``CsrfViewMiddleware`` and reinstates the check only inside ``SessionAuthentication``, which these do not use. Only the ``SameSite='Lax'`` default of the cookie stood between another origin and them, and a frontend served from a different site needs that relaxed to ``'None'``. The check now runs wherever a capability cookie is accepted, and the redirects that hand the capability out carry the CSRF cookie the frontend has to send back in ``X-CSRFToken``. The built-in password forms already do. Set ``JWT_ALLAUTH_CAPABILITY_COOKIE_CSRF = False`` to opt out while a frontend catches up.
+
 - **Refresh rejected for deactivated accounts**: rotating a refresh token now requires the account to be active. When ``is_active`` is ``False`` the refresh is rejected and the user's whitelisted refresh tokens are removed, which ends every session of the account. Previously only ``LoginView`` checked ``is_active``, so a deactivated user kept its sessions alive by refreshing.
 
 New Features
@@ -38,10 +42,21 @@ New Features
 
 - **Optional absolute session lifetime**: sessions remain sliding by default — they stay alive for as long as they are used and expire after ``JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME`` of inactivity — but the new ``JWT_ALLAUTH_SESSION_LIFETIME`` setting (default ``None``, no limit) caps how long a session may live in total, no matter how often it is refreshed. Refresh tokens now carry a ``session_iat`` claim, set when the session starts and preserved across rotations, so the limit is measured from the login instead of the last rotation. When it is reached the refresh endpoint revokes the whole session and answers ``401`` with code ``session_expired``; until then no token is issued with an expiration beyond that deadline. Useful for deployments that must re-authenticate on a schedule (e.g. NIST SP 800-63B).
 
+- **Retention for the single-use tokens**: ``GenericTokenModel`` backs every short-lived credential of the library, and a row is only dropped when the token it stands for is consumed — an unopened reset link, an invitation nobody accepts or an MFA challenge abandoned at the code prompt was kept forever. The new ``python manage.py jwt_allauth_purge_tokens`` command (``--dry-run`` to count first) deletes what is past the lifetime of the flow that issued it, which is nothing a flow would still honour, so it is safe to run on a schedule. Purposes the library does not know about are left alone and reported; declare their retention through ``JWT_ALLAUTH_TOKEN_RETENTION = {'MY_PURPOSE': timedelta(hours=6)}`` to have them purged too. The MFA challenges of a user are also cleaned up as new ones are issued.
+
+Performance
+~~~~~~~~~~~
+
+- **Stored tokens are indexed**: ``GenericTokenModel`` had no index at all, so every single-use validation, every MFA lookup and every invalidation scanned a table that only grows. The pairs those queries narrow by — ``(token, purpose)``, ``(user, purpose)`` and ``(purpose, created)`` — are indexed now: run ``python manage.py makemigrations jwt_allauth && python manage.py migrate``.
+
 Bug Fixes
 ~~~~~~~~~
 
 - **Password reset link kept public**: ``PasswordResetConfirmView`` did not declare ``permission_classes``, so it inherited the project's ``DEFAULT_PERMISSION_CLASSES``. Where that default is ``IsAuthenticated``, the link sent by email answered ``401`` to the anonymous user clicking it and the reset flow was unusable. The view now declares ``AllowAny``, like the other password reset entry points.
+
+- **Invalid reset link page no longer answers 500**: the page rendered for an expired or already used link reversed a URL that only exists when the built-in password UI is routed, so it raised ``NoReverseMatch`` in every project configured with its own ``PASSWORD_RESET_REDIRECT``.
+
+- **Duplicate MFA login challenge no longer answers 500**: the challenge was looked up with ``get()``, which raises ``MultipleObjectsReturned`` if two rows ever share an id. The newest match is taken now.
 
 Version 1.2.4
 -------------

@@ -22,6 +22,18 @@ Both the confirmation link and the access cookie it grants are claimed atomicall
 exactly once even when two requests arrive at the same time. Requesting a new reset also supersedes the cookie
 granted by the previous one: only the most recent link can set a password.
 
+The account is re-read when the cookie is used: a link issued before the account was deactivated or deleted is
+rejected with ``401``, and a deactivated account is never handed a cookie in the first place.
+
+CSRF
+----
+
+The access cookie authenticates the request that sets the new password, so that request has to carry a CSRF
+token as well — a cookie alone travels from any origin the ``SameSite`` policy allows. The redirect that hands
+out the access cookie sets the CSRF cookie too, and the form is expected to send its value back in the
+``X-CSRFToken`` header; the built-in form already does. Set ``JWT_ALLAUTH_CAPABILITY_COOKIE_CSRF = False`` to
+skip the check.
+
 Configuration
 -------------
 
