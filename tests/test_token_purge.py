@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from jwt_allauth.constants import (
     EMAIL_CONFIRMATION,
+    REFRESH_TOKEN_COOKIE,
     MFA_PURPOSE_LOGIN_ATTEMPT,
     MFA_PURPOSE_LOGIN_CHALLENGE,
     MFA_PURPOSE_SETUP_CHALLENGE,
@@ -21,8 +22,14 @@ from jwt_allauth.mfa.storage import (
     create_setup_challenge,
     get_login_challenge_user,
 )
-from jwt_allauth.tokens.models import GenericTokenModel
-from jwt_allauth.tokens.purge import purge, retentions, unknown_purposes
+from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
+from jwt_allauth.tokens.purge import (
+    purge,
+    purge_sessions,
+    retentions,
+    session_retention,
+    unknown_purposes,
+)
 from .mixins import TestsMixin
 
 
@@ -118,7 +125,7 @@ class TokenPurgeTests(TestsMixin):
         call_command('jwt_allauth_purge_tokens', stdout=out)
         output = out.getvalue()
 
-        self.assertIn('1 expired token(s) deleted.', output)
+        self.assertIn('1 expired row(s) deleted.', output)
         self.assertIn('APPLICATION_OWN_PURPOSE (1)', output)
         self.assertEqual(self._purposes(), ['APPLICATION_OWN_PURPOSE', EMAIL_CONFIRMATION])
 
@@ -128,8 +135,79 @@ class TokenPurgeTests(TestsMixin):
         out = StringIO()
         call_command('jwt_allauth_purge_tokens', '--dry-run', stdout=out)
 
-        self.assertIn('1 expired token(s) would be deleted.', out.getvalue())
+        self.assertIn('1 expired row(s) would be deleted.', out.getvalue())
         self.assertEqual(GenericTokenModel.objects.count(), 1)
+
+
+class SessionPurgeTests(TestsMixin):
+    """
+    The whitelist keeps a row per live refresh token, and expired ones are never read.
+
+    A session is removed from the whitelist when it is rotated, revoked or logged out.
+    Nothing removes the one left behind on a device that simply stops coming back.
+    """
+
+    def setUp(self):
+        self.init()
+        # init() opens a session; these tests are about what is left of it.
+        self.session = RefreshTokenWhitelistModel.objects.get(jti=self.TOKEN['jti'])
+
+    def _age(self, age):
+        RefreshTokenWhitelistModel.objects.filter(pk=self.session.pk).update(
+            created=timezone.now() - age
+        )
+
+    def test_expired_session_is_removed(self):
+        self._age(session_retention() + timedelta(seconds=1))
+
+        self.assertEqual(purge_sessions(), 1)
+        self.assertFalse(RefreshTokenWhitelistModel.objects.filter(pk=self.session.pk).exists())
+
+    def test_live_session_is_kept(self):
+        self._age(session_retention() - timedelta(seconds=1))
+
+        self.assertEqual(purge_sessions(), 0)
+        self.assertTrue(RefreshTokenWhitelistModel.objects.filter(pk=self.session.pk).exists())
+
+    def test_refresh_still_works_after_a_purge(self):
+        """Only what the refresh endpoint would reject anyway is removed."""
+        purge_sessions()
+
+        self.client.cookies.load({REFRESH_TOKEN_COOKIE: str(self.TOKEN)})
+        resp = self.client.post(self.refresh_url, content_type='application/json')
+
+        self.assertEqual(resp.status_code, 200)
+
+    def test_dry_run_counts_without_deleting(self):
+        self._age(session_retention() + timedelta(seconds=1))
+
+        self.assertEqual(purge_sessions(dry_run=True), 1)
+        self.assertTrue(RefreshTokenWhitelistModel.objects.filter(pk=self.session.pk).exists())
+
+    def test_retention_follows_the_refresh_token_lifetime(self):
+        with override_settings(SIMPLE_JWT={'REFRESH_TOKEN_LIFETIME': timedelta(days=2)}):
+            self.assertEqual(session_retention(), timedelta(days=2))
+
+    def test_retention_never_undercuts_the_access_token_lifetime(self):
+        """The row is also what the optional access token session check reads."""
+        with override_settings(
+            SIMPLE_JWT={
+                'REFRESH_TOKEN_LIFETIME': timedelta(minutes=5),
+                'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+            }
+        ):
+            self.assertEqual(session_retention(), timedelta(minutes=30))
+
+    def test_management_command_reports_sessions(self):
+        self._age(session_retention() + timedelta(seconds=1))
+
+        out = StringIO()
+        call_command('jwt_allauth_purge_tokens', stdout=out)
+        output = out.getvalue()
+
+        self.assertIn('expired sessions: 1 deleted', output)
+        self.assertIn('1 expired row(s) deleted.', output)
+        self.assertEqual(RefreshTokenWhitelistModel.objects.count(), 0)
 
 
 class MFAChallengeStorageTests(TestsMixin):

@@ -54,6 +54,12 @@ own ``DEFAULT_AUTHENTICATION_CLASSES`` can mix in ``SessionRevocationMixin``:
     class MyAuthentication(SessionRevocationMixin, JWTAuthentication):
         pass
 
+A whitelist entry is removed when the token it holds is rotated or revoked, so what is left behind are the
+sessions of devices that simply stopped coming back — those rows stay until they are purged. An expired
+refresh token is rejected on its own ``exp`` before the whitelist is read, so nothing consults them any more:
+``python manage.py jwt_allauth_purge_tokens`` deletes them along with the expired single-use tokens (see
+:doc:`installation`).
+
 Session lifetime
 ----------------
 
