@@ -1,10 +1,67 @@
 Release Notes
 =============
 
+Version 1.2.5
+-------------
+
+Released: August 11, 2026
+
+Security
+~~~~~~~~
+
+- **Privileges are re-read from the database on refresh token rotation**: the ``role`` claim (and any claim configured through ``JWT_ALLAUTH_USER_ATTRIBUTES``) used to be copied verbatim from the old refresh token into the rotated one, so a privilege change only took effect once the refresh token expired — a demoted administrator kept its administrator claim indefinitely as long as it kept refreshing. The refresh endpoint now loads the user behind the whitelisted token and regenerates those claims from the database, so a role change applies on the next rotation.
+
+- **Email confirmation links no longer act as unbounded password reset links**: in admin-managed registration, the confirmation link is exchanged for a one-time permission to set a password. That permission was granted even when the link had expired — allauth's expiry rejection was swallowed as long as the account owned any verified email address — and regardless of whether the account already had a password, so an old confirmation email (for instance one sent when adding a secondary address) could be replayed at any time to take over an established account. The confirmation is now rejected past ``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS``, is never exchanged for a password set permission when the account already has a usable password, and each access supersedes the permission issued by the previous one. Multi-use until the password is set is preserved within the expiration window.
+
+- **Email confirmation keys hashed at rest**: in admin-managed registration the confirmation key was stored verbatim in ``GenericTokenModel``, so read access to the database exposed a usable link for every pending invitation. Only its SHA-256 digest is persisted now, matching how the other single-use tokens are already stored. This change is backward compatible — confirmations issued by a prior version remain in plain text and keep working until they expire.
+
+- **Email verification is no longer bypassable through the MFA bootstrap**: when ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, ``POST /registration/`` answers an anonymous caller with a ``setup_challenge_id`` before the address is confirmed, and ``/mfa/activate/`` exchanged that challenge for a fully enabled session — so anyone could register an address they do not own, complete the TOTP setup with their own authenticator, and obtain a working session on the account despite ``EMAIL_VERIFICATION = True``. The bootstrap now checks the account's verification state: while the address is unverified no access token is issued and the refresh token is created disabled, matching registration without MFA. The login and set-password bootstraps already require a verified address and keep issuing a full session.
+
+- **TOTP brute force limited per user, not just per challenge**: a login challenge was invalidated after 5 failed codes, but the budget was scoped to the challenge, so an attacker holding the password could log in again for a fresh one and keep guessing. Failed verifications are now also counted per user, across every challenge and both verification endpoints (``JWT_ALLAUTH_MFA_MAX_ATTEMPTS``, default 10, over a sliding ``JWT_ALLAUTH_MFA_LOCKOUT_SECONDS`` window, default 900): once the budget is spent, outstanding challenges are dropped, ``/mfa/verify/`` and ``/mfa/verify-recovery/`` answer ``429`` with ``Retry-After`` without checking the code, and ``/login/`` refuses to issue a new challenge. The bookkeeping also counted attempts right after writing them without a lock, letting concurrent requests slip under the threshold; it now runs in a transaction that locks the user row first.
+
+- **Registration no longer discloses which addresses are registered**: signing up with a taken address answered ``400`` with *"A user is already registered with this e-mail address."*, so the endpoint could be walked through a list of addresses to learn who has an account. It now follows allauth's ``ACCOUNT_PREVENT_ENUMERATION`` (enabled by default): while email verification is mandatory — both ``EMAIL_VERIFICATION`` and allauth's ``ACCOUNT_EMAIL_VERIFICATION`` — a conflicting address gets the same ``201`` as a free one, no account is created and the owner of the address is notified by email. That response carries no ``refresh`` token — one cannot be issued for somebody else's address, and it is unusable until the address is verified anyway; see ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION`` below to open the session from the confirmation link instead. Set ``ACCOUNT_PREVENT_ENUMERATION = False``, or drop mandatory verification, to report the conflict as before; the admin-managed endpoint always reports it. The endpoint honours DRF's ``anon`` throttle rate now.
+
+- **Pending registrations are no longer destroyed by anyone who knows the address**: validating a registration deleted every unverified ``EmailAddress`` matching it, even when the request ended in ``400`` — enough to invalidate somebody else's confirmation link, or to strip an established account of an address it was still confirming, leaving the account behind it without one. Nothing is deleted during validation any more, and an address is only taken over when the account holding it is a sign-up nobody completed (unverified, never logged into, not privileged, no verified address of its own), which is then removed as a whole, user row included.
+
+- **Refresh token rotation is atomic**: the whitelist was read, checked, cleared and repopulated without a transaction or a row lock, so two requests presenting the same refresh token at once both whitelisted a successor — one credential turned into two live sessions, and the reuse detection that revokes a session never fired. Rotation now runs in a transaction that locks the whitelist entry before reading it and treats the deletion of that entry as the claim: only the request that removed it mints the successor, the other is handled as the replay it is. ``jti`` is unique in the database now, which also turns the previously unreachable ``IntegrityError`` guard into a real last barrier.
+
+- **Password reset and password set capabilities are consumed atomically**: both endpoints looked the single-use token up, checked it and deleted it afterwards, so two simultaneous requests carrying the same cookie both set a password and the last writer won. The deletion is the claim now, and only the request that removed the row proceeds; the same applies when a reset link is exchanged for a capability. ``PasswordResetConfirmView`` also used to mint a capability without invalidating the previous ones, leaving one alive per reset request — only the most recent one is valid now.
+
+- **Password reset and password set rejected for deactivated accounts**: both endpoints trusted the capability alone and never looked the account up again, so deactivating an account did not invalidate a capability already issued for it — and setting a password ends by opening a session. The account is re-read when the capability is used and a deactivated one is rejected with ``401``; the reset link and the email confirmation refuse to hand a capability out for it in the first place. The reset endpoint also let a ``DoesNotExist`` escape as a ``500`` when the account had been deleted in the meantime, where the set-password endpoint already answered ``401``.
+
+- **CSRF enforced on the flows authenticated by a capability cookie**: ``/password/reset/set-new/`` and ``/registration/set-password/`` authenticate from a cookie, and DRF runs no CSRF check for them — it exempts its views from ``CsrfViewMiddleware`` and reinstates the check only inside ``SessionAuthentication``, which these do not use. Only the ``SameSite='Lax'`` default of the cookie stood between another origin and them, and a frontend served from a different site needs that relaxed to ``'None'``. The check now runs wherever a capability cookie is accepted, and the redirects that hand the capability out carry the CSRF cookie the frontend has to send back in ``X-CSRFToken``. The built-in password forms already do. Set ``JWT_ALLAUTH_CAPABILITY_COOKIE_CSRF = False`` to opt out while a frontend catches up.
+
+- **Refresh rejected for deactivated accounts**: rotating a refresh token now requires the account to be active. When ``is_active`` is ``False`` the refresh is rejected and the user's whitelisted refresh tokens are removed, which ends every session of the account. Previously only ``LoginView`` checked ``is_active``, so a deactivated user kept its sessions alive by refreshing.
+
+New Features
+~~~~~~~~~~~~
+
+- **Optional session on email verification**: with ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION = True`` (default ``False``), following the sign-up confirmation link sets a refresh token cookie on the redirect, so the browser that opened the email lands on the frontend already authenticated. It is the natural place for the session that registration no longer hands out when address conflicts are hidden — control over the mailbox has just been proven, and the link is often opened on a different device from the one that filled in the form — and it applies whether or not conflicts are hidden. Off by default because it turns the confirmation link into a credential: whoever the email reaches gets the session. Confirming an address added later to an account that is already usable never opens one.
+
+- **Optional session revocation check on access tokens**: revoking a session removes its refresh tokens from the whitelist, which stops rotation, but the access tokens already issued for it keep working until they expire (up to ``JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME``). Setting the new ``JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK = True`` (default ``False``) makes authentication check the ``session`` claim against the whitelist on every request, so ``/logout/``, a reused refresh token or any other revocation takes effect immediately, at the cost of one indexed query per request. ``jwt_allauth.authentication.JWTAllAuthAuthentication`` is now the default authentication class and applies it; ``SessionRevocationMixin`` is available for projects with their own class. The whitelist ``session`` column is indexed now, and ``jti`` is unique: run ``python manage.py makemigrations jwt_allauth && python manage.py migrate``.
+
+- **Optional absolute session lifetime**: sessions remain sliding by default — they stay alive for as long as they are used and expire after ``JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME`` of inactivity — but the new ``JWT_ALLAUTH_SESSION_LIFETIME`` setting (default ``None``, no limit) caps how long a session may live in total, no matter how often it is refreshed. Refresh tokens now carry a ``session_iat`` claim, set when the session starts and preserved across rotations, so the limit is measured from the login instead of the last rotation. When it is reached the refresh endpoint revokes the whole session and answers ``401`` with code ``session_expired``; until then no token is issued with an expiration beyond that deadline. Useful for deployments that must re-authenticate on a schedule (e.g. NIST SP 800-63B).
+
+- **Retention for the stored tokens**: a row is only dropped when the token it holds is used, and nothing uses the ones nobody comes back for — an unopened reset link, an invitation nobody accepts or an MFA challenge abandoned at the code prompt in ``GenericTokenModel``, a session left behind on a device that never logs out in the refresh token whitelist. Both tables grew without bound. The new ``python manage.py jwt_allauth_purge_tokens`` command (``--dry-run`` to count first) deletes what is past the lifetime of the flow that issued it: an expired refresh token is rejected on its own ``exp`` before the whitelist is read, and every other flow checks its own expiry too, so nothing that could still be honoured is removed and the command is safe to run on a schedule. Purposes the library does not know about are left alone and reported; declare their retention through ``JWT_ALLAUTH_TOKEN_RETENTION = {'MY_PURPOSE': timedelta(hours=6)}`` to have them purged too. The MFA challenges of a user are also cleaned up as new ones are issued.
+
+Performance
+~~~~~~~~~~~
+
+- **Stored tokens are indexed**: ``GenericTokenModel`` had no index at all, so every single-use validation, every MFA lookup and every invalidation scanned a table that only grows. The pairs those queries narrow by — ``(token, purpose)``, ``(user, purpose)`` and ``(purpose, created)`` — are indexed now: run ``python manage.py makemigrations jwt_allauth && python manage.py migrate``.
+
+Bug Fixes
+~~~~~~~~~
+
+- **Password reset link kept public**: ``PasswordResetConfirmView`` did not declare ``permission_classes``, so it inherited the project's ``DEFAULT_PERMISSION_CLASSES``. Where that default is ``IsAuthenticated``, the link sent by email answered ``401`` to the anonymous user clicking it and the reset flow was unusable. The view now declares ``AllowAny``, like the other password reset entry points.
+
+- **Invalid reset link page no longer answers 500**: the page rendered for an expired or already used link reversed a URL that only exists when the built-in password UI is routed, so it raised ``NoReverseMatch`` in every project configured with its own ``PASSWORD_RESET_REDIRECT``.
+
+- **Duplicate MFA login challenge no longer answers 500**: the challenge was looked up with ``get()``, which raises ``MultipleObjectsReturned`` if two rows ever share an id. The newest match is taken now.
+
 Version 1.2.4
 -------------
 
-Released: TBD
+Released: April 1, 2026
 
 Security
 ~~~~~~~~

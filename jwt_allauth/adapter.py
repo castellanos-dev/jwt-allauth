@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 
 from jwt_allauth.constants import EMAIL_CONFIRMATION
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
-from jwt_allauth.utils import get_template_path
+from jwt_allauth.utils import get_template_path, hash_token
 
 
 class JWTAllAuthAdapter(DefaultAccountAdapter):
@@ -39,6 +39,35 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
         email = super().clean_email(email)
         email = email.strip().lower()
         return email
+
+    def send_account_already_exists_mail(self, email):
+        """
+        Warn the owner of an address that somebody tried to sign up with it.
+
+        Sent instead of the confirmation mail when registration hides that an address
+        is already in use (see ``ACCOUNT_PREVENT_ENUMERATION``), so that the person
+        behind a genuine second attempt is not left waiting for a link that is never
+        going to arrive.
+
+        allauth's implementation links to its own signup and password reset views,
+        which a REST installation does not serve, hence the dedicated templates.
+
+        Args:
+            email (str): Address that is already in use.
+        """
+        self.send_mail(
+            "email/account_exists/email_account_exists",
+            email,
+            {},
+            subject_path=get_template_path(
+                'ACCOUNT_EXISTS_SUBJECT',
+                "email/account_exists/email_subject.txt",
+            ),
+            template_path=get_template_path(
+                'ACCOUNT_EXISTS',
+                "email/account_exists/email_message.html",
+            ),
+        )
 
     def send_confirmation_mail(self, request, emailconfirmation, signup):
         """
@@ -119,12 +148,13 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
             template_path=template_path
         )
 
-        # Persist the confirmation key as a generic token so that the verify view
-        # can enforce single-use semantics.
+        # Persist the digest of the confirmation key as a generic token so that the
+        # verify view can enforce single-use semantics without storing a usable
+        # credential in the database.
         if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
             token_serializer = GenericTokenModelSerializer(
                 data={
-                    "token": confirmation_key,
+                    "token": hash_token(confirmation_key),
                     "user": emailconfirmation.email_address.user.id,
                     "purpose": EMAIL_CONFIRMATION,
                 }

@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework.authtoken.models import Token as DefaultTokenModel
 
@@ -32,9 +32,14 @@ class BaseToken(models.Model):
 
 
 class AbstractRefreshToken(BaseToken):
-    jti = models.CharField(_("jti"), max_length=32, blank=False)
+    # Both columns are looked up on every rotation, and `session` also on every
+    # authenticated request when the access token session check is enabled. The
+    # uniqueness of `jti` is enforced by the database so that a rotation racing another
+    # one cannot whitelist the same credential twice: it is the last barrier behind the
+    # row lock taken while rotating.
+    jti = models.CharField(_("jti"), max_length=32, blank=False, unique=True)
     enabled = models.BooleanField(_("enabled"), default=True)
-    session = models.CharField(_("session"), max_length=32, blank=False)
+    session = models.CharField(_("session"), max_length=32, blank=False, db_index=True)
 
     class Meta:
         abstract = True
@@ -60,3 +65,31 @@ class GenericTokenModel(BaseToken):
     )
     token = models.CharField(_("token"), max_length=255, blank=False)
     purpose = models.CharField(_("purpose"), max_length=32, blank=False)
+
+    class Meta:
+        verbose_name = _("generic token")
+        verbose_name_plural = _("generic tokens")
+        # Every lookup on this table narrows by purpose, together with either the token
+        # (single-use validation) or the user (MFA bookkeeping, invalidation of the
+        # capabilities of an account). Without these, each of them scans a table that
+        # only grows, and so does the retention purge.
+        indexes = [
+            models.Index(fields=["token", "purpose"], name="ja_gen_token_token_idx"),
+            models.Index(fields=["user", "purpose"], name="ja_gen_token_user_idx"),
+            models.Index(fields=["purpose", "created"], name="ja_gen_token_purpose_idx"),
+        ]
+
+    @classmethod
+    def consume(cls, token, purpose):
+        """
+        Atomically claim a single-use token.
+
+        Returns ``True`` only for the caller that actually removed the row. Looking the
+        token up and deleting it afterwards is not enough on its own: two requests
+        presenting the same token at the same time both find it and both go ahead. The
+        deletion is therefore the claim, and the number of rows it reports decides the
+        race — a portable check that needs no row locking.
+        """
+        with transaction.atomic():
+            deleted, _ = cls.objects.filter(token=token, purpose=purpose).delete()
+        return deleted > 0

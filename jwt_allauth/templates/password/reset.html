@@ -118,6 +118,7 @@
         {% endif %}
     </div>
 
+    {% if validlink %}
     <script>
         document.querySelector('form').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -143,5 +144,6 @@
             });
         });
     </script>
+    {% endif %}
 </body>
-</html> 
+</html>

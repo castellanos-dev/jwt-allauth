@@ -1,4 +1,6 @@
 import hashlib
+from datetime import datetime
+from typing import Optional
 from django.conf import settings
 from uuid import uuid4
 from inspect import getattr_static
@@ -6,11 +8,17 @@ from inspect import getattr_static
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.exceptions import InvalidToken
-from rest_framework_simplejwt.tokens import RefreshToken as DefaultRefreshToken
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken as DefaultRefreshToken
+from rest_framework_simplejwt.utils import aware_utcnow, datetime_from_epoch, datetime_to_epoch
 
+from jwt_allauth.constants import SESSION_IAT_CLAIM
 from jwt_allauth.tokens.models import GenericTokenModel
 from jwt_allauth.tokens.serializers import RefreshTokenWhitelistSerializer, GenericTokenModelSerializer
-from jwt_allauth.utils import user_agent_dict
+from jwt_allauth.utils import get_session_lifetime, user_agent_dict
+
+# Claims managed by the token itself. They are never regenerated from the
+# user attribute configuration.
+RESERVED_CLAIMS = ('token_type', 'exp', 'iat', 'jti', 'user_id', 'session', SESSION_IAT_CLAIM, 'role')
 
 
 class RefreshToken(DefaultRefreshToken):
@@ -23,6 +31,71 @@ class RefreshToken(DefaultRefreshToken):
             id_ = uuid4().hex
         self.payload['session'] = id_
 
+    def set_session_iat(self, at_time: Optional[datetime] = None):
+        """
+        Timestamp at which the session started.
+
+        Unlike ``iat``, this claim is carried over to every rotated refresh token, which
+        makes it possible to enforce an absolute session lifetime.
+        """
+        self.set_iat(claim=SESSION_IAT_CLAIM, at_time=at_time)
+
+    def session_deadline(self) -> Optional[datetime]:
+        """
+        Instant at which the session reaches its absolute lifetime, or ``None`` when the
+        limit is disabled or the token carries no session start (e.g. one-time tokens).
+        """
+        lifetime = get_session_lifetime()
+        if lifetime is None or SESSION_IAT_CLAIM not in self.payload:
+            return None
+        return datetime_from_epoch(self.payload[SESSION_IAT_CLAIM]) + lifetime
+
+    def session_expired(self, at_time: Optional[datetime] = None) -> bool:
+        """
+        Whether the session has already reached its absolute lifetime.
+        """
+        deadline = self.session_deadline()
+        if deadline is None:
+            return False
+        return deadline <= (at_time if at_time is not None else aware_utcnow())
+
+    def cap_exp_to_session(self):
+        """
+        Shorten the ``exp`` claim so that the token never outlives the session deadline.
+        """
+        deadline = self.session_deadline()
+        if deadline is not None and 'exp' in self.payload:
+            self.payload['exp'] = min(self.payload['exp'], datetime_to_epoch(deadline))
+
+    @property
+    def access_token(self) -> AccessToken:
+        """
+        Access token derived from this refresh token, never outliving the session deadline.
+        """
+        access = super().access_token
+        deadline = self.session_deadline()
+        if deadline is not None:
+            access.payload['exp'] = min(access.payload['exp'], datetime_to_epoch(deadline))
+        return access
+
+    @staticmethod
+    def _attribute_map():
+        """
+        Return the configured mapping of claim name to dot-path on the user object.
+        """
+        configured_attributes = getattr(settings, 'JWT_ALLAUTH_USER_ATTRIBUTES', {})
+
+        # Accept legacy list format for backward compatibility but prefer dict.
+        # In legacy mode, the final attribute name is used as the claim key.
+        if isinstance(configured_attributes, list):
+            return {
+                attr_path.split('.')[-1]: attr_path
+                for attr_path in configured_attributes
+            }
+        if isinstance(configured_attributes, dict):
+            return configured_attributes
+        return {}
+
     def set_user_attributes(self, user):
         """
         Add configurable user attributes to the token payload.
@@ -30,19 +103,7 @@ class RefreshToken(DefaultRefreshToken):
         output claim names to dot-paths on the user object.
         Example: {'organization_id': 'organization.id', 'area_id': 'area.id'}
         """
-        configured_attributes = getattr(settings, 'JWT_ALLAUTH_USER_ATTRIBUTES', {})
-
-        # Accept legacy list format for backward compatibility but prefer dict.
-        # In legacy mode, the final attribute name is used as the claim key.
-        if isinstance(configured_attributes, list):
-            attribute_map = {
-                attr_path.split('.')[-1]: attr_path
-                for attr_path in configured_attributes
-            }
-        elif isinstance(configured_attributes, dict):
-            attribute_map = configured_attributes
-        else:
-            attribute_map = {}
+        attribute_map = self._attribute_map()
 
         # Validate configuration: output names must be unique and must not collide
         # with reserved payload keys like 'role'.
@@ -87,6 +148,19 @@ class RefreshToken(DefaultRefreshToken):
     def set_user_role(self, user):
         self.payload['role'] = user.role
 
+    def sync_user_claims(self, user):
+        """
+        Re-read the role and the configured user attributes from the database.
+
+        Called on refresh token rotation so that privilege changes take effect on
+        the next refresh instead of surviving until the refresh token expires.
+        """
+        for output_name in self._attribute_map():
+            if output_name not in RESERVED_CLAIMS:
+                self.payload.pop(output_name, None)
+        self.set_user_role(user)
+        self.set_user_attributes(user)
+
     @classmethod
     def for_user(cls, user, request=None, enabled=True):
         """
@@ -97,6 +171,8 @@ class RefreshToken(DefaultRefreshToken):
         """
         token = super().for_user(user)
         token.set_session()  # type: ignore
+        token.set_session_iat()  # type: ignore
+        token.cap_exp_to_session()  # type: ignore
         token.set_user_role(user)  # type: ignore
         token.set_user_attributes(user)  # type: ignore
         # Store the token in the database
@@ -144,7 +220,7 @@ class GenericToken(PasswordResetTokenGenerator):
         result = super().check_token(user, token)
         if result:
             hashed_token = hashlib.sha256(str(token).encode()).hexdigest()
-            if GenericTokenModel.objects.filter(token=hashed_token, purpose=self.purpose).count() == 0:
-                return False
-            GenericTokenModel.objects.filter(token=hashed_token, purpose=self.purpose).delete()
+            # Single use: claiming the row atomically keeps two concurrent clicks on the
+            # same link from both being honoured.
+            return GenericTokenModel.consume(hashed_token, self.purpose)
         return result

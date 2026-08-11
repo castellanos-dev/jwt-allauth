@@ -70,8 +70,13 @@ Email verification behavior
 ---------------------------
 
 - The verification GET confirms the email in admin-managed mode and issues a one-time token, then redirects to the password set UI.
-- The verification link allows multiple accesses (e.g. by email scanners) and is only invalidated once the password is successfully set.
+- The verification link allows multiple accesses (e.g. by email scanners) until the password is successfully set, but never past its expiration date. Each access supersedes the one-time token issued by the previous one.
 - The verification link validity is determined by ``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS`` (default: 3 days).
+- The link only grants access to the password set UI while the account has no password. Once a password exists, the account must use the password reset flow.
+- Only the SHA-256 digest of the confirmation key is stored, so the key itself cannot be recovered from the database.
+- The one-time token is claimed atomically, so two simultaneous set-password requests carrying the same cookie cannot both succeed.
+- A deactivated account is never handed a one-time token, and a token issued before the deactivation is rejected with ``401`` when the password is set.
+- The set-password request has to carry a CSRF token, since the one-time token authenticating it travels in a cookie. The verification ``GET`` sets the CSRF cookie along with it, and the UI is expected to send its value back in the ``X-CSRFToken`` header; the built-in form already does. Set ``JWT_ALLAUTH_CAPABILITY_COOKIE_CSRF = False`` to skip the check.
 - The set-password endpoint does not alter email verification status.
 
 Email templates

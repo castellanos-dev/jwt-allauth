@@ -1,15 +1,22 @@
 import time
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
 
 from allauth.account.models import EmailAddress
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
+from django.db import IntegrityError, transaction
 from django.test import override_settings
+from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.utils import aware_utcnow, datetime_from_epoch, datetime_to_epoch
 
+from jwt_allauth.roles import STAFF_CODE, USER_CODE
+from jwt_allauth.utils import get_session_lifetime
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from jwt_allauth.tokens.tokens import RefreshToken
 from jwt_allauth.tokens.tokens import RefreshToken as RefreshTokenClass
-from .mixins import TestsMixin
-from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
+from .mixins import APIClient, TestsMixin
+from jwt_allauth.constants import REFRESH_TOKEN_COOKIE, SESSION_IAT_CLAIM
 
 
 class TokenTests(TestsMixin):
@@ -118,6 +125,50 @@ class TokenTests(TestsMixin):
         resp = self.post(self.refresh_url, data={}, status_code=401)
         self.assertEqual(resp['code'], u'token_not_valid')
 
+    def test_whitelisted_jti_is_unique(self):
+        """
+        The ``IntegrityError`` guard of the rotation is only a guard if the database
+        refuses to whitelist the same credential twice.
+        """
+        entry = RefreshTokenWhitelistModel.objects.get(jti=self.TOKEN.payload['jti'])
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            RefreshTokenWhitelistModel.objects.create(
+                jti=entry.jti, user=entry.user, session=entry.session
+            )
+
+    def test_concurrent_refresh_does_not_split_the_session(self):
+        """
+        A single refresh token must never yield two live sessions.
+
+        The competing request is fired from inside the first one, right after the
+        whitelist entry has been read and before it is claimed: the exact window two
+        simultaneous rotations share.
+        """
+        original_sync = RefreshTokenClass.sync_user_claims
+        race = {}
+
+        def sync_and_race(token, user):
+            original_sync(token, user)
+            if 'response' in race:  # the competing request must not race itself
+                return
+            race['response'] = None
+            competitor = APIClient()
+            competitor.cookies[REFRESH_TOKEN_COOKIE] = str(self.TOKEN)
+            race['response'] = competitor.post(self.refresh_url, data={}, format='json')
+
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = str(self.TOKEN)
+        with patch.object(RefreshTokenClass, 'sync_user_claims', sync_and_race):
+            first = self.client.post(self.refresh_url, data={}, format='json')
+
+        self.assertEqual(
+            sorted([first.status_code, race['response'].status_code]), [200, 401]
+        )
+        # The rejected rotation is a replay as far as the server can tell, so the whole
+        # session is revoked: what must never happen is both credentials surviving.
+        self.assertEqual(
+            RefreshTokenWhitelistModel.objects.filter(session=self.TOKEN.payload['session']).count(), 0
+        )
+
     def test_refresh_methods_not_allowed(self):
         resp = self.get(self.refresh_url, status_code=405)
         self.assertEqual(resp['detail'], u'Method "GET" not allowed.')
@@ -187,6 +238,52 @@ class TokenTests(TestsMixin):
         # Test new session still works
         self.client.cookies[REFRESH_TOKEN_COOKIE] = str(new_session_token)
         self.post(self.refresh_url, data={}, status_code=200)
+
+    def test_refresh_reloads_role_from_database(self):
+        """A role downgrade must apply on the next rotation, not on token expiration"""
+        self.USER.role = STAFF_CODE
+        self.USER.save()
+        token = RefreshTokenClass.for_user(self.USER)
+        self.assertEqual(token.payload['role'], STAFF_CODE)
+
+        # Privileges are revoked in the database
+        self.USER.role = USER_CODE
+        self.USER.save()
+
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = str(token)
+        refresh_response = self.client.post(self.refresh_url, data={}, format='json')
+        self.assertEqual(refresh_response.status_code, 200)
+
+        new_token = RefreshToken(refresh_response.cookies[REFRESH_TOKEN_COOKIE].value)
+        self.assertEqual(new_token.payload['role'], USER_CODE)
+        self.assertEqual(AccessToken(refresh_response.json()['access'])['role'], USER_CODE)
+
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES={'username': 'username'})
+    def test_refresh_reloads_user_attributes_from_database(self):
+        """Configured user attributes are regenerated from the database on rotation"""
+        token = RefreshTokenClass.for_user(self.USER)
+        self.assertEqual(token.payload['username'], self.USERNAME)
+
+        self.USER.username = 'renamed'
+        self.USER.save()
+
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = str(token)
+        refresh_response = self.client.post(self.refresh_url, data={}, format='json')
+        self.assertEqual(refresh_response.status_code, 200)
+
+        new_token = RefreshToken(refresh_response.cookies[REFRESH_TOKEN_COOKIE].value)
+        self.assertEqual(new_token.payload['username'], 'renamed')
+        self.assertEqual(str(new_token.payload['user_id']), str(self.USER.id))
+
+    def test_refresh_rejected_for_inactive_user(self):
+        """A deactivated account cannot keep rotating its refresh token"""
+        self.USER.is_active = False
+        self.USER.save()
+
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = str(self.TOKEN)
+        resp = self.post(self.refresh_url, data={}, status_code=401)
+        self.assertEqual(resp['code'], 'token_not_valid')
+        self.assertFalse(RefreshTokenWhitelistModel.objects.filter(user=self.USER).exists())
 
     def test_token_claims_integrity(self):
         # Set cookie for refresh
@@ -556,3 +653,130 @@ class TokenTests(TestsMixin):
         self.assertEqual(token.payload['email'], 'test@example.com')
         self.assertEqual(token.payload['username'], 'testuser')
         self.assertEqual(token.payload['title'], 'Developer')
+
+
+class SessionLifetimeTests(TestsMixin):
+    """Optional absolute session lifetime, off unless JWT_ALLAUTH_SESSION_LIFETIME is set."""
+
+    def setUp(self):
+        self.init()
+
+    def _refresh(self, token, status_code=200):
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = str(token)
+        response = self.client.post(self.refresh_url, data={}, format='json')
+        self.assertEqual(response.status_code, status_code)
+        return response
+
+    def _backdate_session(self, token, age):
+        """Rewrite the session start of a whitelisted token so it looks `age` old."""
+        token.payload[SESSION_IAT_CLAIM] = datetime_to_epoch(aware_utcnow() - age)
+        return token
+
+    def test_session_iat_is_set_on_token_creation(self):
+        token = RefreshTokenClass.for_user(self.USER)
+
+        self.assertIn(SESSION_IAT_CLAIM, token.payload)
+        self.assertAlmostEqual(
+            token.payload[SESSION_IAT_CLAIM], datetime_to_epoch(aware_utcnow()), delta=10)
+        # The session start is also visible from the derived access token
+        self.assertEqual(token.access_token.payload[SESSION_IAT_CLAIM], token.payload[SESSION_IAT_CLAIM])
+
+    def test_session_iat_is_preserved_across_rotations(self):
+        token = self.TOKEN
+        session_iat = token.payload[SESSION_IAT_CLAIM]
+
+        for _ in range(3):
+            response = self._refresh(token)
+            token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+            # `iat` is renewed on every rotation, the session start is not
+            self.assertEqual(token.payload[SESSION_IAT_CLAIM], session_iat)
+            self.assertGreaterEqual(token.payload['iat'], session_iat)
+
+    @override_settings(JWT_ALLAUTH_SESSION_LIFETIME=timedelta(days=30))
+    def test_refresh_rejected_once_session_lifetime_is_exceeded(self):
+        token = self._backdate_session(self.TOKEN, timedelta(days=31))
+
+        response = self._refresh(token, status_code=401)
+        self.assertEqual(response.json()['code'], 'session_expired')
+
+        # The whole session is revoked, no further rotation is possible
+        self.assertFalse(
+            RefreshTokenWhitelistModel.objects.filter(session=token.payload['session']).exists())
+
+    @override_settings(JWT_ALLAUTH_SESSION_LIFETIME=timedelta(days=30))
+    def test_refresh_allowed_within_session_lifetime(self):
+        token = self._backdate_session(self.TOKEN, timedelta(days=29))
+
+        response = self._refresh(token)
+        new_token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+        self.assertEqual(new_token.payload[SESSION_IAT_CLAIM], token.payload[SESSION_IAT_CLAIM])
+
+    @override_settings(JWT_ALLAUTH_SESSION_LIFETIME=timedelta(days=30))
+    def test_rotated_token_expiration_is_capped_to_the_session_deadline(self):
+        # Five minutes of session left: shorter than both the refresh and the access lifetimes
+        token = self._backdate_session(self.TOKEN, timedelta(days=30) - timedelta(minutes=5))
+        deadline = datetime_to_epoch(
+            datetime_from_epoch(token.payload[SESSION_IAT_CLAIM]) + timedelta(days=30))
+
+        response = self._refresh(token)
+        new_token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+
+        self.assertEqual(new_token.payload['exp'], deadline)
+        # ... and so is the access token issued along with it
+        access = AccessToken(response.json()['access'])
+        self.assertEqual(access.payload['exp'], deadline)
+
+    @override_settings(JWT_ALLAUTH_SESSION_LIFETIME=timedelta(minutes=5))
+    def test_new_token_expiration_is_capped_to_the_session_deadline(self):
+        token = RefreshTokenClass.for_user(self.USER)
+
+        deadline = datetime_to_epoch(
+            datetime_from_epoch(token.payload[SESSION_IAT_CLAIM]) + timedelta(minutes=5))
+        self.assertEqual(token.payload['exp'], deadline)
+        self.assertEqual(token.access_token.payload['exp'], deadline)
+
+    def test_legacy_token_without_session_iat_is_anchored_on_rotation(self):
+        """Tokens issued before this feature existed get their session start stamped once."""
+        token = self.TOKEN
+        del token.payload[SESSION_IAT_CLAIM]
+
+        response = self._refresh(token)
+        new_token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+
+        self.assertIn(SESSION_IAT_CLAIM, new_token.payload)
+        self.assertAlmostEqual(
+            new_token.payload[SESSION_IAT_CLAIM], datetime_to_epoch(aware_utcnow()), delta=10)
+
+    def test_sessions_are_unlimited_by_default(self):
+        """No setting configured: rotation keeps extending the session, as it always did."""
+        self.assertIsNone(get_session_lifetime())
+
+        token = self._backdate_session(self.TOKEN, timedelta(days=1000))
+        self.assertIsNone(token.session_deadline())
+
+        response = self._refresh(token)
+        new_token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+        self.assertEqual(new_token.payload[SESSION_IAT_CLAIM], token.payload[SESSION_IAT_CLAIM])
+        # The expiration is a full refresh token lifetime away, not capped by the session
+        expected_exp = datetime_to_epoch(aware_utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'])
+        self.assertAlmostEqual(new_token.payload['exp'], expected_exp, delta=10)
+
+    @override_settings(JWT_ALLAUTH_SESSION_LIFETIME=None)
+    def test_session_lifetime_can_be_disabled_explicitly(self):
+        token = self._backdate_session(self.TOKEN, timedelta(days=1000))
+
+        response = self._refresh(token)
+        new_token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+        self.assertEqual(new_token.payload[SESSION_IAT_CLAIM], token.payload[SESSION_IAT_CLAIM])
+
+    @override_settings(JWT_ALLAUTH_SESSION_LIFETIME='30 days')
+    def test_invalid_session_lifetime_setting_is_rejected(self):
+        with self.assertRaises(ImproperlyConfigured):
+            get_session_lifetime()
+
+    def test_one_time_tokens_have_no_session_deadline(self):
+        """Password reset / set password tokens carry no session and must not be capped."""
+        token = RefreshTokenClass()
+
+        self.assertIsNone(token.session_deadline())
+        self.assertFalse(token.session_expired())

@@ -3,6 +3,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 
 from jwt_allauth.constants import PASS_RESET_ACCESS, PASS_RESET_COOKIE, FOR_USER, ONE_TIME_PERMISSION, \
     PASS_SET_ACCESS, SET_PASSWORD_COOKIE
+from jwt_allauth.csrf import enforce_csrf
 from jwt_allauth.password_reset.models import SetPasswordTokenUser
 from jwt_allauth.tokens.app_settings import RefreshToken
 
@@ -12,6 +13,11 @@ class _BaseOneTimeCookiePermission(DefaultBasePermission):
     Base permission that validates a one-time access token from a specific cookie
     and injects a SetPasswordTokenUser into the request.
     Subclasses must define COOKIE_NAME and REQUIRED_PERMISSION.
+
+    The capability travels in a cookie, so the browser attaches it to cross-site
+    requests as well, as far as its ``SameSite`` policy allows. The CSRF check is
+    therefore run here: it is the point where the cookie starts to authenticate the
+    request, and DRF runs no such check of its own outside ``SessionAuthentication``.
     """
     COOKIE_NAME = None
     REQUIRED_PERMISSION = None
@@ -29,6 +35,7 @@ class _BaseOneTimeCookiePermission(DefaultBasePermission):
                 return False
             if access_token and ONE_TIME_PERMISSION in access_token and FOR_USER in access_token:
                 if access_token[ONE_TIME_PERMISSION] == self.REQUIRED_PERMISSION:
+                    enforce_csrf(request)
                     request.user = SetPasswordTokenUser(access_token)
                     request.auth = access_token
                     return True

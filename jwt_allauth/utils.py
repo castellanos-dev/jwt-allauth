@@ -1,9 +1,13 @@
+import hashlib
 import warnings
+from datetime import timedelta
 from importlib import import_module
 from typing import Any, Dict, Optional
 
+from allauth.account import app_settings as allauth_settings
 from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress
+from django.core.exceptions import ImproperlyConfigured
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
@@ -18,6 +22,22 @@ from jwt_allauth.constants import TEMPLATE_PATHS, REFRESH_TOKEN_COOKIE
 from jwt_allauth.exceptions import NotVerifiedEmail, IncorrectCredentials
 
 string_types = (str,)
+
+
+def hash_token(token):
+    """
+    Return the digest under which a single-use token is stored at rest.
+
+    Tokens sent to the user are credentials on their own, so only their digest is
+    persisted: read access to the database must not hand out usable tokens.
+
+    Args:
+        token (str): Raw token as delivered to the user.
+
+    Returns:
+        str: Hex-encoded SHA-256 digest of the token.
+    """
+    return hashlib.sha256(str(token).encode()).hexdigest()
 
 
 def _get_cookie_max_age():
@@ -36,6 +56,50 @@ def _get_cookie_max_age():
     if lifetime is not None:
         return int(lifetime.total_seconds())
     return None
+
+
+def get_session_lifetime():
+    """Resolve the absolute lifetime of a session.
+
+    ``None`` (the default) keeps the sliding behaviour: a session stays alive for as
+    long as it is used, and only dies after ``REFRESH_TOKEN_LIFETIME`` of inactivity.
+
+    When ``JWT_ALLAUTH_SESSION_LIFETIME`` is set to a timedelta, a session starts when
+    the user authenticates and cannot be extended past that limit by rotating the
+    refresh token: once it is reached the user has to log in again.
+    """
+    lifetime = getattr(settings, "JWT_ALLAUTH_SESSION_LIFETIME", None)
+    if lifetime is not None and not isinstance(lifetime, timedelta):
+        raise ImproperlyConfigured(
+            "jwt-allauth: JWT_ALLAUTH_SESSION_LIFETIME must be a datetime.timedelta or None."
+        )
+    return lifetime
+
+
+def enumeration_prevented():
+    """Whether sign-up must hide that an e-mail address is already in use.
+
+    Follows allauth's ``ACCOUNT_PREVENT_ENUMERATION`` (enabled by default), so that a
+    single setting governs the behaviour of the whole project.
+
+    Hiding the conflict is only possible while e-mail verification is mandatory, and
+    both settings that govern it have to agree: ``EMAIL_VERIFICATION``, which decides
+    whether registration hands out a usable session, and allauth's
+    ``ACCOUNT_EMAIL_VERIFICATION``, which decides whether the confirmation mail the
+    cover story relies on is sent at all. ``ACCOUNT_EMAIL_VERIFICATION`` is derived
+    from ``EMAIL_VERIFICATION`` unless the project sets it itself, so the two only
+    part ways on purpose. When either falls short the conflict is reported to the
+    caller as before — the same choice allauth makes in ``assess_unique_email``.
+
+    Returns:
+        bool: ``True`` when the registration endpoint must answer a conflicting
+        address exactly as it answers a fresh sign-up.
+    """
+    if not bool(getattr(settings, 'EMAIL_VERIFICATION', False)):
+        return False
+    if allauth_settings.EMAIL_VERIFICATION != allauth_settings.EmailVerificationMethod.MANDATORY:
+        return False
+    return bool(allauth_settings.PREVENT_ENUMERATION)
 
 
 def _get_cookie_secure():
@@ -275,6 +339,36 @@ def load_user(f):
         res = f(self, *args, **kwargs)
         return res
     return wrapper
+
+
+def load_capability_user(user_id):
+    """
+    Load the account a one-time capability was issued for.
+
+    A capability is self-contained: it carries the id of the account it was minted for
+    and stays valid until it expires or is consumed, so the state of that account has
+    to be re-read when it is used. Deactivating an account ends every session of it —
+    logging in and refreshing both check ``is_active`` — and these flows end by opening
+    a session, so a capability issued before the deactivation must not be honoured
+    afterwards. An account deleted in the meantime is rejected the same way, rather
+    than surfacing as a server error.
+
+    Args:
+        user_id (int|str): Identifier carried by the capability.
+
+    Returns:
+        User: The account behind the capability.
+
+    Raises:
+        InvalidToken: if the account no longer exists or is not active.
+    """
+    try:
+        user = get_user_model().objects.get(id=user_id)
+    except get_user_model().DoesNotExist:
+        raise InvalidToken()
+    if not user.is_active:
+        raise InvalidToken()
+    return user
 
 
 def build_token_response(

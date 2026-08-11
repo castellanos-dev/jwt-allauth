@@ -13,6 +13,11 @@ The default role codes are:
 
 New users are assigned the default role value of 0.
 
+Because the role travels inside the tokens, a role change is not visible to the permission classes until a new token is
+issued. The refresh endpoint regenerates the role claim from the database on every rotation, so the change applies at
+the latest on the next refresh (i.e. within the lifetime of the access token). To revoke privileges immediately, delete
+the user's entries in the refresh token whitelist, which forces a new login.
+
 Usage example
 """""""""""""
 
@@ -45,3 +50,7 @@ included all the roles allowed for the corresponding permission.
     class UserDetailsView(RetrieveUpdateAPIView):
         serializer_class = UserDetailsSerializer
         permission_classes = (CreateUserPermission,)
+
+.. note:: Login, refresh, registration, email confirmation and the password reset flow declare their
+   own permission classes, so a restrictive ``DEFAULT_PERMISSION_CLASSES`` (e.g. ``IsAuthenticated``)
+   in ``REST_FRAMEWORK`` does not lock the endpoints a user must reach before holding a token.

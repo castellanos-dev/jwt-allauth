@@ -14,6 +14,7 @@ from jwt_allauth.constants import (
 from jwt_allauth.mfa.storage import (
     create_login_challenge,
     create_setup_challenge,
+    login_lockout_remaining,
 )
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.utils import allauth_authenticate
@@ -93,6 +94,15 @@ class LoginSerializer(TokenObtainPairSerializer):
 
             # If user has MFA enabled (OPTIONAL or REQUIRED mode), request MFA verification
             if has_mfa:
+                # Handing out a new challenge to a locked out user would hand out a new
+                # batch of code guesses along with it.
+                retry_after = login_lockout_remaining(self.user.id)
+                if retry_after:
+                    raise exceptions.Throttled(
+                        wait=retry_after,
+                        detail="Too many failed MFA attempts. Try again later.",
+                    )
+
                 # Store MFA challenge server-side using MFA storage backend
                 challenge_id = create_login_challenge(self.user.id)
                 return {"mfa_required": True, "challenge_id": challenge_id}

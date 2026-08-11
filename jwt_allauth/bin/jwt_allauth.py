@@ -218,7 +218,7 @@ AUTHENTICATION_BACKENDS = (
 # Django Rest Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTStatelessUserAuthentication',
+        'jwt_allauth.authentication.JWTAllAuthAuthentication',
     )
 }
 
@@ -227,6 +227,11 @@ from datetime import timedelta
 # JWT settings
 JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME = timedelta(minutes=30)
 JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME = timedelta(days=14)
+
+# Sessions stay alive for as long as they are used and expire after
+# JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME of inactivity. Uncomment to also cap how long a
+# session may live in total, no matter how often it is refreshed.
+# JWT_ALLAUTH_SESSION_LIFETIME = timedelta(days=90)
 """
     # Add RS256 SIMPLE_JWT config if keys were generated successfully
     if rs256_ok:

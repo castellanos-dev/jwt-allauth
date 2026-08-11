@@ -1,4 +1,8 @@
+import re
+
 from allauth.account.models import EmailAddress, EmailConfirmationHMAC
+from django.conf import settings as django_settings
+from django.core import mail
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.urls import NoReverseMatch, clear_url_caches, reverse
@@ -12,7 +16,8 @@ from jwt_allauth.constants import (
 )
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel
-from .mixins import TestsMixin
+from jwt_allauth.utils import hash_token
+from .mixins import APIClient, TestsMixin
 
 
 @override_settings(
@@ -134,8 +139,9 @@ class AdminManagedRegistrationTests(TestsMixin):
 
     def test_email_confirmation_token_created_on_registration(self):
         """
-        When a staff user registers an invited user, a confirmation token
-        should be persisted for EMAIL_CONFIRMATION with the correct key.
+        When a staff user registers an invited user, a confirmation token should be
+        persisted for EMAIL_CONFIRMATION as the digest of the key sent by email — the
+        raw key must never be readable from the database.
         """
         staff = get_user_model().objects.create_user(
             'admin_token', email='admin_token@demo.com', password='A-1_strong', is_staff=True
@@ -143,6 +149,7 @@ class AdminManagedRegistrationTests(TestsMixin):
         EmailAddress.objects.create(user=staff, email=staff.email, verified=True, primary=True)
         staff_access = str(RefreshToken.for_user(staff).access_token)
 
+        mail.outbox = []
         resp = self.client.post(
             self.user_register_url,
             data={"email": self.INVITED_EMAIL, "role": 300},
@@ -155,14 +162,44 @@ class AdminManagedRegistrationTests(TestsMixin):
         email_addr = EmailAddress.objects.filter(user=invited, email=self.INVITED_EMAIL).first()
         self.assertIsNotNone(email_addr)
 
+        # Recover the key the invited user actually received
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        body = ' '.join(
+            [message.body] + [alt for alt, _ in getattr(message, 'alternatives', [])]
+        )
+        match = re.search(r'/registration/verification/([^/\s"\'<>]+)/', body)
+        self.assertIsNotNone(match)
+        key = match.group(1)
+
+        confirmation = EmailConfirmationHMAC.from_key(key)
+        self.assertIsNotNone(confirmation)
+        self.assertEqual(confirmation.email_address, email_addr)
+
         token = GenericTokenModel.objects.filter(
             user=invited, purpose=EMAIL_CONFIRMATION
         ).first()
         self.assertIsNotNone(token)
+        self.assertEqual(token.token, hash_token(key))
+        self.assertNotEqual(token.token, key)
 
-        confirmation = EmailConfirmationHMAC.from_key(token.token)
-        self.assertIsNotNone(confirmation)
-        self.assertEqual(confirmation.email_address, email_addr)
+    def test_legacy_plain_text_confirmation_token_still_accepted(self):
+        """
+        Confirmations issued before keys were hashed are stored in plain text; they must
+        keep working until they expire.
+        """
+        invited = get_user_model().objects.create_user('invited_legacy', email=self.INVITED_EMAIL)
+        email_addr = EmailAddress.objects.create(
+            user=invited, email=self.INVITED_EMAIL, verified=False, primary=True
+        )
+
+        key = EmailConfirmationHMAC(email_addr).key
+        GenericTokenModel.objects.create(user=invited, token=key, purpose=EMAIL_CONFIRMATION)
+
+        resp = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(SET_PASSWORD_COOKIE, self.client.cookies)
 
     def test_email_confirmation_token_multi_use_until_password_set(self):
         """
@@ -175,7 +212,7 @@ class AdminManagedRegistrationTests(TestsMixin):
         )
 
         key = EmailConfirmationHMAC(email_addr).key
-        GenericTokenModel.objects.create(user=invited, token=key, purpose=EMAIL_CONFIRMATION)
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
 
         verify_url = reverse('account_confirm_email', args=[key])
 
@@ -185,7 +222,7 @@ class AdminManagedRegistrationTests(TestsMixin):
         self.assertIn(SET_PASSWORD_COOKIE, self.client.cookies)
         self.assertTrue(
             GenericTokenModel.objects.filter(
-                user=invited, token=key, purpose=EMAIL_CONFIRMATION
+                user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION
             ).exists()
         )
 
@@ -203,7 +240,7 @@ class AdminManagedRegistrationTests(TestsMixin):
         # Now the token should be gone
         self.assertFalse(
             GenericTokenModel.objects.filter(
-                user=invited, token=key, purpose=EMAIL_CONFIRMATION
+                user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION
             ).exists()
         )
 
@@ -227,7 +264,7 @@ class AdminManagedRegistrationTests(TestsMixin):
         )
 
         key = EmailConfirmationHMAC(email_addr).key
-        GenericTokenModel.objects.create(user=invited, token=key, purpose=EMAIL_CONFIRMATION)
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
 
         # Simulate expiration by overriding the setting to 0 days (or -1 if possible, but 0 usually means
         # immediate expiration)
@@ -241,6 +278,158 @@ class AdminManagedRegistrationTests(TestsMixin):
             self.assertEqual(resp.status_code, 400)
             self.assertTemplateUsed(resp, 'registration/verification_failed.html')
 
+    def test_expired_confirmation_of_verified_user_grants_nothing(self):
+        """
+        An expired confirmation link must not hand out a password-set capability, not even
+        when the account already owns a verified email address (which is what the
+        "already verified" fallback used to accept as proof).
+        """
+        established = get_user_model().objects.create_user(
+            'established_expired', email='established_expired@demo.com', password='A-1_strong'
+        )
+        EmailAddress.objects.create(
+            user=established, email='established_expired@demo.com', verified=True, primary=True
+        )
+        secondary = EmailAddress.objects.create(
+            user=established, email='established_expired_work@demo.com', verified=False, primary=False
+        )
+
+        key = EmailConfirmationHMAC(secondary).key
+        GenericTokenModel.objects.create(user=established, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+
+        with override_settings(ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS=0):
+            resp = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertTemplateUsed(resp, 'registration/verification_failed.html')
+        self.assertNotIn(SET_PASSWORD_COOKIE, self.client.cookies)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(user=established, purpose=PASS_SET_ACCESS).exists()
+        )
+
+    def test_confirmation_of_user_with_password_grants_nothing(self):
+        """
+        Even with a perfectly valid confirmation key, an account that already has a
+        password must never be handed a password-set capability: that would be a password
+        reset outside of the reset flow.
+        """
+        established = get_user_model().objects.create_user(
+            'established_valid', email='established_valid@demo.com', password='A-1_strong'
+        )
+        EmailAddress.objects.create(
+            user=established, email='established_valid@demo.com', verified=True, primary=True
+        )
+        secondary = EmailAddress.objects.create(
+            user=established, email='established_valid_work@demo.com', verified=False, primary=False
+        )
+
+        key = EmailConfirmationHMAC(secondary).key
+        GenericTokenModel.objects.create(user=established, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+
+        resp = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertNotIn(SET_PASSWORD_COOKIE, self.client.cookies)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(user=established, purpose=PASS_SET_ACCESS).exists()
+        )
+
+    def test_only_latest_password_set_capability_stays_valid(self):
+        """
+        Multi-use is allowed until the password is set, but each click supersedes the
+        capability granted by the previous one.
+        """
+        invited = get_user_model().objects.create_user('invited_latest', email=self.INVITED_EMAIL)
+        email_addr = EmailAddress.objects.create(
+            user=invited, email=self.INVITED_EMAIL, verified=False, primary=True
+        )
+
+        key = EmailConfirmationHMAC(email_addr).key
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+        verify_url = reverse('account_confirm_email', args=[key])
+
+        self.client.get(verify_url)
+        first_capability = self.client.cookies[SET_PASSWORD_COOKIE].value
+
+        self.client.get(verify_url)
+        second_capability = self.client.cookies[SET_PASSWORD_COOKIE].value
+
+        self.assertNotEqual(first_capability, second_capability)
+        self.assertEqual(
+            GenericTokenModel.objects.filter(user=invited, purpose=PASS_SET_ACCESS).count(), 1
+        )
+
+    def _invite(self, username, email=None, **user_kwargs):
+        """Create an invited account and the confirmation it received."""
+        email = email or self.INVITED_EMAIL
+        invited = get_user_model().objects.create_user(username, email=email, **user_kwargs)
+        email_addr = EmailAddress.objects.create(
+            user=invited, email=email, verified=False, primary=True
+        )
+        key = EmailConfirmationHMAC(email_addr).key
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+        return invited, key
+
+    def test_confirmation_of_deactivated_account_grants_nothing(self):
+        """
+        A deactivated account gets no password-set capability: login and refresh both
+        refuse it, and setting the password opens a session.
+        """
+        invited, key = self._invite('invited_deactivated', is_active=False)
+
+        resp = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertTemplateUsed(resp, 'registration/verification_failed.html')
+        self.assertNotIn(SET_PASSWORD_COOKIE, self.client.cookies)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(user=invited, purpose=PASS_SET_ACCESS).exists()
+        )
+
+    def test_set_password_rejected_for_deactivated_account(self):
+        """A capability issued before the deactivation is not honoured after it."""
+        invited, key = self._invite('invited_then_deactivated')
+        self.client.get(reverse('account_confirm_email', args=[key]))
+        self.assertIn(SET_PASSWORD_COOKIE, self.client.cookies)
+
+        get_user_model().objects.filter(pk=invited.pk).update(is_active=False)
+
+        resp = self.client.post(
+            self.set_password_url,
+            data={"new_password1": "A-1_newpass", "new_password2": "A-1_newpass"},
+            content_type='application/json'
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertNotIn(REFRESH_TOKEN_COOKIE, resp.cookies)
+        invited.refresh_from_db()
+        self.assertFalse(invited.has_usable_password())
+
+    def test_set_password_requires_a_csrf_token(self):
+        """
+        The capability travels in a cookie, so the endpoint that consumes it has to
+        check the CSRF token — the ``SameSite`` policy of the cookie is a deployment
+        setting, not a guarantee.
+        """
+        csrf_client = APIClient(enforce_csrf_checks=True)
+        _, key = self._invite('invited_csrf')
+        verify_resp = csrf_client.get(reverse('account_confirm_email', args=[key]))
+        self.assertIn(SET_PASSWORD_COOKIE, verify_resp.cookies)
+        # The redirect carries the token the frontend has to send back.
+        self.assertIn(django_settings.CSRF_COOKIE_NAME, verify_resp.cookies)
+
+        data = {"new_password1": "A-1_newpass", "new_password2": "A-1_newpass"}
+        resp = csrf_client.post(self.set_password_url, data=data, content_type='application/json')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+        resp = csrf_client.post(
+            self.set_password_url,
+            data=data,
+            content_type='application/json',
+            HTTP_X_CSRFTOKEN=csrf_client.cookies[django_settings.CSRF_COOKIE_NAME].value,
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
     def test_set_password_flow(self):
         """
         Simulate the verification GET that issues a one-time access token cookie,
@@ -253,7 +442,7 @@ class AdminManagedRegistrationTests(TestsMixin):
         # Simulate clicking the verification link sent by email
         key = EmailConfirmationHMAC(email_addr).key
         # Persist confirmation token as it would be created by the adapter
-        GenericTokenModel.objects.create(user=invited, token=key, purpose=EMAIL_CONFIRMATION)
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
         verify_url = reverse('account_confirm_email', args=[key])
         verify_resp = self.client.get(verify_url)
         self.assertEqual(verify_resp.status_code, 302)  # redirected after confirming
@@ -362,7 +551,7 @@ class AdminManagedEmailVerificationOffTests(TestsMixin):
         # Simulate verification GET
         key = EmailConfirmationHMAC(email_addr).key
         # Persist confirmation token as it would be created by the adapter
-        GenericTokenModel.objects.create(user=invited, token=key, purpose=EMAIL_CONFIRMATION)
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
         verify_url = reverse('account_confirm_email', args=[key])
         verify_resp = self.client.get(verify_url)
         self.assertEqual(verify_resp.status_code, 302)
