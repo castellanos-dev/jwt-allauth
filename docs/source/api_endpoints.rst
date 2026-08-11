@@ -616,10 +616,10 @@ Multi-Factor Authentication (MFA)
      - Indicates successful activation (always ``True`` on success).
    * - Body (JSON, optional)
      - ``access``
-     - Access token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id``.
+     - Access token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id``. Omitted while the user's email address is still unverified and ``EMAIL_VERIFICATION`` is enabled.
    * - Body (JSON, optional)
      - ``refresh``
-     - Refresh token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id`` (may be delivered via HTTP-only cookie depending on settings).
+     - Refresh token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id`` (may be delivered via HTTP-only cookie depending on settings). If the email address is still unverified and ``EMAIL_VERIFICATION`` is enabled, it is returned in the body and stays disabled until the verification link is used.
 
 **URL Name:** ``mfa_activate``
 
@@ -658,9 +658,7 @@ Multi-Factor Authentication (MFA)
      - ``refresh_token``
      - JWT refresh token set in the ``refresh_token`` cookie (by default).
 
-Failed verifications are limited per challenge and per user. Once the per-user budget is
-spent the endpoint answers ``429`` with a ``Retry-After`` header and stops checking codes
-until the window slides. See :doc:`mfa_totp`.
+Failed verifications are limited per challenge and per user; once the per-user budget is spent the endpoint answers ``429`` with a ``Retry-After`` header without checking the code. See :doc:`mfa_totp`.
 
 **URL Name:** ``mfa_verify``
 
@@ -699,8 +697,7 @@ until the window slides. See :doc:`mfa_totp`.
      - ``refresh_token``
      - JWT refresh token set in the ``refresh_token`` cookie (by default).
 
-Recovery code failures share the same per-challenge and per-user budgets as ``/mfa/verify/``
-and answer ``429`` the same way once the per-user budget is spent.
+Recovery code failures share the same budgets as ``/mfa/verify/`` and answer ``429`` the same way.
 
 **URL Name:** ``mfa_verify_recovery``
 

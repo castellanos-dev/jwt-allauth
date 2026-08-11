@@ -35,7 +35,7 @@ from jwt_allauth.mfa.storage import (
     load_setup_secret,
 )
 from jwt_allauth.tokens.app_settings import RefreshToken
-from jwt_allauth.tokens.models import GenericTokenModel
+from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from .mixins import TestsMixin
 from allauth.account.models import EmailAddress
@@ -1469,44 +1469,96 @@ class MFARequiredModeRegistrationTests(TestsMixin):
         self.assertIn('detail', resp)
         self.assertIn('Verification e-mail sent', str(resp['detail']))
 
-    def test_required_mode_mfa_activate_with_setup_challenge_returns_tokens(self):
-        """Test that /mfa/activate/ with setup_challenge_id returns access token and recovery codes"""
-        # Register to get setup_challenge_id
+    def _register_and_setup(self):
+        """Register in REQUIRED mode and start the TOTP setup, returning the challenge id."""
         resp = self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
         setup_challenge_id = resp['setup_challenge_id']
-
-        # Setup
         self.post(
             self.setup_url,
             data={'setup_challenge_id': setup_challenge_id},
             status_code=200
         )
+        return setup_challenge_id
 
-        # Activate with setup_challenge_id should return tokens
+    def _activate(self, setup_challenge_id, recovery_codes=('RC1', 'RC2')):
+        """Activate TOTP through the bootstrap flow and return the raw response."""
         with patch('jwt_allauth.mfa.views.TOTP.validate_code', return_value=True), \
              patch('jwt_allauth.mfa.views.RecoveryCodes') as mock_recovery_class:
 
             mock_recovery_instance = MagicMock()
-            mock_recovery_instance.get_unused_codes.return_value = ['RC1', 'RC2']
+            mock_recovery_instance.get_unused_codes.return_value = list(recovery_codes)
             mock_recovery_class.activate.return_value = mock_recovery_instance
 
-            response = self.client.post(
+            return self.client.post(
                 self.activate_url,
                 data={'code': '123456', 'setup_challenge_id': setup_challenge_id},
                 format='json'
             )
-            self.assertEqual(response.status_code, 200)
-            resp = response.json()
-            self.assertTrue(resp['success'])
-            self.assertIn('recovery_codes', resp)
-            # Bootstrap mode returns access token
-            self.assertIn('access', resp)
-            # Refresh token is in response or cookie depending on JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE
-            use_cookie = getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True)
-            if not use_cookie:
-                self.assertIn('refresh', resp)
-            else:
-                self.assertIn('refresh_token', response.cookies)
+
+    @override_settings(EMAIL_VERIFICATION=False)
+    def test_required_mode_mfa_activate_with_setup_challenge_returns_tokens(self):
+        """Test that /mfa/activate/ with setup_challenge_id returns access token and recovery codes"""
+        setup_challenge_id = self._register_and_setup()
+
+        # Activate with setup_challenge_id should return tokens
+        response = self._activate(setup_challenge_id)
+        self.assertEqual(response.status_code, 200)
+        resp = response.json()
+        self.assertTrue(resp['success'])
+        self.assertIn('recovery_codes', resp)
+        # Bootstrap mode returns access token
+        self.assertIn('access', resp)
+        # Refresh token is in response or cookie depending on JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE
+        use_cookie = getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True)
+        if not use_cookie:
+            self.assertIn('refresh', resp)
+        else:
+            self.assertIn('refresh_token', response.cookies)
+
+    @override_settings(EMAIL_VERIFICATION=True, JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False)
+    def test_required_mode_mfa_activate_does_not_bypass_email_verification(self):
+        """
+        The setup_challenge_id is handed to an anonymous caller by /registration/, so
+        completing the bootstrap must not grant a usable session while the e-mail
+        address is still unverified.
+        """
+        setup_challenge_id = self._register_and_setup()
+
+        response = self._activate(setup_challenge_id)
+        self.assertEqual(response.status_code, 200)
+        resp = response.json()
+        self.assertTrue(resp['success'])
+        self.assertIn('recovery_codes', resp)
+
+        # No session credentials are handed out before the e-mail is confirmed
+        self.assertNotIn('access', resp)
+        self.assertNotIn('refresh_token', response.cookies)
+        self.assertIn('Verification e-mail sent', str(resp['detail']))
+
+        # The refresh token is issued but disabled, exactly like plain registration
+        self.assertIn('refresh', resp)
+        user = get_user_model().objects.get(email=self.REGISTRATION_EMAIL)
+        whitelist = RefreshTokenWhitelistModel.objects.filter(user=user)
+        self.assertEqual(whitelist.count(), 1)
+        self.assertFalse(whitelist.first().enabled)
+
+        # And it cannot be exchanged for an access token
+        self.post(self.refresh_url, data={'refresh': resp['refresh']}, status_code=401)
+
+    @override_settings(EMAIL_VERIFICATION=True, JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False)
+    def test_required_mode_mfa_activate_issues_session_once_email_verified(self):
+        """Once the e-mail is verified, the bootstrap flow issues a full session."""
+        setup_challenge_id = self._register_and_setup()
+
+        user = get_user_model().objects.get(email=self.REGISTRATION_EMAIL)
+        EmailAddress.objects.filter(user=user).update(verified=True)
+
+        response = self._activate(setup_challenge_id)
+        self.assertEqual(response.status_code, 200)
+        resp = response.json()
+        self.assertIn('access', resp)
+        self.assertIn('refresh', resp)
+        self.assertTrue(RefreshTokenWhitelistModel.objects.get(user=user).enabled)
 
     def test_required_mode_mfa_activate_without_setup_challenge_no_tokens(self):
         """Test that /mfa/activate/ without setup_challenge_id (normal auth) doesn't return tokens"""
@@ -1575,9 +1627,10 @@ class MFARequiredModeRegistrationTests(TestsMixin):
             resp = response.json()
             self.assertTrue(resp['success'])
             self.assertIn('recovery_codes', resp)
-            # Bootstrap mode should return access token via build_token_response
-            self.assertIn('access', resp)
-            # With JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False, refresh token should be in response
+            # The e-mail is still unverified, so no session credentials are issued yet
+            self.assertNotIn('access', resp)
+            # With JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False, the (disabled) refresh
+            # token is returned in the response body, as in plain registration
             self.assertIn('refresh', resp)
 
         # Verify MFA was created
