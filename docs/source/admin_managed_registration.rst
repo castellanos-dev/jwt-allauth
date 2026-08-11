@@ -70,8 +70,9 @@ Email verification behavior
 ---------------------------
 
 - The verification GET confirms the email in admin-managed mode and issues a one-time token, then redirects to the password set UI.
-- The verification link allows multiple accesses (e.g. by email scanners) and is only invalidated once the password is successfully set.
+- The verification link allows multiple accesses (e.g. by email scanners) until the password is successfully set, but never past its expiration date. Each access supersedes the one-time token issued by the previous one.
 - The verification link validity is determined by ``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS`` (default: 3 days).
+- The link only grants access to the password set UI while the account has no password. Once a password exists, the account must use the password reset flow.
 - The set-password endpoint does not alter email verification status.
 
 Email templates
