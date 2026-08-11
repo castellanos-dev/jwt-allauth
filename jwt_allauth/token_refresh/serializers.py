@@ -39,6 +39,16 @@ class TokenRefreshSerializer(serializers.Serializer):
             RefreshTokenWhitelistModel.objects.filter(session=refresh.payload["session"]).delete()
             raise SessionExpired()
 
+        user = query_set[0].user
+        if not user.is_active:
+            # Deactivated accounts must not be able to keep rotating tokens.
+            RefreshTokenWhitelistModel.objects.filter(user=user).delete()
+            raise InvalidToken()
+
+        # Re-read the privileges from the database so that role changes are not
+        # carried over from the old token.
+        refresh.sync_user_claims(user)
+
         data = {"access": str(refresh.access_token)}
 
         RefreshTokenWhitelistModel.objects.filter(jti=refresh.payload["jti"]).delete()

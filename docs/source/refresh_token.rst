@@ -9,6 +9,11 @@ directly in the tokens, this approach reduces reliance on frequent database quer
 Importantly, the refresh token whitelist mechanism ensures this strategy maintains robust security standards, as
 compromised or outdated refresh tokens can be promptly invalidated when necessary.
 
+Every rotation (i.e. every call to the refresh endpoint) re-reads the user from the database and regenerates the
+``role`` claim and the ``JWT_ALLAUTH_USER_ATTRIBUTES`` claims from it, so privilege changes take effect on the next
+refresh instead of surviving until the refresh token expires. Rotation is also refused (and the user's refresh tokens
+are removed from the whitelist) when the account is no longer active.
+
 The following constants should be included in the settings.py file:
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN`` - refresh token class (default: ``jwt_allauth.tokens.tokens.RefreshToken``).

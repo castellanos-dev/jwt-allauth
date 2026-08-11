@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 1.2.4
+Version 1.2.6
 -------------
 
 Released: TBD
@@ -9,11 +9,31 @@ Released: TBD
 Security
 ~~~~~~~~
 
+- **Absolute session lifetime**: rotation used to recompute the expiration from the current time, so a leaked refresh token could be renewed forever with one call to the refresh endpoint per refresh token lifetime. Refresh tokens now carry a ``session_iat`` claim, set when the session starts and preserved across rotations, and no token is issued with an expiration beyond ``session_iat + JWT_ALLAUTH_SESSION_LIFETIME`` (new setting, default **90 days**, ``None`` to disable). Once that deadline is reached the refresh endpoint revokes the whole session and answers ``401`` with code ``session_expired``. Sessions already active when upgrading have their start anchored at their first rotation.
+
+Version 1.2.5
+-------------
+
+Released: August 11, 2026
+
+Security
+~~~~~~~~
+
+- **Privileges are re-read from the database on refresh token rotation**: the ``role`` claim (and any claim configured through ``JWT_ALLAUTH_USER_ATTRIBUTES``) used to be copied verbatim from the old refresh token into the rotated one, so a privilege change only took effect once the refresh token expired — a demoted administrator kept its administrator claim indefinitely as long as it kept refreshing. The refresh endpoint now loads the user behind the whitelisted token and regenerates those claims from the database, so a role change applies on the next rotation.
+
+- **Refresh rejected for deactivated accounts**: rotating a refresh token now requires the account to be active. When ``is_active`` is ``False`` the refresh is rejected and the user's whitelisted refresh tokens are removed, which ends every session of the account. Previously only ``LoginView`` checked ``is_active``, so a deactivated user kept its sessions alive by refreshing.
+
+Version 1.2.4
+-------------
+
+Released: April 1, 2026
+
+Security
+~~~~~~~~
+
 - **Encrypted TOTP setup secrets**: TOTP secrets generated during MFA setup are now encrypted at rest using Fernet symmetric encryption (derived from ``SECRET_KEY``) before being stored in the database. Previously, secrets were stored in plaintext in ``GenericTokenModel``. This change is fully backward compatible — any in-flight plaintext secrets from a prior version are automatically detected and handled during read.
 
 - **JWT signing key warning**: A runtime warning is now emitted when ``JWT_ALLAUTH_SECRET_KEY`` is not configured and ``DEBUG=False``. Using Django's ``SECRET_KEY`` as the JWT signing key is insecure for production — a dedicated ``JWT_ALLAUTH_SECRET_KEY`` is strongly recommended.
-
-- **Absolute session lifetime**: refresh token rotation no longer extends a session indefinitely. Refresh tokens now carry a ``session_iat`` claim, set when the session starts and preserved across every rotation. Once ``JWT_ALLAUTH_SESSION_LIFETIME`` (default: **90 days**) has elapsed, the refresh endpoint revokes the whole session and responds ``401`` with code ``session_expired``, forcing re-authentication. Refresh and access tokens are also never issued with an expiration beyond the session deadline. Previously, a leaked refresh token could be renewed forever by calling the refresh endpoint once per refresh token lifetime. Sessions already active during the upgrade have their start anchored at their first rotation. The limit can be disabled with ``JWT_ALLAUTH_SESSION_LIFETIME = None``, which is discouraged.
 
 - **Reduced default refresh token lifetime** from 90 days to **14 days**. The previous 90-day window was excessively long in case of token leakage. Existing installations using the old ``JWT_REFRESH_TOKEN_LIFETIME`` setting are not affected — it continues to work.
 
