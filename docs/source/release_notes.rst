@@ -17,6 +17,8 @@ Security
 
 - **Forced secure cookies in production**: The refresh token cookie ``secure`` flag is now forced to ``True`` when ``DEBUG=False``, regardless of the ``JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SECURE`` setting. If the setting is explicitly ``False`` while in production, a warning is emitted. This prevents accidental cookie exposure over plain HTTP.
 
+- **E-mail verification is no longer bypassable through the MFA bootstrap**: when ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, ``POST /registration/`` returns a ``setup_challenge_id`` to an anonymous caller before the address is confirmed. ``/mfa/activate/`` used to exchange that challenge for a fully enabled session, granting access to an account registered with somebody else's e-mail address even with ``EMAIL_VERIFICATION = True``. The bootstrap branch now checks the user's verification state: while the address is unverified it issues no access token and the refresh token is created disabled, matching registration without MFA. The login and set-password bootstraps already require a verified address and are unaffected.
+
 - **Rate limiting on MFA verification**: ``MFAVerifyView`` and ``MFAVerifyRecoveryView`` now enforce ``AnonRateThrottle``. Additionally, the login challenge is automatically invalidated after 5 consecutive failed verification attempts, preventing brute-force attacks on TOTP codes and recovery codes.
 
 New Features

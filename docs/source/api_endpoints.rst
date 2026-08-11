@@ -610,10 +610,10 @@ Multi-Factor Authentication (MFA)
      - Indicates successful activation (always ``True`` on success).
    * - Body (JSON, optional)
      - ``access``
-     - Access token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id``.
+     - Access token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id``. Omitted while the user's e-mail address is still unverified and ``EMAIL_VERIFICATION`` is enabled.
    * - Body (JSON, optional)
      - ``refresh``
-     - Refresh token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id`` (may be delivered via HTTP-only cookie depending on settings).
+     - Refresh token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id`` (may be delivered via HTTP-only cookie depending on settings). If the e-mail address is still unverified and ``EMAIL_VERIFICATION`` is enabled, it is returned in the body and stays disabled until the verification link is used.
 
 **URL Name:** ``mfa_activate``
 

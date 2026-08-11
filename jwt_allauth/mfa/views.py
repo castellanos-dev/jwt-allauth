@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -16,7 +17,7 @@ from jwt_allauth.constants import (
 )
 
 from jwt_allauth.tokens.app_settings import RefreshToken
-from jwt_allauth.utils import build_token_response, load_user
+from jwt_allauth.utils import build_token_response, is_email_verified, load_user
 from .serializers import (
     MFAActivateSerializer,
     MFAVerifySerializer,
@@ -168,7 +169,28 @@ class MFAActivateView(APIView):
         # issue tokens for immediate login/registration completion.
         # This covers both login bootstrap and registration bootstrap flows.
         if is_bootstrap and get_mfa_totp_mode() == MFA_TOTP_REQUIRED:
-            refresh = RefreshToken.for_user(user)
+            # The registration bootstrap hands out the setup challenge to an anonymous
+            # caller before the e-mail address has been confirmed, so completing the
+            # setup must not grant a session that EMAIL_VERIFICATION withholds.
+            # The login and set-password bootstraps already require a verified e-mail,
+            # so they are unaffected by this check.
+            verification_pending = bool(settings.EMAIL_VERIFICATION) and not is_email_verified(user)
+
+            refresh = RefreshToken.for_user(user, enabled=not verification_pending)
+
+            if verification_pending:
+                # Mirror RegisterView.get_response_data: no access token is issued and
+                # the refresh token stays disabled until the verification link is used.
+                return Response(
+                    {
+                        "success": True,
+                        "recovery_codes": recovery_codes,
+                        "detail": _("Verification e-mail sent."),
+                        "refresh": str(refresh),
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
             # Use build_token_response to respect cookie configuration
             return build_token_response(
                 refresh_token=refresh,
