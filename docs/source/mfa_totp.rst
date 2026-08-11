@@ -347,6 +347,17 @@ When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, both self-service and admin-man
     POST /mfa/activate/
     # ... receives tokens
 
+    # While the address is unverified, activation completes the TOTP setup but
+    # withholds the session: no access token, and the refresh token is disabled
+    # until the verification link is followed.
+    Response (200 OK - email still unverified):
+    {
+        "success": true,
+        "recovery_codes": ["ABC12345DEF67890", ...],
+        "detail": "Verification e-mail sent.",
+        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+    }
+
 **Admin-Managed Registration** (``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``)
 
 .. code-block:: bash
@@ -413,7 +424,8 @@ When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, both self-service and admin-man
 
  - In both registration flows, when MFA is REQUIRED, **no tokens are issued during registration or password setup**
  - Users receive a ``setup_challenge_id`` instead, which allows access to ``/mfa/setup/`` and ``/mfa/activate/`` without authentication
- - After successful MFA activation using ``setup_challenge_id``, **tokens are always issued** via ``/mfa/activate/`` (using ``build_token_response()``), completing login/registration in a single step
+ - After successful MFA activation using ``setup_challenge_id``, tokens are issued via ``/mfa/activate/`` (using ``build_token_response()``), completing login/registration in a single step
+ - The one exception is self-service registration with ``EMAIL_VERIFICATION = True``: the challenge is handed to an anonymous caller before the address is confirmed, so ``/mfa/activate/`` returns no access token and the refresh token is issued disabled until the verification link is used. ``EMAIL_VERIFICATION`` is therefore never bypassed by the MFA bootstrap
  - ``build_token_response()`` respects ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` configuration for token delivery method
  - This prevents bypass of MFA requirements and ensures consistent security posture across all registration methods
 
