@@ -89,6 +89,12 @@ Authentication
 
 **URL Name:** ``token_refresh``
 
+.. note::
+
+    When ``JWT_ALLAUTH_SESSION_LIFETIME`` is configured (disabled by default), rotation stops extending the
+    session once that limit is reached: the session is revoked and the endpoint responds ``401`` with code
+    ``session_expired``, so the client must authenticate again.
+
 **/logout/** (POST) ``[Authenticated]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

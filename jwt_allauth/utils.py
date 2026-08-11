@@ -1,9 +1,12 @@
+import hashlib
 import warnings
+from datetime import timedelta
 from importlib import import_module
 from typing import Any, Dict, Optional
 
 from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress
+from django.core.exceptions import ImproperlyConfigured
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
@@ -18,6 +21,22 @@ from jwt_allauth.constants import TEMPLATE_PATHS, REFRESH_TOKEN_COOKIE
 from jwt_allauth.exceptions import NotVerifiedEmail, IncorrectCredentials
 
 string_types = (str,)
+
+
+def hash_token(token):
+    """
+    Return the digest under which a single-use token is stored at rest.
+
+    Tokens sent to the user are credentials on their own, so only their digest is
+    persisted: read access to the database must not hand out usable tokens.
+
+    Args:
+        token (str): Raw token as delivered to the user.
+
+    Returns:
+        str: Hex-encoded SHA-256 digest of the token.
+    """
+    return hashlib.sha256(str(token).encode()).hexdigest()
 
 
 def _get_cookie_max_age():
@@ -36,6 +55,24 @@ def _get_cookie_max_age():
     if lifetime is not None:
         return int(lifetime.total_seconds())
     return None
+
+
+def get_session_lifetime():
+    """Resolve the absolute lifetime of a session.
+
+    ``None`` (the default) keeps the sliding behaviour: a session stays alive for as
+    long as it is used, and only dies after ``REFRESH_TOKEN_LIFETIME`` of inactivity.
+
+    When ``JWT_ALLAUTH_SESSION_LIFETIME`` is set to a timedelta, a session starts when
+    the user authenticates and cannot be extended past that limit by rotating the
+    refresh token: once it is reached the user has to log in again.
+    """
+    lifetime = getattr(settings, "JWT_ALLAUTH_SESSION_LIFETIME", None)
+    if lifetime is not None and not isinstance(lifetime, timedelta):
+        raise ImproperlyConfigured(
+            "jwt-allauth: JWT_ALLAUTH_SESSION_LIFETIME must be a datetime.timedelta or None."
+        )
+    return lifetime
 
 
 def _get_cookie_secure():

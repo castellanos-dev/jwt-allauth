@@ -10,6 +10,12 @@ class NotVerifiedEmail(AuthenticationFailed):
     default_code = "email_not_verified"
 
 
+class SessionExpired(AuthenticationFailed):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    default_detail = _("Session reached its maximum lifetime. Please log in again")
+    default_code = "session_expired"
+
+
 class IncorrectCredentials(AuthenticationFailed):
     status_code = status.HTTP_401_UNAUTHORIZED
     default_detail = _("Incorrect credentials")

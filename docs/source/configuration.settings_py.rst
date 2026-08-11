@@ -19,6 +19,8 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME`` - refresh token lifetime (default: ``timedelta(days=14)``).
 
+    - ``JWT_ALLAUTH_SESSION_LIFETIME`` - absolute lifetime of a session (default: ``None``, no limit). By default sessions are sliding: they stay alive for as long as they are used and expire after ``JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME`` of inactivity. Set a ``timedelta`` to also cap the total life of a session: rotation can no longer extend it past that deadline, the refresh endpoint then revokes the session and the user has to log in again. Useful when a policy requires periodic re-authentication (e.g. NIST SP 800-63B) or to bound the exposure of a leaked refresh token that the legitimate user never rotates again.
+
     - ``JWT_ALLAUTH_COLLECT_USER_AGENT`` - whether to collect user agent and IP information (default: ``False``).
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` - whether to send refresh tokens as HTTP-only cookies instead of in the JSON response payload (default: ``True``).

@@ -54,6 +54,10 @@ class JWTAllauthAppConfig(AppConfig):
         if getattr(settings, 'BLACKLIST_AFTER_ROTATION', False):
             raise ValueError('Token blacklist is not supported.')
 
+        session_lifetime = getattr(settings, 'JWT_ALLAUTH_SESSION_LIFETIME', None)
+        if session_lifetime is not None and not isinstance(session_lifetime, timedelta):
+            raise ValueError('JWT_ALLAUTH_SESSION_LIFETIME must be a datetime.timedelta or None.')
+
         settings.EMAIL_VERIFICATION = getattr(settings, 'EMAIL_VERIFICATION', False)
         if not hasattr(settings, 'ACCOUNT_ADAPTER'):
             settings.ACCOUNT_ADAPTER = 'jwt_allauth.adapter.JWTAllAuthAdapter'
