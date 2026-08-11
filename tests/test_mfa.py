@@ -1239,6 +1239,24 @@ class MFARequiredModeRegistrationTests(TestsMixin):
         self.assertNotIn('refresh', resp)
         self.assertEqual(get_user_model().objects.all().count(), user_count + 1)
 
+    def test_required_mode_registration_existing_email_is_not_disclosed(self):
+        """A taken address gets the same challenge-shaped response, leading nowhere."""
+        user_count = get_user_model().objects.all().count()
+        data = self.REGISTRATION_DATA.copy()
+        data['email'] = self.EMAIL
+
+        resp = self.post(self.register_url, data=data, status_code=201)
+        self.assertTrue(resp['mfa_setup_required'])
+        self.assertIn('setup_challenge_id', resp)
+        self.assertEqual(get_user_model().objects.all().count(), user_count)
+
+        # Redeeming it fails exactly like redeeming an expired challenge does.
+        self.post(
+            self.setup_url,
+            data={'setup_challenge_id': resp['setup_challenge_id']},
+            status_code=401
+        )
+
     def test_required_mode_registration_email_verification_true_includes_message(self):
         """Test that detail message is included when EMAIL_VERIFICATION=True"""
         resp = self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)

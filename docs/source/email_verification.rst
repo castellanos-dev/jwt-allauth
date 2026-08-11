@@ -13,3 +13,11 @@ To enable the email verification, configure the email provider in your ``setting
     EMAIL_HOST_PASSWORD = ...
     EMAIL_USE_TLS = ...
     DEFAULT_FROM_EMAIL = ...
+
+.. note::
+
+    With verification enabled, registering an address that is already in use is answered exactly
+    like a fresh registration, so the endpoint cannot be used to find out who is registered. The
+    owner of the address receives a notice instead of a confirmation link, and the response carries
+    no refresh token. See :doc:`api_endpoints` for the details and for how to opt out through
+    ``ACCOUNT_PREVENT_ENUMERATION``.

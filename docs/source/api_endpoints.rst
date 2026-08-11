@@ -395,19 +395,39 @@ Registration
    * - Location
      - Field
      - Description
-   * - Body (JSON, optional)
-     - ``key``
-     - Authentication token when email verification is disabled.
-   * - Body (JSON)
-     - ``email``
-     - Registered email address.
    * - Body (JSON)
      - ``detail``
      - Message indicating that a verification e-mail has been sent when email verification is enabled.
+   * - Body (JSON, optional)
+     - ``refresh``
+     - Refresh token. Only when ``EMAIL_VERIFICATION = False``, or when enumeration prevention is turned off (see the note below).
+   * - Body (JSON, optional)
+     - ``access``
+     - Access token, only when ``EMAIL_VERIFICATION = False``.
+   * - Body (JSON, optional)
+     - ``mfa_setup_required``
+     - When MFA mode is REQUIRED. The response contains a ``setup_challenge_id`` to bootstrap MFA setup.
 
 **URL Name:** ``rest_register``
 
 .. note:: Disabled when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True`` (the open registration endpoint is removed in admin-managed mode).
+
+.. note::
+
+    **Account enumeration.** When email verification is mandatory, signing up with an address that
+    is already in use gets the very same ``201`` response as a fresh sign-up: no account is created
+    and the owner of the address receives a notice instead of a confirmation link. This follows
+    allauth's ``ACCOUNT_PREVENT_ENUMERATION`` (enabled by default), so the endpoint cannot be used
+    to find out who is registered.
+
+    A refresh token is not part of that response, since one cannot be issued for an address that
+    belongs to somebody else — its presence alone would give the answer away. It is of no use until
+    the address is verified anyway: authenticate through ``/login/`` once it is.
+
+    Set ``ACCOUNT_PREVENT_ENUMERATION = False`` to opt out, in which case a conflicting address is
+    rejected with ``400`` and the refresh token is issued as before. With ``EMAIL_VERIFICATION =
+    False`` the conflict is always reported, as a successful sign-up answers with session tokens
+    that cannot be faked.
 
 **/registration/user-register/** (POST) ``[Admin role]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

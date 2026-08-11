@@ -4,6 +4,7 @@ from datetime import timedelta
 from importlib import import_module
 from typing import Any, Dict, Optional
 
+from allauth.account import app_settings as allauth_settings
 from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress
 from django.core.exceptions import ImproperlyConfigured
@@ -73,6 +74,26 @@ def get_session_lifetime():
             "jwt-allauth: JWT_ALLAUTH_SESSION_LIFETIME must be a datetime.timedelta or None."
         )
     return lifetime
+
+
+def enumeration_prevented():
+    """Whether sign-up must hide that an e-mail address is already in use.
+
+    Follows allauth's ``ACCOUNT_PREVENT_ENUMERATION`` (enabled by default), so that a
+    single setting governs the behaviour of the whole project.
+
+    Hiding the conflict is only possible while e-mail verification is mandatory: when
+    it is disabled a successful registration answers with session tokens straight
+    away, and those cannot be produced for an address that belongs to somebody else.
+    In that case the conflict is reported to the caller as before.
+
+    Returns:
+        bool: ``True`` when the registration endpoint must answer a conflicting
+        address exactly as it answers a fresh sign-up.
+    """
+    if not bool(getattr(settings, 'EMAIL_VERIFICATION', False)):
+        return False
+    return bool(allauth_settings.PREVENT_ENUMERATION)
 
 
 def _get_cookie_secure():
