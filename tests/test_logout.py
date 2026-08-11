@@ -129,10 +129,25 @@ class LogoutTests(TestsMixin):
 
     @override_settings(JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False)
     def test_logout_idempotency(self):
+        # Authenticated from a second session, because logging out revokes the access
+        # token of the session being closed and the endpoint requires authentication.
+        other_session = RefreshToken().for_user(self.USER)
+
         self.token = self.ACCESS
         self.post(self.logout_url, data={'refresh': str(self.TOKEN)}, status_code=200)
+
+        self.token = str(other_session.access_token)
         resp = self.post(self.logout_url, data={'refresh': str(self.TOKEN)}, status_code=400)
         self.assertIn('Invalid token.', resp['detail'])
+
+    @override_settings(JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False)
+    def test_logout_revokes_the_access_token_of_the_session(self):
+        self.token = self.ACCESS
+        self.post(self.logout_url, data={'refresh': str(self.TOKEN)}, status_code=200)
+
+        # The access token of the closed session is rejected right away, it does not stay
+        # usable until it expires.
+        self.post(self.logout_url, data={'refresh': str(self.TOKEN)}, status_code=401)
 
     @override_settings(JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False)
     def test_tampered_token_logout(self):

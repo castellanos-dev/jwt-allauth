@@ -1,8 +1,10 @@
 Refresh token
 =============
 
-Since this library is security and performance based, the authentication is performed in a completely stateless way,
-which means the databased is not hit at every request to load the user information. The refresh token class can be
+Since this library is security and performance based, the authentication is performed in a nearly stateless way,
+which means the user information is never loaded from the database to authenticate a request — only the session
+of the access token is checked against the whitelist, and that check can be disabled (see `Session revocation`_).
+The refresh token class can be
 enhanced to incorporate additional data within its payload. This supplementary
 information will automatically propagate to the access tokens during their generation. Additional user attributes can be included via the ``JWT_ALLAUTH_USER_ATTRIBUTES`` setting. By embedding such data
 directly in the tokens, this approach reduces reliance on frequent database queries, thereby alleviating server load.
@@ -23,6 +25,54 @@ The following constants should be included in the settings.py file:
     - ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` - whether to send refresh tokens as HTTP-only cookies instead of in the JSON response payload (default: ``True``).
 
     - ``JWT_ALLAUTH_SESSION_LIFETIME`` - absolute lifetime of a session (default: ``None``, no limit).
+
+    - ``JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK`` - whether access tokens are checked against the refresh token whitelist on every request (default: ``True``).
+
+Session revocation
+------------------
+
+Revoking a session removes its refresh tokens from the whitelist, which stops any further rotation. Access
+tokens, however, are self-contained: nothing in them says whether the session they belong to is still alive.
+Every access token already handed out therefore has to be rejected explicitly, otherwise it keeps working
+until it expires on its own — up to ``JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME`` after the revocation.
+
+That is what the authentication classes in :mod:`jwt_allauth.authentication` do: on each authenticated request
+they check that the ``session`` claim of the access token still matches a whitelisted refresh token, and answer
+``401`` with code ``token_not_valid`` when it does not. ``jwt_allauth.authentication.JWTAllAuthAuthentication``
+is configured as the default authentication class, and it keeps the stateless user of simplejwt's
+``JWTStatelessUserAuthentication`` — the user table is still never hit. The check applies to every way a
+session ends: ``/logout/``, ``/logout-all/``, a password change or reset, the absolute session lifetime, a
+deactivated account, and the detection of a reused refresh token.
+
+Reusing a rotated refresh token is the case that motivates it. Rotation makes the replay detectable, but the
+attacker that replayed the token has already obtained a fresh access token; without this check, revoking the
+session locks out the legitimate user immediately (its next rotation fails) while the attacker keeps working
+until its access token expires.
+
+If a project sets its own ``DEFAULT_AUTHENTICATION_CLASSES``, mix
+``jwt_allauth.authentication.SessionRevocationMixin`` into the authentication class to keep revocation
+effective:
+
+.. code-block:: python
+
+    from rest_framework_simplejwt.authentication import JWTAuthentication
+
+    from jwt_allauth.authentication import SessionRevocationMixin
+
+
+    class MyAuthentication(SessionRevocationMixin, JWTAuthentication):
+        pass
+
+A warning is emitted at startup when ``DEFAULT_AUTHENTICATION_CLASSES`` uses simplejwt's classes directly, since
+revocation would then have no effect on access tokens.
+
+The check costs one indexed query per authenticated request. Setting
+``JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK = False`` removes it and restores fully stateless authentication; with
+that setting, keep ``JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME`` short, as it becomes the window during which a revoked
+session remains usable.
+
+Tokens without a ``session`` claim are not affected — the one-time capabilities issued by the password reset and
+email confirmation flows carry their own single-use validation.
 
 Session lifetime
 ----------------

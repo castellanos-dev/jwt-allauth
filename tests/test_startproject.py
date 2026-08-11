@@ -67,7 +67,8 @@ MIDDLEWARE = [
 
         # Check if REST framework settings are added
         self.assertIn("REST_FRAMEWORK", content)
-        self.assertIn("rest_framework_simplejwt.authentication.JWTStatelessUserAuthentication", content)
+        self.assertIn("jwt_allauth.authentication.JWTAllAuthAuthentication", content)
+        self.assertIn("JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK = True", content)
 
         # Check if email settings are added
         self.assertIn("EMAIL_VERIFICATION = True", content)

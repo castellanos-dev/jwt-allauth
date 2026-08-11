@@ -122,12 +122,12 @@ class JWTAllauthAppConfig(AppConfig):
         if not hasattr(settings, 'REST_FRAMEWORK'):
             settings.REST_FRAMEWORK = {
                 'DEFAULT_AUTHENTICATION_CLASSES': (
-                    'rest_framework_simplejwt.authentication.JWTStatelessUserAuthentication',
+                    'jwt_allauth.authentication.JWTAllAuthAuthentication',
                 )
             }
         elif 'DEFAULT_AUTHENTICATION_CLASSES' not in settings.REST_FRAMEWORK:
             settings.REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = (
-                'rest_framework_simplejwt.authentication.JWTStatelessUserAuthentication',
+                'jwt_allauth.authentication.JWTAllAuthAuthentication',
             )
 
         if not hasattr(settings, 'AUTHENTICATION_BACKENDS'):
@@ -143,3 +143,10 @@ class JWTAllauthAppConfig(AppConfig):
 
         reload(rest_framework_simplejwt.settings)
         reload(allauth.app_settings)
+
+        # Imported last: it pulls in the token models, which need a populated app
+        # registry, and simplejwt's authentication module, which reads the settings
+        # reloaded just above at import time.
+        from jwt_allauth.authentication import warn_if_revocation_is_not_enforced
+
+        warn_if_revocation_is_not_enforced(settings.REST_FRAMEWORK)

@@ -95,6 +95,13 @@ Authentication
     session once that limit is reached: the session is revoked and the endpoint responds ``401`` with code
     ``session_expired``, so the client must authenticate again.
 
+.. note::
+
+    Revoking a session — replaying a rotated refresh token, logging out, changing the password, reaching the
+    absolute session lifetime or deactivating the account — also invalidates the access tokens already issued
+    for it: authenticated endpoints answer ``401`` with code ``token_not_valid`` right away instead of honouring
+    them until they expire. See :doc:`refresh_token` to opt out of that check.
+
 **/logout/** (POST) ``[Authenticated]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

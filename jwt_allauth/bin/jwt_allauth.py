@@ -218,9 +218,14 @@ AUTHENTICATION_BACKENDS = (
 # Django Rest Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTStatelessUserAuthentication',
+        'jwt_allauth.authentication.JWTAllAuthAuthentication',
     )
 }
+
+# Check on every authenticated request that the session behind the access token has not
+# been revoked. Set to False for fully stateless authentication, at the cost of revoked
+# sessions staying usable until their access token expires.
+JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK = True
 
 from datetime import timedelta
 
