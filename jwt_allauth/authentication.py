@@ -1,20 +1,16 @@
 """
-Authentication classes that enforce server-side session revocation.
+Authentication classes with an optional server-side session revocation check.
 
 Access tokens are self-contained: nothing in them tells the server whether the session
-they belong to is still alive. Revoking a session — through ``/logout/``,
-``/logout-all/``, a password change, an absolute session lifetime, a deactivated account
-or the detection of a reused refresh token — removes the session from the refresh token
-whitelist, which stops any further rotation. Without the check implemented here, every
-access token already handed out for that session stays usable until it expires on its
-own, so an attacker that has just rotated a stolen refresh token keeps a working access
-token for up to ``JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME`` after the theft is detected.
+they belong to is still alive. Revoking a session removes it from the refresh token
+whitelist, which stops rotation, but the access tokens already issued for it stay usable
+until they expire on their own.
 
-The classes below close that window by verifying, on each authenticated request, that
-the ``session`` claim of the access token still matches a whitelisted refresh token.
+Setting ``JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK = True`` closes that window, at the cost
+of one indexed query per authenticated request. It is disabled by default: authentication
+stays fully stateless and the exposure after a revocation is bounded by
+``JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME``.
 """
-
-import warnings
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -35,7 +31,7 @@ def session_check_enabled() -> bool:
 
     Read at call time so that ``override_settings`` and runtime changes are honoured.
     """
-    return bool(getattr(settings, SESSION_CHECK_SETTING, True))
+    return bool(getattr(settings, SESSION_CHECK_SETTING, False))
 
 
 def session_is_active(session: str) -> bool:
@@ -52,6 +48,8 @@ def session_is_active(session: str) -> bool:
 def validate_session(validated_token) -> None:
     """
     Reject an access token whose session has been revoked.
+
+    Does nothing unless ``JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK`` is enabled.
 
     Tokens without a ``session`` claim are left untouched. Those are not session tokens:
     the one-time capabilities issued by the password reset and email confirmation flows
@@ -96,50 +94,13 @@ class JWTAllAuthAuthentication(SessionRevocationMixin, JWTStatelessUserAuthentic
     Default authentication class.
 
     Keeps the stateless user of ``JWTStatelessUserAuthentication`` — the user is built
-    from the token claims, the user table is never hit — and adds a single indexed query
-    against the refresh token whitelist so that revoked sessions stop being accepted
-    immediately.
-
-    Set ``JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK = False`` to skip that query and go back
-    to fully stateless authentication, where revocation only takes effect once the access
-    token expires.
+    from the token claims, the user table is never hit — and applies the session
+    revocation check when ``JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK`` is enabled.
     """
 
 
 class JWTAllAuthDBAuthentication(SessionRevocationMixin, JWTAuthentication):
     """
-    Same check as :class:`JWTAllAuthAuthentication`, on top of the simplejwt
+    Same behaviour as :class:`JWTAllAuthAuthentication`, on top of the simplejwt
     authentication class that loads the user from the database.
     """
-
-
-def warn_if_revocation_is_not_enforced(rest_framework_settings) -> None:
-    """
-    Warn when the session check is enabled but no authentication class applies it.
-
-    Called from the app config, after ``DEFAULT_AUTHENTICATION_CLASSES`` has been
-    resolved. A project that swapped in simplejwt's own classes would silently keep
-    honouring access tokens of revoked sessions.
-    """
-    if not session_check_enabled():
-        return
-
-    configured = rest_framework_settings.get('DEFAULT_AUTHENTICATION_CLASSES') or ()
-    paths = [
-        klass if isinstance(klass, str) else f'{klass.__module__}.{klass.__qualname__}'
-        for klass in configured
-    ]
-    if any(path.startswith('jwt_allauth.') for path in paths):
-        return
-    if not any(path.startswith('rest_framework_simplejwt.') for path in paths):
-        return
-
-    warnings.warn(
-        "jwt-allauth: DEFAULT_AUTHENTICATION_CLASSES uses simplejwt's authentication "
-        "classes directly, so access tokens are not checked against the refresh token "
-        "whitelist and revoked sessions stay usable until their access token expires. "
-        "Use 'jwt_allauth.authentication.JWTAllAuthAuthentication' (or mix "
-        "'jwt_allauth.authentication.SessionRevocationMixin' into your own class), or "
-        f"set {SESSION_CHECK_SETTING} = False to silence this warning.",
-        stacklevel=2,
-    )

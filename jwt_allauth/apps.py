@@ -143,10 +143,3 @@ class JWTAllauthAppConfig(AppConfig):
 
         reload(rest_framework_simplejwt.settings)
         reload(allauth.app_settings)
-
-        # Imported last: it pulls in the token models, which need a populated app
-        # registry, and simplejwt's authentication module, which reads the settings
-        # reloaded just above at import time.
-        from jwt_allauth.authentication import warn_if_revocation_is_not_enforced
-
-        warn_if_revocation_is_not_enforced(settings.REST_FRAMEWORK)

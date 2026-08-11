@@ -222,11 +222,6 @@ REST_FRAMEWORK = {
     )
 }
 
-# Check on every authenticated request that the session behind the access token has not
-# been revoked. Set to False for fully stateless authentication, at the cost of revoked
-# sessions staying usable until their access token expires.
-JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK = True
-
 from datetime import timedelta
 
 # JWT settings
