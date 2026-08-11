@@ -50,3 +50,7 @@ included all the roles allowed for the corresponding permission.
     class UserDetailsView(RetrieveUpdateAPIView):
         serializer_class = UserDetailsSerializer
         permission_classes = (CreateUserPermission,)
+
+.. note:: Login, refresh, registration, email confirmation and the password reset flow declare their
+   own permission classes, so a restrictive ``DEFAULT_PERMISSION_CLASSES`` (e.g. ``IsAuthenticated``)
+   in ``REST_FRAMEWORK`` does not lock the endpoints a user must reach before holding a token.

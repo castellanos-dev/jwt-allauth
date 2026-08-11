@@ -34,6 +34,11 @@ New Features
 
 - **Optional absolute session lifetime**: sessions remain sliding by default — they stay alive for as long as they are used and expire after ``JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME`` of inactivity — but the new ``JWT_ALLAUTH_SESSION_LIFETIME`` setting (default ``None``, no limit) caps how long a session may live in total, no matter how often it is refreshed. Refresh tokens now carry a ``session_iat`` claim, set when the session starts and preserved across rotations, so the limit is measured from the login instead of the last rotation. When it is reached the refresh endpoint revokes the whole session and answers ``401`` with code ``session_expired``; until then no token is issued with an expiration beyond that deadline. Useful for deployments that must re-authenticate on a schedule (e.g. NIST SP 800-63B).
 
+Bug Fixes
+~~~~~~~~~
+
+- **Password reset link kept public**: ``PasswordResetConfirmView`` did not declare ``permission_classes``, so it inherited the project's ``DEFAULT_PERMISSION_CLASSES``. Where that default is ``IsAuthenticated``, the link sent by email answered ``401`` to the anonymous user clicking it and the reset flow was unusable. The view now declares ``AllowAny``, like the other password reset entry points.
+
 Version 1.2.4
 -------------
 
