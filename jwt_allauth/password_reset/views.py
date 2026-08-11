@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.db import transaction
 from django.http import HttpResponseRedirect, HttpResponseNotFound
 from django.shortcuts import render
 from django.urls import reverse_lazy
@@ -146,7 +147,12 @@ class PasswordResetConfirmView(GenericAPIView):
                     'purpose': PASS_RESET_ACCESS
                 })
                 token_serializer.is_valid(raise_exception=True)
-                token_serializer.save()
+
+                with transaction.atomic():
+                    # Requesting a second reset must not leave the capability handed out
+                    # by an earlier link usable: only the latest one stays alive.
+                    GenericTokenModel.objects.filter(user=user, purpose=PASS_RESET_ACCESS).delete()
+                    token_serializer.save()
 
                 return response
         return render(self.request, 'password/reset.html', {
@@ -187,11 +193,10 @@ class ResetPasswordView(GenericAPIView):
         return super(ResetPasswordView, self).dispatch(*args, **kwargs)
 
     def post(self, request):
-        # check the token has not been used
-        query_set = GenericTokenModel.objects.filter(token=request.auth['jti'], purpose=PASS_RESET_ACCESS)
-        if len(query_set) != 1:
+        # Claim the capability atomically: two requests arriving at once with the same
+        # cookie must not both get to set a password.
+        if not GenericTokenModel.consume(request.auth['jti'], PASS_RESET_ACCESS):
             raise InvalidToken()
-        query_set.delete()  # single use
 
         # Load the user in the request
         request.user = get_user_model().objects.get(id=self.request.user.id)
@@ -227,11 +232,10 @@ class SetPasswordView(GenericAPIView):
         return super(SetPasswordView, self).dispatch(*args, **kwargs)
 
     def post(self, request):
-        # check the token has not been used
-        query_set = GenericTokenModel.objects.filter(token=request.auth['jti'], purpose=PASS_SET_ACCESS)
-        if len(query_set) != 1:
+        # Claim the capability atomically: two requests arriving at once with the same
+        # cookie must not both get to set a password.
+        if not GenericTokenModel.consume(request.auth['jti'], PASS_SET_ACCESS):
             raise InvalidToken()
-        query_set.delete()  # single use
 
         # Load the user in the request
         try:

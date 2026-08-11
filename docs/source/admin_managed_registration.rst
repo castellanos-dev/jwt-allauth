@@ -74,6 +74,7 @@ Email verification behavior
 - The verification link validity is determined by ``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS`` (default: 3 days).
 - The link only grants access to the password set UI while the account has no password. Once a password exists, the account must use the password reset flow.
 - Only the SHA-256 digest of the confirmation key is stored, so the key itself cannot be recovered from the database.
+- The one-time token is claimed atomically, so two simultaneous set-password requests carrying the same cookie cannot both succeed.
 - The set-password endpoint does not alter email verification status.
 
 Email templates

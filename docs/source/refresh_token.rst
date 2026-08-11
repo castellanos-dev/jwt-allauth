@@ -14,6 +14,10 @@ Every rotation (i.e. every call to the refresh endpoint) re-reads the user from 
 refresh instead of surviving until the refresh token expires. Rotation is also refused (and the user's refresh tokens
 are removed from the whitelist) when the account is no longer active.
 
+A refresh token is consumed exactly once. The rotation runs in a single transaction that locks the whitelist entry
+and claims it by deleting it, so two requests presenting the same token at the same time cannot both obtain a
+successor: one rotates, the other is treated as a reused token and its whole session is revoked.
+
 The following constants should be included in the settings.py file:
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN`` - refresh token class (default: ``jwt_allauth.tokens.tokens.RefreshToken``).

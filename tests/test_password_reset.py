@@ -131,6 +131,47 @@ class PasswordResetTests(TestsMixin):
         token2 = GenericTokenModel.objects.first()
         self.assertNotEqual(token1.token, token2.token)
 
+    def _issue_reset_capability(self):
+        """Walk a reset link end to end and return the capability cookie it hands out."""
+        token = GenericToken(purpose=PASS_RESET).make_token(self.USER)
+        uid = urlsafe_base64_encode(force_bytes(self.USER.pk))
+        resp = self.client.get(reverse("password_reset_confirm", args=(uid, token)))
+        self.assertEqual(resp.status_code, 302)
+        return resp.cookies[PASS_RESET_COOKIE].value
+
+    def test_second_reset_supersedes_the_previous_capability(self):
+        """Two reset requests must not leave two capabilities alive at the same time."""
+        superseded = self._issue_reset_capability()
+        current = self._issue_reset_capability()
+        self.assertNotEqual(superseded, current)
+
+        data = {"new_password1": "P@sw0rd-set", "new_password2": "P@sw0rd-set"}
+
+        self.client.cookies.load({PASS_RESET_COOKIE: superseded})
+        resp = self.client.post(
+            reverse("rest_password_reset_set_new"), data=data, content_type="application/json"
+        )
+        self.assertEqual(resp.status_code, 401)
+
+        self.client.cookies.load({PASS_RESET_COOKIE: current})
+        resp = self.client.post(
+            reverse("rest_password_reset_set_new"), data=data, content_type="application/json"
+        )
+        self.assertEqual(resp.status_code, 200)
+
+    def test_reset_capability_is_claimed_once(self):
+        """Only the caller that removed the row owns the capability."""
+        refresh_token = RefreshToken()
+        refresh_token[FOR_USER] = self.USER.id
+        refresh_token[ONE_TIME_PERMISSION] = PASS_RESET_ACCESS
+        access_token = refresh_token.access_token
+        GenericTokenModel.objects.create(
+            token=access_token["jti"], purpose=PASS_RESET_ACCESS, user=self.USER
+        )
+
+        self.assertTrue(GenericTokenModel.consume(access_token["jti"], PASS_RESET_ACCESS))
+        self.assertFalse(GenericTokenModel.consume(access_token["jti"], PASS_RESET_ACCESS))
+
     def test_reset_password_tokens(self):
         data = {"new_password1": "P@sw0rd-set", "new_password2": "P@sw0rd-set"}
 
