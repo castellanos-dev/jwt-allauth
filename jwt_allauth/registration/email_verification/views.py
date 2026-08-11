@@ -23,6 +23,7 @@ from jwt_allauth.constants import (
     EMAIL_CONFIRMATION,
     EMAIL_VERIFICATION_FAILED_TEMPLATE,
 )
+from jwt_allauth.csrf import ensure_csrf_cookie
 from jwt_allauth.registration.email_verification.serializers import VerifyEmailSerializer
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
@@ -124,6 +125,11 @@ class VerifyEmailView(APIView, ConfirmEmailView):
 
             user = token_entry.user
 
+            # A deactivated account gets no capability: login and refresh both refuse it,
+            # and setting the password opens a session.
+            if not user.is_active:
+                return self._verification_failed(request)
+
             # The password-set capability only makes sense for an invited account that has
             # not chosen a password yet. Issuing it for an account that already has one
             # would turn any confirmation link into a password reset link, bypassing the
@@ -149,6 +155,9 @@ class VerifyEmailView(APIView, ConfirmEmailView):
             access_token = refresh_token.access_token
 
             response = HttpResponseRedirect(self.form_url)
+            # The form this redirects to has to send a CSRF token back with the new
+            # password, so the cookie holding it goes out together with the capability.
+            ensure_csrf_cookie(request)
             response.set_cookie(
                 key=SET_PASSWORD_COOKIE,
                 value=str(access_token),

@@ -1,6 +1,7 @@
 import re
 
 from allauth.account.models import EmailAddress, EmailConfirmationHMAC
+from django.conf import settings as django_settings
 from django.core import mail
 from django.contrib.auth import get_user_model
 from django.test import override_settings
@@ -16,7 +17,7 @@ from jwt_allauth.constants import (
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel
 from jwt_allauth.utils import hash_token
-from .mixins import TestsMixin
+from .mixins import APIClient, TestsMixin
 
 
 @override_settings(
@@ -357,6 +358,77 @@ class AdminManagedRegistrationTests(TestsMixin):
         self.assertEqual(
             GenericTokenModel.objects.filter(user=invited, purpose=PASS_SET_ACCESS).count(), 1
         )
+
+    def _invite(self, username, email=None, **user_kwargs):
+        """Create an invited account and the confirmation it received."""
+        email = email or self.INVITED_EMAIL
+        invited = get_user_model().objects.create_user(username, email=email, **user_kwargs)
+        email_addr = EmailAddress.objects.create(
+            user=invited, email=email, verified=False, primary=True
+        )
+        key = EmailConfirmationHMAC(email_addr).key
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+        return invited, key
+
+    def test_confirmation_of_deactivated_account_grants_nothing(self):
+        """
+        A deactivated account gets no password-set capability: login and refresh both
+        refuse it, and setting the password opens a session.
+        """
+        invited, key = self._invite('invited_deactivated', is_active=False)
+
+        resp = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertTemplateUsed(resp, 'registration/verification_failed.html')
+        self.assertNotIn(SET_PASSWORD_COOKIE, self.client.cookies)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(user=invited, purpose=PASS_SET_ACCESS).exists()
+        )
+
+    def test_set_password_rejected_for_deactivated_account(self):
+        """A capability issued before the deactivation is not honoured after it."""
+        invited, key = self._invite('invited_then_deactivated')
+        self.client.get(reverse('account_confirm_email', args=[key]))
+        self.assertIn(SET_PASSWORD_COOKIE, self.client.cookies)
+
+        get_user_model().objects.filter(pk=invited.pk).update(is_active=False)
+
+        resp = self.client.post(
+            self.set_password_url,
+            data={"new_password1": "A-1_newpass", "new_password2": "A-1_newpass"},
+            content_type='application/json'
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertNotIn(REFRESH_TOKEN_COOKIE, resp.cookies)
+        invited.refresh_from_db()
+        self.assertFalse(invited.has_usable_password())
+
+    def test_set_password_requires_a_csrf_token(self):
+        """
+        The capability travels in a cookie, so the endpoint that consumes it has to
+        check the CSRF token — the ``SameSite`` policy of the cookie is a deployment
+        setting, not a guarantee.
+        """
+        csrf_client = APIClient(enforce_csrf_checks=True)
+        _, key = self._invite('invited_csrf')
+        verify_resp = csrf_client.get(reverse('account_confirm_email', args=[key]))
+        self.assertIn(SET_PASSWORD_COOKIE, verify_resp.cookies)
+        # The redirect carries the token the frontend has to send back.
+        self.assertIn(django_settings.CSRF_COOKIE_NAME, verify_resp.cookies)
+
+        data = {"new_password1": "A-1_newpass", "new_password2": "A-1_newpass"}
+        resp = csrf_client.post(self.set_password_url, data=data, content_type='application/json')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+        resp = csrf_client.post(
+            self.set_password_url,
+            data=data,
+            content_type='application/json',
+            HTTP_X_CSRFTOKEN=csrf_client.cookies[django_settings.CSRF_COOKIE_NAME].value,
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
     def test_set_password_flow(self):
         """

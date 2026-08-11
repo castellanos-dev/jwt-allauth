@@ -341,6 +341,36 @@ def load_user(f):
     return wrapper
 
 
+def load_capability_user(user_id):
+    """
+    Load the account a one-time capability was issued for.
+
+    A capability is self-contained: it carries the id of the account it was minted for
+    and stays valid until it expires or is consumed, so the state of that account has
+    to be re-read when it is used. Deactivating an account ends every session of it —
+    logging in and refreshing both check ``is_active`` — and these flows end by opening
+    a session, so a capability issued before the deactivation must not be honoured
+    afterwards. An account deleted in the meantime is rejected the same way, rather
+    than surfacing as a server error.
+
+    Args:
+        user_id (int|str): Identifier carried by the capability.
+
+    Returns:
+        User: The account behind the capability.
+
+    Raises:
+        InvalidToken: if the account no longer exists or is not active.
+    """
+    try:
+        user = get_user_model().objects.get(id=user_id)
+    except get_user_model().DoesNotExist:
+        raise InvalidToken()
+    if not user.is_active:
+        raise InvalidToken()
+    return user
+
+
 def build_token_response(
     refresh_token: Any,
     access_token: Optional[str] = None,

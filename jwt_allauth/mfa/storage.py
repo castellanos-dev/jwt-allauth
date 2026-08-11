@@ -88,7 +88,18 @@ def _is_expired(created) -> bool:
     return created < timezone.now() - timedelta(seconds=MFA_TOKEN_MAX_AGE_SECONDS)
 
 
+def _purge_expired(user_id: int, purpose: str) -> None:
+    """Drop the expired tokens of a user for a single purpose."""
+    GenericTokenModel.objects.filter(
+        user_id=user_id,
+        purpose=purpose,
+        created__lt=timezone.now() - timedelta(seconds=MFA_TOKEN_MAX_AGE_SECONDS),
+    ).delete()
+
+
 def create_setup_challenge(user_id: int) -> str:
+    # A challenge nobody completes is never read again, so it is only ever dropped here.
+    _purge_expired(user_id, MFA_PURPOSE_SETUP_CHALLENGE)
     challenge_id = uuid4().hex
     GenericTokenModel.objects.create(
         user_id=user_id,
@@ -159,6 +170,7 @@ def delete_setup_secret(user_id: int) -> None:
 
 def create_login_challenge(user_id: int) -> str:
     _purge_expired_attempts(user_id)
+    _purge_expired(user_id, MFA_PURPOSE_LOGIN_CHALLENGE)
     challenge_id = uuid4().hex
     GenericTokenModel.objects.create(
         user_id=user_id,
@@ -169,11 +181,13 @@ def create_login_challenge(user_id: int) -> str:
 
 
 def get_login_challenge_user(challenge_id: str):
+    # Nothing constrains the column to a single row per challenge, so the newest match
+    # is taken rather than letting a duplicate turn a rejection into a server error.
     try:
-        token_obj = GenericTokenModel.objects.get(
+        token_obj = GenericTokenModel.objects.filter(
             token=challenge_id,
             purpose=MFA_PURPOSE_LOGIN_CHALLENGE,
-        )
+        ).latest("created")
     except GenericTokenModel.DoesNotExist:
         return None
     if _is_expired(token_obj.created):
