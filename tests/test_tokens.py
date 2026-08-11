@@ -4,7 +4,9 @@ from datetime import datetime, timedelta
 
 from allauth.account.models import EmailAddress
 from django.test import override_settings
+from rest_framework_simplejwt.tokens import AccessToken
 
+from jwt_allauth.roles import STAFF_CODE, USER_CODE
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from jwt_allauth.tokens.tokens import RefreshToken
 from jwt_allauth.tokens.tokens import RefreshToken as RefreshTokenClass
@@ -187,6 +189,52 @@ class TokenTests(TestsMixin):
         # Test new session still works
         self.client.cookies[REFRESH_TOKEN_COOKIE] = str(new_session_token)
         self.post(self.refresh_url, data={}, status_code=200)
+
+    def test_refresh_reloads_role_from_database(self):
+        """A role downgrade must apply on the next rotation, not on token expiration"""
+        self.USER.role = STAFF_CODE
+        self.USER.save()
+        token = RefreshTokenClass.for_user(self.USER)
+        self.assertEqual(token.payload['role'], STAFF_CODE)
+
+        # Privileges are revoked in the database
+        self.USER.role = USER_CODE
+        self.USER.save()
+
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = str(token)
+        refresh_response = self.client.post(self.refresh_url, data={}, format='json')
+        self.assertEqual(refresh_response.status_code, 200)
+
+        new_token = RefreshToken(refresh_response.cookies[REFRESH_TOKEN_COOKIE].value)
+        self.assertEqual(new_token.payload['role'], USER_CODE)
+        self.assertEqual(AccessToken(refresh_response.json()['access'])['role'], USER_CODE)
+
+    @override_settings(JWT_ALLAUTH_USER_ATTRIBUTES={'username': 'username'})
+    def test_refresh_reloads_user_attributes_from_database(self):
+        """Configured user attributes are regenerated from the database on rotation"""
+        token = RefreshTokenClass.for_user(self.USER)
+        self.assertEqual(token.payload['username'], self.USERNAME)
+
+        self.USER.username = 'renamed'
+        self.USER.save()
+
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = str(token)
+        refresh_response = self.client.post(self.refresh_url, data={}, format='json')
+        self.assertEqual(refresh_response.status_code, 200)
+
+        new_token = RefreshToken(refresh_response.cookies[REFRESH_TOKEN_COOKIE].value)
+        self.assertEqual(new_token.payload['username'], 'renamed')
+        self.assertEqual(str(new_token.payload['user_id']), str(self.USER.id))
+
+    def test_refresh_rejected_for_inactive_user(self):
+        """A deactivated account cannot keep rotating its refresh token"""
+        self.USER.is_active = False
+        self.USER.save()
+
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = str(self.TOKEN)
+        resp = self.post(self.refresh_url, data={}, status_code=401)
+        self.assertEqual(resp['code'], 'token_not_valid')
+        self.assertFalse(RefreshTokenWhitelistModel.objects.filter(user=self.USER).exists())
 
     def test_token_claims_integrity(self):
         # Set cookie for refresh

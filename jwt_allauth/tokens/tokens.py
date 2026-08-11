@@ -12,6 +12,10 @@ from jwt_allauth.tokens.models import GenericTokenModel
 from jwt_allauth.tokens.serializers import RefreshTokenWhitelistSerializer, GenericTokenModelSerializer
 from jwt_allauth.utils import user_agent_dict
 
+# Claims managed by the token itself. They are never regenerated from the
+# user attribute configuration.
+RESERVED_CLAIMS = ('token_type', 'exp', 'iat', 'jti', 'user_id', 'session', 'role')
+
 
 class RefreshToken(DefaultRefreshToken):
 
@@ -23,6 +27,24 @@ class RefreshToken(DefaultRefreshToken):
             id_ = uuid4().hex
         self.payload['session'] = id_
 
+    @staticmethod
+    def _attribute_map():
+        """
+        Return the configured mapping of claim name to dot-path on the user object.
+        """
+        configured_attributes = getattr(settings, 'JWT_ALLAUTH_USER_ATTRIBUTES', {})
+
+        # Accept legacy list format for backward compatibility but prefer dict.
+        # In legacy mode, the final attribute name is used as the claim key.
+        if isinstance(configured_attributes, list):
+            return {
+                attr_path.split('.')[-1]: attr_path
+                for attr_path in configured_attributes
+            }
+        if isinstance(configured_attributes, dict):
+            return configured_attributes
+        return {}
+
     def set_user_attributes(self, user):
         """
         Add configurable user attributes to the token payload.
@@ -30,19 +52,7 @@ class RefreshToken(DefaultRefreshToken):
         output claim names to dot-paths on the user object.
         Example: {'organization_id': 'organization.id', 'area_id': 'area.id'}
         """
-        configured_attributes = getattr(settings, 'JWT_ALLAUTH_USER_ATTRIBUTES', {})
-
-        # Accept legacy list format for backward compatibility but prefer dict.
-        # In legacy mode, the final attribute name is used as the claim key.
-        if isinstance(configured_attributes, list):
-            attribute_map = {
-                attr_path.split('.')[-1]: attr_path
-                for attr_path in configured_attributes
-            }
-        elif isinstance(configured_attributes, dict):
-            attribute_map = configured_attributes
-        else:
-            attribute_map = {}
+        attribute_map = self._attribute_map()
 
         # Validate configuration: output names must be unique and must not collide
         # with reserved payload keys like 'role'.
@@ -86,6 +96,19 @@ class RefreshToken(DefaultRefreshToken):
 
     def set_user_role(self, user):
         self.payload['role'] = user.role
+
+    def sync_user_claims(self, user):
+        """
+        Re-read the role and the configured user attributes from the database.
+
+        Called on refresh token rotation so that privilege changes take effect on
+        the next refresh instead of surviving until the refresh token expires.
+        """
+        for output_name in self._attribute_map():
+            if output_name not in RESERVED_CLAIMS:
+                self.payload.pop(output_name, None)
+        self.set_user_role(user)
+        self.set_user_attributes(user)
 
     @classmethod
     def for_user(cls, user, request=None, enabled=True):
