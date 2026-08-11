@@ -1,3 +1,4 @@
+import hashlib
 import warnings
 from datetime import timedelta
 from importlib import import_module
@@ -20,6 +21,22 @@ from jwt_allauth.constants import TEMPLATE_PATHS, REFRESH_TOKEN_COOKIE
 from jwt_allauth.exceptions import NotVerifiedEmail, IncorrectCredentials
 
 string_types = (str,)
+
+
+def hash_token(token):
+    """
+    Return the digest under which a single-use token is stored at rest.
+
+    Tokens sent to the user are credentials on their own, so only their digest is
+    persisted: read access to the database must not hand out usable tokens.
+
+    Args:
+        token (str): Raw token as delivered to the user.
+
+    Returns:
+        str: Hex-encoded SHA-256 digest of the token.
+    """
+    return hashlib.sha256(str(token).encode()).hexdigest()
 
 
 def _get_cookie_max_age():
