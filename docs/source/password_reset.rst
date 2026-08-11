@@ -18,6 +18,10 @@ The password reset flow follows these steps:
 
 #. System updates password and revokes access token.
 
+Both the confirmation link and the access cookie it grants are claimed atomically, so each of them is honoured
+exactly once even when two requests arrive at the same time. Requesting a new reset also supersedes the cookie
+granted by the previous one: only the most recent link can set a password.
+
 Configuration
 -------------
 
