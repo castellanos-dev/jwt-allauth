@@ -24,6 +24,32 @@ The following constants should be included in the settings.py file:
 
     - ``JWT_ALLAUTH_SESSION_LIFETIME`` - absolute lifetime of a session (default: ``None``, no limit).
 
+    - ``JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK`` - whether access tokens are checked against the refresh token whitelist on every request (default: ``False``).
+
+Session revocation
+------------------
+
+Revoking a session — ``/logout/``, ``/logout-all/``, a password change or reset, the absolute session lifetime,
+a deactivated account or the detection of a reused refresh token — removes its refresh tokens from the
+whitelist, which stops rotation. Access tokens are self-contained, so the ones already issued for that session
+keep working until they expire; ``JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME`` bounds that window.
+
+Setting ``JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK = True`` closes it: the default authentication class,
+``jwt_allauth.authentication.JWTAllAuthAuthentication``, then checks on each request that the ``session`` claim
+still matches a whitelisted refresh token and answers ``401`` with code ``token_not_valid`` when it does not.
+That costs one indexed query per authenticated request, which is why it is off by default. Projects with their
+own ``DEFAULT_AUTHENTICATION_CLASSES`` can mix in ``SessionRevocationMixin``:
+
+.. code-block:: python
+
+    from rest_framework_simplejwt.authentication import JWTAuthentication
+
+    from jwt_allauth.authentication import SessionRevocationMixin
+
+
+    class MyAuthentication(SessionRevocationMixin, JWTAuthentication):
+        pass
+
 Session lifetime
 ----------------
 

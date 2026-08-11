@@ -20,6 +20,11 @@ class TokenRefreshSerializer(serializers.Serializer):
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, str]:
         refresh = self.token_class(attrs["refresh"])
 
+        if "session" not in refresh.payload:
+            # Not a session token: it cannot be matched against the whitelist, and the
+            # reuse detection below would have no session to revoke.
+            raise InvalidToken()
+
         query_set = list(RefreshTokenWhitelistModel.objects.filter(jti=refresh.payload["jti"]).all())
         if len(query_set) == 0:
             # Suspicious operation
