@@ -658,6 +658,8 @@ Multi-Factor Authentication (MFA)
      - ``refresh_token``
      - JWT refresh token set in the ``refresh_token`` cookie (by default).
 
+Failed verifications are limited per challenge and per user; once the per-user budget is spent the endpoint answers ``429`` with a ``Retry-After`` header without checking the code. See :doc:`mfa_totp`.
+
 **URL Name:** ``mfa_verify``
 
 **/mfa/verify-recovery/** (POST)
@@ -694,6 +696,8 @@ Multi-Factor Authentication (MFA)
    * - Cookie (HTTP-only)
      - ``refresh_token``
      - JWT refresh token set in the ``refresh_token`` cookie (by default).
+
+Recovery code failures share the same budgets as ``/mfa/verify/`` and answer ``429`` the same way.
 
 **URL Name:** ``mfa_verify_recovery``
 

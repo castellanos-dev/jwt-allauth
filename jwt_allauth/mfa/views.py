@@ -11,7 +11,6 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
 from jwt_allauth.constants import (
-    MFA_PURPOSE_LOGIN_ATTEMPT,
     MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
 )
@@ -27,14 +26,16 @@ from .serializers import (
 )
 from jwt_allauth.mfa.permissions import IsAuthenticatedOrHasMFASetupChallenge
 from jwt_allauth.mfa.storage import (
+    clear_failed_login_attempts,
     delete_login_challenge,
     delete_setup_challenge,
     delete_setup_secret,
     get_login_challenge_user,
     load_setup_secret,
+    login_lockout_remaining,
+    record_failed_login_attempt,
     store_setup_secret,
 )
-from jwt_allauth.tokens.models import GenericTokenModel
 
 
 def get_mfa_totp_mode() -> str:
@@ -254,28 +255,13 @@ class MFADeactivateView(APIView):
         return Response({"success": True})
 
 
-MFA_CHALLENGE_MAX_ATTEMPTS = 5
-
-
-def _record_failed_attempt(challenge_id: str, user) -> bool:
-    """Record a failed MFA attempt in the DB. Returns True if the challenge is now invalidated."""
-    GenericTokenModel.objects.create(
-        user=user,
-        token=challenge_id,
-        purpose=MFA_PURPOSE_LOGIN_ATTEMPT,
+def _locked_out_response(retry_after: int) -> Response:
+    response = Response(
+        {"detail": "Too many failed MFA attempts. Try again later."},
+        status=status.HTTP_429_TOO_MANY_REQUESTS,
     )
-    count = GenericTokenModel.objects.filter(
-        token=challenge_id,
-        purpose=MFA_PURPOSE_LOGIN_ATTEMPT,
-    ).count()
-    if count >= MFA_CHALLENGE_MAX_ATTEMPTS:
-        delete_login_challenge(challenge_id)
-        GenericTokenModel.objects.filter(
-            token=challenge_id,
-            purpose=MFA_PURPOSE_LOGIN_ATTEMPT,
-        ).delete()
-        return True
-    return False
+    response["Retry-After"] = str(retry_after)
+    return response
 
 
 class MFAVerifyView(APIView):
@@ -300,6 +286,12 @@ class MFAVerifyView(APIView):
         if not user:
             return Response({"detail": "Challenge expired or invalid."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Refuse to check codes at all while the user is locked out, so a lockout cannot be
+        # waited out with a fresh challenge.
+        retry_after = login_lockout_remaining(user.id)
+        if retry_after:
+            return _locked_out_response(retry_after)
+
         auth_qs = Authenticator.objects.filter(user_id=user.id, type=Authenticator.Type.TOTP.value)
         if not auth_qs.exists():
             return Response({"detail": "TOTP not activated."}, status=status.HTTP_400_BAD_REQUEST)
@@ -308,12 +300,16 @@ class MFAVerifyView(APIView):
         # Validate TOTP code using django-allauth's TOTP class
         totp = TOTP(authenticator)
         if not totp.validate_code(code):
-            if _record_failed_attempt(challenge_id, user):
+            result = record_failed_login_attempt(challenge_id, user)
+            if result.locked_out:
+                return _locked_out_response(result.retry_after)
+            if result.challenge_invalidated:
                 return Response({"detail": "Too many failed attempts. Challenge invalidated."}, status=status.HTTP_400_BAD_REQUEST)
             return Response({"detail": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Delete challenge after successful verification
+        # Delete challenge and reset the attempt counter after successful verification
         delete_login_challenge(challenge_id)
+        clear_failed_login_attempts(user.id)
 
         refresh = RefreshToken.for_user(user)
         return build_token_response(refresh)
@@ -341,6 +337,10 @@ class MFAVerifyRecoveryView(APIView):
         if not user:
             return Response({"detail": "Challenge expired or invalid."}, status=status.HTTP_400_BAD_REQUEST)
 
+        retry_after = login_lockout_remaining(user.id)
+        if retry_after:
+            return _locked_out_response(retry_after)
+
         # Get recovery codes authenticator for the user
         rc_authenticator = Authenticator.objects.filter(
             user_id=user.id, type=Authenticator.Type.RECOVERY_CODES.value
@@ -351,12 +351,16 @@ class MFAVerifyRecoveryView(APIView):
         # Validate recovery code using django-allauth's RecoveryCodes class
         rc = RecoveryCodes(rc_authenticator)
         if not rc.validate_code(recovery_code):
-            if _record_failed_attempt(challenge_id, user):
+            result = record_failed_login_attempt(challenge_id, user)
+            if result.locked_out:
+                return _locked_out_response(result.retry_after)
+            if result.challenge_invalidated:
                 return Response({"detail": "Too many failed attempts. Challenge invalidated."}, status=status.HTTP_400_BAD_REQUEST)
             return Response({"detail": "Invalid recovery code."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Delete challenge after successful verification
+        # Delete challenge and reset the attempt counter after successful verification
         delete_login_challenge(challenge_id)
+        clear_failed_login_attempts(user.id)
 
         refresh = RefreshToken.for_user(user)
         return build_token_response(refresh)

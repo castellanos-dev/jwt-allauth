@@ -445,6 +445,28 @@ When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, both self-service and admin-man
 
  If a user doesn't complete MFA setup within 5 minutes, they must re-login or re-register to get a new challenge.
 
+Brute Force Limits
+------------------
+
+Failed verifications at ``/mfa/verify/`` and ``/mfa/verify-recovery/`` are limited on two levels:
+
+- **Per challenge** (``JWT_ALLAUTH_MFA_CHALLENGE_MAX_ATTEMPTS``, default ``5``): the challenge is invalidated and the user has to log in again.
+- **Per user** (``JWT_ALLAUTH_MFA_MAX_ATTEMPTS``, default ``10``, over a sliding window of ``JWT_ALLAUTH_MFA_LOCKOUT_SECONDS``, default ``900``): shared by every challenge and both endpoints, so logging in again for a fresh challenge buys no extra guesses.
+
+When the per-user budget is spent, outstanding challenges are dropped, both verification endpoints answer ``429`` with a ``Retry-After`` header **without checking the submitted code**, and ``/login/`` answers ``429`` instead of issuing a new challenge:
+
+.. code-block:: json
+
+    {
+        "detail": "Too many failed MFA attempts. Try again later."
+    }
+
+The lockout is released as the counted attempts age out of the window, and a successful verification clears the counter immediately. Both limits are applied under a user row lock, so concurrent requests cannot slip past a threshold together.
+
+.. note::
+
+    The counter follows the account, so somebody who knows a user's password can keep that user's MFA step locked for the duration of the window — the usual trade-off of an account lockout, and the reason the window is short and rolling. Set ``JWT_ALLAUTH_MFA_MAX_ATTEMPTS = 0`` to disable the per-user limit.
+
 Security Considerations
 -----------------------
 
@@ -460,6 +482,10 @@ Security Considerations
  - Setup challenges are single-purpose (MFA setup only)
  - Challenges are stored server-side in the database via ``GenericTokenModel``, not in tokens or client-side storage
  - Challenges expire after 5 minutes
+
+✅ **Bounded Guessing:**
+- Failed verifications are capped per challenge and per user, so requesting a new challenge does not reset the budget
+- The limits are enforced under a row lock, so concurrent requests cannot exceed them
 
 ✅ **Respects Configuration:**
 - Cookie preferences (HTTP-only, Secure, SameSite) are honored

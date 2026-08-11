@@ -17,6 +17,7 @@ from allauth.mfa.models import Authenticator
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.conf import settings
+from django.db import transaction
 from django.test import override_settings
 from django.urls import reverse, clear_url_caches
 from django.utils import timezone
@@ -25,8 +26,9 @@ from jwt_allauth.constants import (
     SET_PASSWORD_COOKIE, REFRESH_TOKEN_COOKIE,
     MFA_TOTP_REQUIRED, MFA_TOKEN_MAX_AGE_SECONDS, MFA_TOTP_DISABLED,
     FOR_USER, ONE_TIME_PERMISSION, PASS_SET_ACCESS,
-    MFA_PURPOSE_LOGIN_CHALLENGE,
+    MFA_PURPOSE_LOGIN_ATTEMPT, MFA_PURPOSE_LOGIN_CHALLENGE,
 )
+from jwt_allauth.mfa import storage
 from jwt_allauth.mfa.storage import (
     create_login_challenge,
     get_login_challenge_user,
@@ -762,6 +764,226 @@ class MFAVerifyRecoveryTests(TestsMixin):
         resp = self.post(self.verify_recovery_url, data={
             'challenge_id': 'test_challenge', 'recovery_code': 'TEST-CODE-001'}, status_code=403)
         self.assertEqual(resp['detail'], 'MFA TOTP is disabled.')
+
+
+@override_settings(
+    JWT_ALLAUTH_MFA_CHALLENGE_MAX_ATTEMPTS=2,
+    JWT_ALLAUTH_MFA_MAX_ATTEMPTS=3,
+    JWT_ALLAUTH_MFA_LOCKOUT_SECONDS=600,
+)
+class MFABruteForceLimitTests(TestsMixin):
+    """
+    Tests for the brute force limits of the MFA verification step.
+
+    The per-challenge limit alone is not a brake: an attacker who already has the
+    password can login again for a fresh challenge and keep guessing. These tests cover
+    the per-user budget and the lockout that closes that loop.
+    """
+
+    def setUp(self):
+        self.init()
+        self.verify_url = reverse('jwt_allauth_mfa_verify')
+        self.verify_recovery_url = reverse('jwt_allauth_mfa_verify_recovery')
+        self.totp_authenticator = Authenticator.objects.create(
+            user=self.USER,
+            type=Authenticator.Type.TOTP.value,
+            data={'secret': 'test_secret'}
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    def _attempt_count(self):
+        return GenericTokenModel.objects.filter(
+            user=self.USER,
+            purpose=MFA_PURPOSE_LOGIN_ATTEMPT,
+        ).count()
+
+    def _fail_verification(self, challenge_id, status_code=400):
+        with patch('jwt_allauth.mfa.views.TOTP') as mock_totp_class:
+            mock_totp_class.return_value.validate_code.return_value = False
+            return self.post(
+                self.verify_url,
+                data={'challenge_id': challenge_id, 'code': '000000'},
+                status_code=status_code,
+            )
+
+    def test_challenge_invalidated_after_max_attempts(self):
+        """Test that a challenge is dropped once its own attempt budget is spent"""
+        challenge_id = create_login_challenge(self.USER.id)
+
+        resp = self._fail_verification(challenge_id)
+        self.assertEqual(resp['detail'], 'Invalid code.')
+
+        resp = self._fail_verification(challenge_id)
+        self.assertEqual(resp['detail'], 'Too many failed attempts. Challenge invalidated.')
+
+        self.assertIsNone(get_login_challenge_user(challenge_id))
+
+    def test_new_challenge_does_not_reset_the_user_budget(self):
+        """Test that requesting a fresh challenge does not buy more guesses"""
+        # First challenge: spends its 2 attempts.
+        first_challenge = create_login_challenge(self.USER.id)
+        self._fail_verification(first_challenge)
+        self._fail_verification(first_challenge)
+
+        # Second challenge: only 1 attempt is left of the per-user budget of 3.
+        second_challenge = create_login_challenge(self.USER.id)
+        resp = self._fail_verification(second_challenge, status_code=429)
+        self.assertEqual(resp['detail'], 'Too many failed MFA attempts. Try again later.')
+        self.assertEqual(self._attempt_count(), 3)
+
+        # And the challenge is gone, so it cannot be reused during the lockout.
+        self.assertIsNone(get_login_challenge_user(second_challenge))
+
+    def test_lockout_drops_every_outstanding_challenge(self):
+        """Test that a lockout invalidates challenges issued before it started"""
+        spare_challenge = create_login_challenge(self.USER.id)
+        challenge_id = create_login_challenge(self.USER.id)
+
+        self._fail_verification(challenge_id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(create_login_challenge(self.USER.id), status_code=429)
+
+        self.assertIsNone(get_login_challenge_user(spare_challenge))
+
+    def test_login_refuses_to_issue_a_challenge_while_locked_out(self):
+        """Test that login returns 429 instead of a new challenge for a locked out user"""
+        challenge_id = create_login_challenge(self.USER.id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(create_login_challenge(self.USER.id), status_code=429)
+
+        resp = self.post(self.login_url, data=self.LOGIN_PAYLOAD, status_code=429)
+        self.assertIn('Too many failed MFA attempts.', resp['detail'])
+        self.assertIn('Retry-After', self.response.headers)
+        self.assertNotIn('challenge_id', resp)
+
+    def test_lockout_rejects_a_valid_code_without_checking_it(self):
+        """Test that a locked out user cannot verify at all, even with the right code"""
+        challenge_id = create_login_challenge(self.USER.id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(create_login_challenge(self.USER.id), status_code=429)
+
+        # The lockout also has to survive a challenge minted straight in the storage layer.
+        fresh_challenge = create_login_challenge(self.USER.id)
+        with patch('jwt_allauth.mfa.views.TOTP') as mock_totp_class:
+            mock_totp_class.return_value.validate_code.return_value = True
+            resp = self.post(
+                self.verify_url,
+                data={'challenge_id': fresh_challenge, 'code': '123456'},
+                status_code=429,
+            )
+            mock_totp_class.return_value.validate_code.assert_not_called()
+
+        self.assertEqual(resp['detail'], 'Too many failed MFA attempts. Try again later.')
+        # Counted down from the oldest attempt still inside the 600s window.
+        self.assertIn(int(self.response.headers['Retry-After']), range(590, 601))
+
+    def test_lockout_is_released_when_attempts_age_out(self):
+        """Test that the attempt window slides instead of locking the account forever"""
+        challenge_id = create_login_challenge(self.USER.id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(create_login_challenge(self.USER.id), status_code=429)
+
+        GenericTokenModel.objects.filter(
+            user=self.USER,
+            purpose=MFA_PURPOSE_LOGIN_ATTEMPT,
+        ).update(created=timezone.now() - timedelta(seconds=601))
+
+        challenge_id = create_login_challenge(self.USER.id)
+        with patch('jwt_allauth.mfa.views.TOTP') as mock_totp_class:
+            mock_totp_class.return_value.validate_code.return_value = True
+            resp = self.post(
+                self.verify_url,
+                data={'challenge_id': challenge_id, 'code': '123456'},
+                status_code=200,
+            )
+        self.assertIn('access', resp)
+
+    def test_recovery_code_failures_share_the_user_budget(self):
+        """Test that failures cannot be spread across the two verification endpoints"""
+        Authenticator.objects.create(
+            user=self.USER,
+            type=Authenticator.Type.RECOVERY_CODES.value,
+            data={'codes': ['CODE1', 'CODE2']}
+        )
+        challenge_id = create_login_challenge(self.USER.id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(challenge_id)
+
+        with patch('jwt_allauth.mfa.views.RecoveryCodes') as mock_recovery_class:
+            mock_recovery_class.return_value.validate_code.return_value = False
+            resp = self.post(
+                self.verify_recovery_url,
+                data={
+                    'challenge_id': create_login_challenge(self.USER.id),
+                    'recovery_code': 'INVALID-CODE',
+                },
+                status_code=429,
+            )
+        self.assertEqual(resp['detail'], 'Too many failed MFA attempts. Try again later.')
+
+    def test_successful_verification_clears_the_user_budget(self):
+        """Test that a legitimate verification resets the failed attempt counter"""
+        challenge_id = create_login_challenge(self.USER.id)
+        self._fail_verification(challenge_id)
+        self.assertEqual(self._attempt_count(), 1)
+
+        with patch('jwt_allauth.mfa.views.TOTP') as mock_totp_class:
+            mock_totp_class.return_value.validate_code.return_value = True
+            self.post(
+                self.verify_url,
+                data={'challenge_id': challenge_id, 'code': '123456'},
+                status_code=200,
+            )
+
+        self.assertEqual(self._attempt_count(), 0)
+
+    def test_attempt_is_recorded_under_a_user_row_lock(self):
+        """Test that the count is not read-modify-written outside a lock"""
+        observed = {}
+        original_lock = storage._lock_user
+
+        def spy(user_id):
+            observed['locked'] = user_id
+            observed['in_atomic_block'] = transaction.get_connection().in_atomic_block
+            observed['attempts_at_lock_time'] = storage._failed_attempts_qs(user_id).count()
+            return original_lock(user_id)
+
+        challenge_id = create_login_challenge(self.USER.id)
+        with patch.object(storage, '_lock_user', side_effect=spy):
+            self._fail_verification(challenge_id)
+
+        # The lock is taken before the attempt is written, so a concurrent request cannot
+        # read a stale count and slip under the threshold.
+        self.assertEqual(observed['locked'], self.USER.pk)
+        self.assertTrue(observed['in_atomic_block'])
+        self.assertEqual(observed['attempts_at_lock_time'], 0)
+        self.assertEqual(self._attempt_count(), 1)
+
+    @override_settings(JWT_ALLAUTH_MFA_MAX_ATTEMPTS=0)
+    def test_per_user_limit_can_be_disabled(self):
+        """Test that JWT_ALLAUTH_MFA_MAX_ATTEMPTS = 0 falls back to per-challenge only"""
+        for _ in range(3):
+            challenge_id = create_login_challenge(self.USER.id)
+            self._fail_verification(challenge_id)
+
+        self.assertFalse(storage.is_login_locked_out(self.USER.id))
+
+    def test_expired_attempts_are_purged(self):
+        """Test that attempt rows do not pile up beyond the window"""
+        challenge_id = create_login_challenge(self.USER.id)
+        self._fail_verification(challenge_id)
+        GenericTokenModel.objects.filter(
+            user=self.USER,
+            purpose=MFA_PURPOSE_LOGIN_ATTEMPT,
+        ).update(created=timezone.now() - timedelta(seconds=601))
+
+        self._fail_verification(create_login_challenge(self.USER.id))
+        self.assertEqual(self._attempt_count(), 1)
 
 
 class MFACompleteFlowTests(TestsMixin):
