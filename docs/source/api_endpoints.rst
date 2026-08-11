@@ -395,19 +395,33 @@ Registration
    * - Location
      - Field
      - Description
-   * - Body (JSON, optional)
-     - ``key``
-     - Authentication token when email verification is disabled.
-   * - Body (JSON)
-     - ``email``
-     - Registered email address.
    * - Body (JSON)
      - ``detail``
      - Message indicating that a verification e-mail has been sent when email verification is enabled.
+   * - Body (JSON, optional)
+     - ``refresh``
+     - Refresh token. Only when ``EMAIL_VERIFICATION = False``, or when enumeration prevention is turned off (see the note below).
+   * - Body (JSON, optional)
+     - ``access``
+     - Access token, only when ``EMAIL_VERIFICATION = False``.
+   * - Body (JSON, optional)
+     - ``mfa_setup_required``
+     - When MFA mode is REQUIRED. The response contains a ``setup_challenge_id`` to bootstrap MFA setup.
 
 **URL Name:** ``rest_register``
 
 .. note:: Disabled when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True`` (the open registration endpoint is removed in admin-managed mode).
+
+.. note::
+
+    **Account enumeration.** While email verification is mandatory, an address that is already in
+    use gets the same ``201`` as a free one — no account is created and its owner is notified by
+    email — so the endpoint cannot be used to find out who is registered. This follows allauth's
+    ``ACCOUNT_PREVENT_ENUMERATION`` (enabled by default). No ``refresh`` token comes with that
+    response: one cannot be issued for somebody else's address, and it is unusable until the
+    address is verified anyway (authenticate through ``/login/`` once it is). Set
+    ``ACCOUNT_PREVENT_ENUMERATION = False``, or disable ``EMAIL_VERIFICATION``, to reject a
+    conflicting address with ``400`` and get the refresh token back.
 
 **/registration/user-register/** (POST) ``[Admin role]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -462,10 +476,22 @@ Registration
      - Description
    * - Redirect / HTML page
      - Redirects to the UI configured by ``EMAIL_VERIFIED_REDIRECT`` or renders the verified page.
+   * - Cookie (HTTP-only, optional)
+     - ``refresh_token``. Only when ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION = True`` (see the note below).
 
 **URL Name:** ``account_confirm_email``
 
 .. note:: Disabled when ``EMAIL_VERIFICATION = False``.
+
+.. note::
+
+    **Session on verification.** With ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION = True`` (off by
+    default) the redirect carries a refresh token cookie, so the browser that follows the link lands
+    on the frontend already authenticated and can call ``/refresh/`` for an access token. It applies
+    to the sign-up confirmation only — confirming an address added later to an account that is
+    already usable never opens a session — and regardless of whether registration hides address
+    conflicts. Bear in mind that it turns the confirmation link into a credential: whoever the email
+    reaches gets the session, not just a verified address.
 
 **/registration/set-password/** (POST) ``[Cookie]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

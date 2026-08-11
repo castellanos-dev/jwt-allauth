@@ -23,6 +23,8 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK`` - whether every authenticated request checks that the session behind the access token is still whitelisted (default: ``False``). Enabling it makes revocation effective immediately instead of when the access token expires, at the cost of one indexed query per request. See :doc:`refresh_token`.
 
+    - ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION`` - whether following the sign-up confirmation link opens a session on the browser that follows it, delivered as a refresh token cookie on the redirect (default: ``False``). Confirming an address added later to an account that is already usable never opens a session. Ignored when ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE = False``, as a redirect has no body to carry the token. Enabling it makes the confirmation link a credential: whoever the email reaches gets the session. See :doc:`email_verification`.
+
     - ``JWT_ALLAUTH_COLLECT_USER_AGENT`` - whether to collect user agent and IP information (default: ``False``).
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` - whether to send refresh tokens as HTTP-only cookies instead of in the JSON response payload (default: ``True``).
@@ -123,6 +125,8 @@ Configure these variables in the ``settings.py`` file of your project.
         - ``ADMIN_EMAIL_VERIFICATION_SUBJECT`` - subject of the email verification sent for admin-managed invitations (default: ``email/admin_invite/email_subject.txt``).
         - ``ADMIN_EMAIL_VERIFICATION`` - template of the email verification sent for admin-managed invitations (default: ``email/admin_invite/email_message.html``).
         - ``EMAIL_VERIFICATION_FAILED_TEMPLATE`` - template rendered when an invalid or expired verification link is accessed (default: ``registration/verification_failed.html``).
+        - ``ACCOUNT_EXISTS_SUBJECT`` - subject of the notice sent when somebody signs up with an address that is already in use (default: ``email/account_exists/email_subject.txt``).
+        - ``ACCOUNT_EXISTS`` - template of that notice (default: ``email/account_exists/email_message.html``).
 
     Example:
 

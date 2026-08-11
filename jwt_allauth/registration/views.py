@@ -1,4 +1,5 @@
 import logging
+from uuid import uuid4
 
 from allauth.account import app_settings as allauth_settings
 # from allauth.account.adapter import get_adapter
@@ -13,6 +14,7 @@ from rest_framework import status
 from rest_framework.generics import CreateAPIView  #, ListAPIView, GenericAPIView
 # from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from django.http import HttpResponseNotFound
 
 # from jwt_allauth.login.views import LoginView
@@ -24,7 +26,7 @@ from jwt_allauth.permissions import RegisterUsersPermission
 from jwt_allauth.registration.serializers import UserRegisterSerializer
 # from jwt_allauth.registration.serializers import (
 #     SocialLoginSerializer, SocialAccountSerializer, SocialConnectSerializer)
-from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m
+from jwt_allauth.utils import enumeration_prevented, get_user_agent, sensitive_post_parameters_m
 from jwt_allauth.constants import (
     MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
@@ -48,6 +50,7 @@ def get_mfa_totp_mode() -> str:
 class RegisterView(CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = register_permission_classes()
+    throttle_classes = [AnonRateThrottle]
     token_model = TokenModel
     jwt_token = RefreshToken
 
@@ -58,10 +61,16 @@ class RegisterView(CreateAPIView):
     @staticmethod
     def get_response_data(token):
         if settings.EMAIL_VERIFICATION:
-            return {
-                "detail": _("Verification e-mail sent."),
-                'refresh': str(token)
-            }
+            data = {"detail": _("Verification e-mail sent.")}
+            # While the address conflict is hidden, no refresh token is handed out:
+            # it could only ever be minted for an account that was really created,
+            # and its very presence -- let alone the user id it carries -- would tell
+            # the caller whether the address was free. The token is of no use until
+            # the address is verified anyway; set ``ACCOUNT_PREVENT_ENUMERATION`` to
+            # ``False`` to get it back.
+            if token is not None:
+                data['refresh'] = str(token)
+            return data
 
         else:
             return {
@@ -90,17 +99,22 @@ class RegisterView(CreateAPIView):
                         headers=headers)
 
     def perform_create(self, serializer):
+        # `user` is None when the address is already in use and the conflict is being
+        # hidden: nothing was created, but the response has to look the same.
         user = serializer.save(self.request)
 
-        # Complete allauth signup flow (email verification, etc.)
-        complete_signup(self.request._request, user,
-                        allauth_settings.EMAIL_VERIFICATION,
-                        None)
+        if user is not None:
+            # Complete allauth signup flow (email verification, etc.)
+            complete_signup(self.request._request, user,
+                            allauth_settings.EMAIL_VERIFICATION,
+                            None)
 
         # If MFA TOTP is REQUIRED, don't emit session tokens here.
         # Instead, create a setup_challenge like in login.
         if get_mfa_totp_mode() == MFA_TOTP_REQUIRED:
-            setup_challenge_id = create_setup_challenge(user.id)
+            # A challenge that leads nowhere keeps the response indistinguishable;
+            # redeeming it fails exactly like redeeming an expired one.
+            setup_challenge_id = create_setup_challenge(user.id) if user is not None else uuid4().hex
 
             data = {
                 "mfa_setup_required": True,
@@ -111,6 +125,11 @@ class RegisterView(CreateAPIView):
                 data["detail"] = _("Verification e-mail sent.")
 
             return data
+
+        if user is None or enumeration_prevented():
+            # See `get_response_data`: the refresh token is left out of the response
+            # while address conflicts are hidden, so there is none to issue.
+            return None
 
         # Normal behavior when MFA is not REQUIRED:
         refresh = self.jwt_token.for_user(
