@@ -10,6 +10,8 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 
 from jwt_allauth.constants import (
@@ -329,6 +331,23 @@ class PasswordResetTests(TestsMixin):
         )
         payload = {"email": self.EMAIL, "password": old_password}
         self.post(self.login_url, data=payload, status_code=401)
+
+    def test_reset_confirm_public_with_restrictive_project_default(self):
+        """
+        The link sent by email is opened by an anonymous user, so the confirm
+        view must stay public even when the project sets a restrictive
+        ``DEFAULT_PERMISSION_CLASSES`` (e.g. ``IsAuthenticated``).
+        """
+        token = GenericToken(purpose=PASS_RESET).make_token(self.USER)
+        uid = urlsafe_base64_encode(force_bytes(self.USER.pk))
+
+        # Emulate a project-wide default of IsAuthenticated: views that do not
+        # declare their own ``permission_classes`` inherit it from APIView.
+        with patch.object(APIView, 'permission_classes', (IsAuthenticated,)):
+            resp = self.client.get(reverse("password_reset_confirm", args=(uid, token)))
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(PASS_RESET_COOKIE, resp.cookies)
 
     def test_password_reset_unverified_email(self):
         EmailAddress.objects.filter(user=self.USER).update(verified=False)

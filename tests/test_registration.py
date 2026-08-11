@@ -1,9 +1,12 @@
+import re
+
 from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import override_settings
 from rest_framework import status
 from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
+from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 
 from .mixins import TestsMixin
 
@@ -100,6 +103,40 @@ class RegistrationTests(TestsMixin):
         # Works since the email is not verified
         self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
         self.assertEqual(len(mail.outbox), mail_count + 2)
+        # The superseded sign-up is removed as a whole: no account is left behind
+        # holding the address it no longer owns.
+        self.assertEqual(get_user_model().objects.filter(email=self.REGISTRATION_EMAIL).count(), 1)
+        self.assertEqual(EmailAddress.objects.filter(email=self.REGISTRATION_EMAIL).count(), 1)
+
+    def test_pending_registration_survives_an_invalid_attempt(self):
+        """
+        A registration that is rejected must not take a pending sign-up with it.
+        """
+        self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
+        pending = get_user_model().objects.get(email=self.REGISTRATION_EMAIL)
+
+        data = self.REGISTRATION_DATA.copy()
+        data['password1'] = data['password2'] = 'short$'
+        self.post(self.register_url, data=data, status_code=400)
+
+        self.assertTrue(get_user_model().objects.filter(id=pending.id).exists())
+        self.assertTrue(EmailAddress.objects.filter(user=pending, email=self.REGISTRATION_EMAIL).exists())
+
+    def test_unverified_address_of_an_established_account_is_not_reclaimable(self):
+        """
+        Registering an address that an established account is still confirming must
+        not delete it: only sign-ups that nobody ever confirmed can be superseded.
+        """
+        secondary = 'secondary@email.com'
+        address = EmailAddress.objects.create(user=self.USER, email=secondary, verified=False)
+
+        data = self.REGISTRATION_DATA.copy()
+        data['email'] = secondary
+        self.post(self.register_url, data=data, status_code=201)
+
+        address.refresh_from_db()
+        self.assertEqual(address.user_id, self.USER.id)
+        self.assertFalse(get_user_model().objects.filter(email=secondary).exists())
 
     @override_settings(EMAIL_VERIFICATION=False)
     def test_email_case_insensitive_registration(self):
@@ -112,6 +149,7 @@ class RegistrationTests(TestsMixin):
         self.assertIn('email', resp)
         self.assertEqual(resp['email'][0], 'A user is already registered with this e-mail address.')
 
+    @override_settings(ACCOUNT_PREVENT_ENUMERATION=False)
     def test_registration_existing_email(self):
         data = self.REGISTRATION_DATA.copy()
         data['email'] = self.EMAIL
@@ -128,13 +166,112 @@ class RegistrationTests(TestsMixin):
         email_object.save()
 
         self.post(self.register_url, data=data, status_code=201)
-        self.assertEqual(get_user_model().objects.filter(email=self.EMAIL).count(), 2)
+        self.assertEqual(get_user_model().objects.filter(email=self.EMAIL).count(), 1)
+
+    def test_registration_existing_email_is_not_disclosed(self):
+        """
+        An anonymous caller must not be able to tell a taken address from a free one.
+        """
+        mail.outbox = []
+        taken = self.REGISTRATION_DATA.copy()
+        taken['email'] = self.EMAIL
+        self.assertTrue(EmailAddress.objects.get(user=self.USER, email=self.EMAIL).verified)
+
+        user_count = get_user_model().objects.count()
+        taken_resp = self.post(self.register_url, data=taken, status_code=201)
+
+        # Nothing is created, and the owner of the address is warned instead of
+        # receiving a confirmation link somebody else could follow.
+        self.assertEqual(get_user_model().objects.count(), user_count)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.EMAIL])
+        self.assertIn('already have an account', mail.outbox[0].subject)
+        self.assertNotIn('/registration/verification/', self._mail_body(mail.outbox[0]))
+
+        # ... and the response is the very same one a fresh address gets.
+        free_resp = self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
+        self.assertEqual(taken_resp, free_resp)
+        self.assertEqual(taken_resp, {'detail': u'Verification e-mail sent.'})
+
+    def test_pending_registration_of_another_account_is_not_disclosed(self):
+        """
+        The same holds for an address that an established account has not confirmed
+        yet: it is taken, and saying so would leak it just the same.
+        """
+        secondary = 'secondary@email.com'
+        EmailAddress.objects.create(user=self.USER, email=secondary, verified=False)
+
+        data = self.REGISTRATION_DATA.copy()
+        data['email'] = secondary
+        mail.outbox = []
+        resp = self.post(self.register_url, data=data, status_code=201)
+
+        self.assertEqual(resp, {'detail': u'Verification e-mail sent.'})
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertNotIn('/registration/verification/', self._mail_body(mail.outbox[0]))
+
+    @override_settings(EMAIL_VERIFICATION=False)
+    def test_registration_existing_email_without_verification(self):
+        """
+        Without mandatory verification a sign-up answers with session tokens, which
+        cannot be faked for somebody else's address: the conflict is reported.
+        """
+        data = self.REGISTRATION_DATA.copy()
+        data['email'] = self.EMAIL
+        resp = self.post(self.register_url, data=data, status_code=400)
+        self.assertEqual(resp['email'][0], u'A user is already registered with this e-mail address.')
+
+    @override_settings(ACCOUNT_EMAIL_VERIFICATION='optional')
+    def test_registration_existing_email_without_mandatory_verification(self):
+        """
+        allauth only sends the confirmation mail the cover story relies on when
+        verification is mandatory, so both settings have to agree before the conflict
+        can be hidden.
+        """
+        data = self.REGISTRATION_DATA.copy()
+        data['email'] = self.EMAIL
+        resp = self.post(self.register_url, data=data, status_code=400)
+        self.assertEqual(resp['email'][0], u'A user is already registered with this e-mail address.')
+
+    @override_settings(JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION=True)
+    def test_verification_link_starts_the_session(self):
+        """
+        End to end: the session registration no longer hands out is picked up by the
+        browser that follows the confirmation link, with conflicts hidden or not.
+        """
+        for prevent, email in ((True, 'hidden@email.com'), (False, 'reported@email.com')):
+            with self.subTest(prevent_enumeration=prevent), \
+                    override_settings(ACCOUNT_PREVENT_ENUMERATION=prevent):
+                data = self.REGISTRATION_DATA.copy()
+                data['email'] = email
+                mail.outbox = []
+                self.post(self.register_url, data=data, status_code=201)
+                self.assertEqual(len(mail.outbox), 1)
+
+                key = self._verification_key_from_mail(mail.outbox[0])
+                resp = self.client.get(f'{self.verify_email_url}{key}/')
+                self.assertEqual(resp.status_code, 302)
+                self.assertIn(REFRESH_TOKEN_COOKIE, resp.cookies)
+
+                self.client.cookies[REFRESH_TOKEN_COOKIE] = resp.cookies[REFRESH_TOKEN_COOKIE].value
+                self.post(self.refresh_url, data={}, status_code=200)
+
+    def _verification_key_from_mail(self, message):
+        match = re.search(r'/registration/verification/([^/\s"\'<>]+)/', self._mail_body(message))
+        self.assertIsNotNone(match)
+        return match.group(1)
+
+    @staticmethod
+    def _mail_body(message):
+        return ' '.join([message.body] + [alt for alt, _ in getattr(message, 'alternatives', [])])
 
     def test_registration(self):
         user_count = get_user_model().objects.all().count()
 
         resp = self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
-        self.assertIn('refresh', resp)
+        # No refresh token while address conflicts are hidden: it could not be minted
+        # for an address that is already in use, so it would give the answer away.
+        self.assertNotIn('refresh', resp)
         self.assertNotIn('access', resp)
         self.assertEqual(resp['detail'], u'Verification e-mail sent.')
         self.assertEqual(get_user_model().objects.all().count(), user_count + 1)
@@ -152,6 +289,29 @@ class RegistrationTests(TestsMixin):
         self._login()
         self.get(self.user_url, status_code=200)
         self._logout()
+
+    @override_settings(ACCOUNT_PREVENT_ENUMERATION=False)
+    def test_registration_returns_refresh_token_without_enumeration_prevention(self):
+        """
+        Opting out of enumeration prevention restores the refresh token issued at
+        registration, which becomes usable once the address is verified.
+        """
+        resp = self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
+        self.assertIn('refresh', resp)
+        self.assertEqual(resp['detail'], u'Verification e-mail sent.')
+
+        # Disabled until the address is verified.
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = resp['refresh']
+        self.post(self.refresh_url, data={}, status_code=401)
+
+        new_user = get_user_model().objects.latest('id')
+        self.assertTrue(RefreshTokenWhitelistModel.objects.filter(user=new_user, enabled=False).exists())
+        email_object = EmailAddress.objects.get(user=new_user, email=new_user.email)
+        email_object.verified = True
+        email_object.save()
+        RefreshTokenWhitelistModel.objects.filter(user=new_user).update(enabled=True)
+
+        self.post(self.refresh_url, data={}, status_code=200)
 
     @override_settings(EMAIL_VERIFICATION=False)
     def test_registration_no_email_verification(self):

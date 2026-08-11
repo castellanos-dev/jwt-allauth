@@ -32,12 +32,14 @@ class BaseToken(models.Model):
 
 
 class AbstractRefreshToken(BaseToken):
-    # The uniqueness is enforced by the database so that a rotation racing another one
-    # cannot end up whitelisting the same credential twice: it is the last barrier
-    # behind the row lock taken while rotating.
+    # Both columns are looked up on every rotation, and `session` also on every
+    # authenticated request when the access token session check is enabled. The
+    # uniqueness of `jti` is enforced by the database so that a rotation racing another
+    # one cannot whitelist the same credential twice: it is the last barrier behind the
+    # row lock taken while rotating.
     jti = models.CharField(_("jti"), max_length=32, blank=False, unique=True)
     enabled = models.BooleanField(_("enabled"), default=True)
-    session = models.CharField(_("session"), max_length=32, blank=False)
+    session = models.CharField(_("session"), max_length=32, blank=False, db_index=True)
 
     class Meta:
         abstract = True

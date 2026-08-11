@@ -42,6 +42,11 @@ class TokenRefreshSerializer(serializers.Serializer):
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, str]:
         refresh = self.token_class(attrs["refresh"])
 
+        if "session" not in refresh.payload:
+            # Not a session token: it cannot be matched against the whitelist, and the
+            # reuse detection below would have no session to revoke.
+            raise InvalidToken()
+
         try:
             with transaction.atomic():
                 data = self.rotate(refresh)

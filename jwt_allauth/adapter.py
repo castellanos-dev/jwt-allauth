@@ -40,6 +40,35 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
         email = email.strip().lower()
         return email
 
+    def send_account_already_exists_mail(self, email):
+        """
+        Warn the owner of an address that somebody tried to sign up with it.
+
+        Sent instead of the confirmation mail when registration hides that an address
+        is already in use (see ``ACCOUNT_PREVENT_ENUMERATION``), so that the person
+        behind a genuine second attempt is not left waiting for a link that is never
+        going to arrive.
+
+        allauth's implementation links to its own signup and password reset views,
+        which a REST installation does not serve, hence the dedicated templates.
+
+        Args:
+            email (str): Address that is already in use.
+        """
+        self.send_mail(
+            "email/account_exists/email_account_exists",
+            email,
+            {},
+            subject_path=get_template_path(
+                'ACCOUNT_EXISTS_SUBJECT',
+                "email/account_exists/email_subject.txt",
+            ),
+            template_path=get_template_path(
+                'ACCOUNT_EXISTS',
+                "email/account_exists/email_message.html",
+            ),
+        )
+
     def send_confirmation_mail(self, request, emailconfirmation, signup):
         """
         Generate and send email confirmation message with context customization.

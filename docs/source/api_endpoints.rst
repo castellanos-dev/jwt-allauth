@@ -203,6 +203,9 @@ Authentication
 
 .. note:: uid and token are sent in email after calling ``/password/reset/``
 
+.. note:: Opened by an anonymous user, so the view declares ``AllowAny`` and is not affected by the
+   project's ``DEFAULT_PERMISSION_CLASSES``.
+
 **/password/reset/default/** (GET)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -395,19 +398,33 @@ Registration
    * - Location
      - Field
      - Description
-   * - Body (JSON, optional)
-     - ``key``
-     - Authentication token when email verification is disabled.
-   * - Body (JSON)
-     - ``email``
-     - Registered email address.
    * - Body (JSON)
      - ``detail``
      - Message indicating that a verification e-mail has been sent when email verification is enabled.
+   * - Body (JSON, optional)
+     - ``refresh``
+     - Refresh token. Only when ``EMAIL_VERIFICATION = False``, or when enumeration prevention is turned off (see the note below).
+   * - Body (JSON, optional)
+     - ``access``
+     - Access token, only when ``EMAIL_VERIFICATION = False``.
+   * - Body (JSON, optional)
+     - ``mfa_setup_required``
+     - When MFA mode is REQUIRED. The response contains a ``setup_challenge_id`` to bootstrap MFA setup.
 
 **URL Name:** ``rest_register``
 
 .. note:: Disabled when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True`` (the open registration endpoint is removed in admin-managed mode).
+
+.. note::
+
+    **Account enumeration.** While email verification is mandatory, an address that is already in
+    use gets the same ``201`` as a free one — no account is created and its owner is notified by
+    email — so the endpoint cannot be used to find out who is registered. This follows allauth's
+    ``ACCOUNT_PREVENT_ENUMERATION`` (enabled by default). No ``refresh`` token comes with that
+    response: one cannot be issued for somebody else's address, and it is unusable until the
+    address is verified anyway (authenticate through ``/login/`` once it is). Set
+    ``ACCOUNT_PREVENT_ENUMERATION = False``, or disable ``EMAIL_VERIFICATION``, to reject a
+    conflicting address with ``400`` and get the refresh token back.
 
 **/registration/user-register/** (POST) ``[Admin role]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -462,10 +479,22 @@ Registration
      - Description
    * - Redirect / HTML page
      - Redirects to the UI configured by ``EMAIL_VERIFIED_REDIRECT`` or renders the verified page.
+   * - Cookie (HTTP-only, optional)
+     - ``refresh_token``. Only when ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION = True`` (see the note below).
 
 **URL Name:** ``account_confirm_email``
 
 .. note:: Disabled when ``EMAIL_VERIFICATION = False``.
+
+.. note::
+
+    **Session on verification.** With ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION = True`` (off by
+    default) the redirect carries a refresh token cookie, so the browser that follows the link lands
+    on the frontend already authenticated and can call ``/refresh/`` for an access token. It applies
+    to the sign-up confirmation only — confirming an address added later to an account that is
+    already usable never opens a session — and regardless of whether registration hides address
+    conflicts. Bear in mind that it turns the confirmation link into a credential: whoever the email
+    reaches gets the session, not just a verified address.
 
 **/registration/set-password/** (POST) ``[Cookie]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -616,10 +645,10 @@ Multi-Factor Authentication (MFA)
      - Indicates successful activation (always ``True`` on success).
    * - Body (JSON, optional)
      - ``access``
-     - Access token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id``.
+     - Access token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id``. Omitted while the user's email address is still unverified and ``EMAIL_VERIFICATION`` is enabled.
    * - Body (JSON, optional)
      - ``refresh``
-     - Refresh token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id`` (may be delivered via HTTP-only cookie depending on settings).
+     - Refresh token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id`` (may be delivered via HTTP-only cookie depending on settings). If the email address is still unverified and ``EMAIL_VERIFICATION`` is enabled, it is returned in the body and stays disabled until the verification link is used.
 
 **URL Name:** ``mfa_activate``
 
@@ -658,6 +687,8 @@ Multi-Factor Authentication (MFA)
      - ``refresh_token``
      - JWT refresh token set in the ``refresh_token`` cookie (by default).
 
+Failed verifications are limited per challenge and per user; once the per-user budget is spent the endpoint answers ``429`` with a ``Retry-After`` header without checking the code. See :doc:`mfa_totp`.
+
 **URL Name:** ``mfa_verify``
 
 **/mfa/verify-recovery/** (POST)
@@ -694,6 +725,8 @@ Multi-Factor Authentication (MFA)
    * - Cookie (HTTP-only)
      - ``refresh_token``
      - JWT refresh token set in the ``refresh_token`` cookie (by default).
+
+Recovery code failures share the same budgets as ``/mfa/verify/`` and answer ``429`` the same way.
 
 **URL Name:** ``mfa_verify_recovery``
 
