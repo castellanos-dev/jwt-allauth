@@ -241,6 +241,87 @@ class AdminManagedRegistrationTests(TestsMixin):
             self.assertEqual(resp.status_code, 400)
             self.assertTemplateUsed(resp, 'registration/verification_failed.html')
 
+    def test_expired_confirmation_of_verified_user_grants_nothing(self):
+        """
+        An expired confirmation link must not hand out a password-set capability, not even
+        when the account already owns a verified email address (which is what the
+        "already verified" fallback used to accept as proof).
+        """
+        established = get_user_model().objects.create_user(
+            'established_expired', email='established_expired@demo.com', password='A-1_strong'
+        )
+        EmailAddress.objects.create(
+            user=established, email='established_expired@demo.com', verified=True, primary=True
+        )
+        secondary = EmailAddress.objects.create(
+            user=established, email='established_expired_work@demo.com', verified=False, primary=False
+        )
+
+        key = EmailConfirmationHMAC(secondary).key
+        GenericTokenModel.objects.create(user=established, token=key, purpose=EMAIL_CONFIRMATION)
+
+        with override_settings(ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS=0):
+            resp = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertTemplateUsed(resp, 'registration/verification_failed.html')
+        self.assertNotIn(SET_PASSWORD_COOKIE, self.client.cookies)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(user=established, purpose=PASS_SET_ACCESS).exists()
+        )
+
+    def test_confirmation_of_user_with_password_grants_nothing(self):
+        """
+        Even with a perfectly valid confirmation key, an account that already has a
+        password must never be handed a password-set capability: that would be a password
+        reset outside of the reset flow.
+        """
+        established = get_user_model().objects.create_user(
+            'established_valid', email='established_valid@demo.com', password='A-1_strong'
+        )
+        EmailAddress.objects.create(
+            user=established, email='established_valid@demo.com', verified=True, primary=True
+        )
+        secondary = EmailAddress.objects.create(
+            user=established, email='established_valid_work@demo.com', verified=False, primary=False
+        )
+
+        key = EmailConfirmationHMAC(secondary).key
+        GenericTokenModel.objects.create(user=established, token=key, purpose=EMAIL_CONFIRMATION)
+
+        resp = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertNotIn(SET_PASSWORD_COOKIE, self.client.cookies)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(user=established, purpose=PASS_SET_ACCESS).exists()
+        )
+
+    def test_only_latest_password_set_capability_stays_valid(self):
+        """
+        Multi-use is allowed until the password is set, but each click supersedes the
+        capability granted by the previous one.
+        """
+        invited = get_user_model().objects.create_user('invited_latest', email=self.INVITED_EMAIL)
+        email_addr = EmailAddress.objects.create(
+            user=invited, email=self.INVITED_EMAIL, verified=False, primary=True
+        )
+
+        key = EmailConfirmationHMAC(email_addr).key
+        GenericTokenModel.objects.create(user=invited, token=key, purpose=EMAIL_CONFIRMATION)
+        verify_url = reverse('account_confirm_email', args=[key])
+
+        self.client.get(verify_url)
+        first_capability = self.client.cookies[SET_PASSWORD_COOKIE].value
+
+        self.client.get(verify_url)
+        second_capability = self.client.cookies[SET_PASSWORD_COOKIE].value
+
+        self.assertNotEqual(first_capability, second_capability)
+        self.assertEqual(
+            GenericTokenModel.objects.filter(user=invited, purpose=PASS_SET_ACCESS).count(), 1
+        )
+
     def test_set_password_flow(self):
         """
         Simulate the verification GET that issues a one-time access token cookie,
