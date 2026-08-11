@@ -134,6 +134,16 @@ class LogoutTests(TestsMixin):
         resp = self.post(self.logout_url, data={'refresh': str(self.TOKEN)}, status_code=400)
         self.assertIn('Invalid token.', resp['detail'])
 
+    @override_settings(
+        JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False, JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK=True)
+    def test_logout_revokes_the_access_token_of_the_session(self):
+        self.token = self.ACCESS
+        self.post(self.logout_url, data={'refresh': str(self.TOKEN)}, status_code=200)
+
+        # With the session check enabled, the access token of the closed session is
+        # rejected right away instead of staying usable until it expires.
+        self.post(self.logout_url, data={'refresh': str(self.TOKEN)}, status_code=401)
+
     @override_settings(JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False)
     def test_tampered_token_logout(self):
         self.token = self.ACCESS

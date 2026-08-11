@@ -414,20 +414,14 @@ Registration
 
 .. note::
 
-    **Account enumeration.** When email verification is mandatory, signing up with an address that
-    is already in use gets the very same ``201`` response as a fresh sign-up: no account is created
-    and the owner of the address receives a notice instead of a confirmation link. This follows
-    allauth's ``ACCOUNT_PREVENT_ENUMERATION`` (enabled by default), so the endpoint cannot be used
-    to find out who is registered.
-
-    A refresh token is not part of that response, since one cannot be issued for an address that
-    belongs to somebody else — its presence alone would give the answer away. It is of no use until
-    the address is verified anyway: authenticate through ``/login/`` once it is.
-
-    Set ``ACCOUNT_PREVENT_ENUMERATION = False`` to opt out, in which case a conflicting address is
-    rejected with ``400`` and the refresh token is issued as before. With ``EMAIL_VERIFICATION =
-    False`` the conflict is always reported, as a successful sign-up answers with session tokens
-    that cannot be faked.
+    **Account enumeration.** While email verification is mandatory, an address that is already in
+    use gets the same ``201`` as a free one — no account is created and its owner is notified by
+    email — so the endpoint cannot be used to find out who is registered. This follows allauth's
+    ``ACCOUNT_PREVENT_ENUMERATION`` (enabled by default). No ``refresh`` token comes with that
+    response: one cannot be issued for somebody else's address, and it is unusable until the
+    address is verified anyway (authenticate through ``/login/`` once it is). Set
+    ``ACCOUNT_PREVENT_ENUMERATION = False``, or disable ``EMAIL_VERIFICATION``, to reject a
+    conflicting address with ``400`` and get the refresh token back.
 
 **/registration/user-register/** (POST) ``[Admin role]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -636,10 +630,10 @@ Multi-Factor Authentication (MFA)
      - Indicates successful activation (always ``True`` on success).
    * - Body (JSON, optional)
      - ``access``
-     - Access token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id``.
+     - Access token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id``. Omitted while the user's email address is still unverified and ``EMAIL_VERIFICATION`` is enabled.
    * - Body (JSON, optional)
      - ``refresh``
-     - Refresh token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id`` (may be delivered via HTTP-only cookie depending on settings).
+     - Refresh token issued when MFA mode is ``required`` and activation is performed using ``setup_challenge_id`` (may be delivered via HTTP-only cookie depending on settings). If the email address is still unverified and ``EMAIL_VERIFICATION`` is enabled, it is returned in the body and stays disabled until the verification link is used.
 
 **URL Name:** ``mfa_activate``
 
@@ -678,6 +672,8 @@ Multi-Factor Authentication (MFA)
      - ``refresh_token``
      - JWT refresh token set in the ``refresh_token`` cookie (by default).
 
+Failed verifications are limited per challenge and per user; once the per-user budget is spent the endpoint answers ``429`` with a ``Retry-After`` header without checking the code. See :doc:`mfa_totp`.
+
 **URL Name:** ``mfa_verify``
 
 **/mfa/verify-recovery/** (POST)
@@ -714,6 +710,8 @@ Multi-Factor Authentication (MFA)
    * - Cookie (HTTP-only)
      - ``refresh_token``
      - JWT refresh token set in the ``refresh_token`` cookie (by default).
+
+Recovery code failures share the same budgets as ``/mfa/verify/`` and answer ``429`` the same way.
 
 **URL Name:** ``mfa_verify_recovery``
 
