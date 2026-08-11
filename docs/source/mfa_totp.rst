@@ -433,6 +433,53 @@ When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, both self-service and admin-man
 
  If a user doesn't complete MFA setup within 5 minutes, they must re-login or re-register to get a new challenge.
 
+Brute Force Limits
+------------------
+
+A 6-digit TOTP code is only worth something if the number of guesses is bounded. Failed
+verifications at ``/mfa/verify/`` and ``/mfa/verify-recovery/`` are limited on two levels:
+
+- **Per challenge** (``JWT_ALLAUTH_MFA_CHALLENGE_MAX_ATTEMPTS``, default ``5``): after that
+  many failures the challenge is invalidated and the user has to log in again.
+- **Per user** (``JWT_ALLAUTH_MFA_MAX_ATTEMPTS``, default ``10``, counted over
+  ``JWT_ALLAUTH_MFA_LOCKOUT_SECONDS``, default ``900``): the per-challenge limit on its own
+  is not a brake, because an attacker who already holds the password can log in again for
+  a fresh challenge and keep guessing. The per-user budget is shared by every challenge and
+  by both verification endpoints, so re-logging in buys no extra guesses.
+
+Both limits are applied inside a transaction that first locks the user row, so concurrent
+requests are serialized and cannot slip past a threshold together.
+
+When the per-user budget is spent the user is **locked out of the MFA step**:
+
+- Every outstanding login challenge of the user is invalidated.
+- ``/mfa/verify/`` and ``/mfa/verify-recovery/`` answer ``429`` with a ``Retry-After``
+  header, without checking the submitted code.
+- ``/login/`` answers ``429`` instead of issuing a new challenge, even though the password
+  was correct.
+
+The window slides: the lockout is released as soon as the oldest of the counted attempts
+ages out of ``JWT_ALLAUTH_MFA_LOCKOUT_SECONDS``. A successful verification clears the
+counter immediately.
+
+.. code-block:: json
+
+    {
+        "detail": "Too many failed MFA attempts. Try again later."
+    }
+
+.. note::
+
+    The counter is per user, so somebody who knows a user's password can keep that user's
+    MFA step locked for the duration of the window. This is the usual trade-off of an
+    account lockout, and the reason the window is short and rolling. Tune it with
+    ``JWT_ALLAUTH_MFA_MAX_ATTEMPTS`` / ``JWT_ALLAUTH_MFA_LOCKOUT_SECONDS``, or set the
+    former to ``0`` to disable the per-user limit entirely.
+
+Per-IP throttling (DRF's ``AnonRateThrottle``) still applies on top, but it is not a
+substitute: an attacker can spread requests over many IPs, while these limits follow the
+account.
+
 Security Considerations
 -----------------------
 
@@ -448,6 +495,10 @@ Security Considerations
  - Setup challenges are single-purpose (MFA setup only)
  - Challenges are stored server-side in the database via ``GenericTokenModel``, not in tokens or client-side storage
  - Challenges expire after 5 minutes
+
+✅ **Bounded Guessing:**
+- Failed verifications are capped per challenge and per user, so requesting a new challenge does not reset the budget
+- The limits are enforced under a row lock, so concurrent requests cannot exceed them
 
 ✅ **Respects Configuration:**
 - Cookie preferences (HTTP-only, Secure, SameSite) are honored
