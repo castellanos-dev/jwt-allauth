@@ -203,6 +203,9 @@ Authentication
 
 .. note:: uid and token are sent in email after calling ``/password/reset/``
 
+.. note:: Opened by an anonymous user, so the view declares ``AllowAny`` and is not affected by the
+   project's ``DEFAULT_PERMISSION_CLASSES``.
+
 **/password/reset/default/** (GET)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

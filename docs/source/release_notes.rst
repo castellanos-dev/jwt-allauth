@@ -37,7 +37,7 @@ New Features
 Bug Fixes
 ~~~~~~~~~
 
-- **Password reset links work under a restrictive project default**: ``PasswordResetConfirmView`` did not declare ``permission_classes`` and therefore inherited the project's ``DEFAULT_PERMISSION_CLASSES``. In a deployment that defaults to ``IsAuthenticated`` — the usual recommendation — the link sent by email answered ``401`` to the anonymous user who clicked it, breaking the reset flow for exactly the users who need it. The view now declares ``AllowAny``, like the rest of the password reset entry points.
+- **Password reset link kept public**: ``PasswordResetConfirmView`` did not declare ``permission_classes``, so it inherited the project's ``DEFAULT_PERMISSION_CLASSES``. Where that default is ``IsAuthenticated``, the link sent by email answered ``401`` to the anonymous user clicking it and the reset flow was unusable. The view now declares ``AllowAny``, like the other password reset entry points.
 
 Version 1.2.4
 -------------
