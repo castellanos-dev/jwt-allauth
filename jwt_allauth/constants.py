@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 PASS_RESET = 'PASS_RESET'
 PASS_RESET_ACCESS = 'PASS_RESET_ACCESS'
 TEMPLATE_PATHS = 'JWT_ALLAUTH_TEMPLATES'
@@ -11,6 +13,12 @@ FOR_USER = 'for_user'
 ONE_TIME_PERMISSION = 'one_time_permission'
 
 REFRESH_TOKEN_COOKIE = 'refresh_token'
+
+# Session
+# Claim holding the timestamp at which the session started. Unlike ``iat``, it is preserved
+# across refresh token rotations so the absolute lifetime of a session can be enforced.
+SESSION_IAT_CLAIM = 'session_iat'
+DEFAULT_SESSION_LIFETIME = timedelta(days=90)
 
 # Admin-managed registration & email confirmation flow
 PASS_SET = 'PASS_SET'

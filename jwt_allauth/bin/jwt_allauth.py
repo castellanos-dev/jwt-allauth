@@ -227,6 +227,10 @@ from datetime import timedelta
 # JWT settings
 JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME = timedelta(minutes=30)
 JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME = timedelta(days=14)
+
+# Absolute lifetime of a session. Refresh token rotation cannot extend a session
+# beyond this limit: once it is reached the user has to log in again.
+JWT_ALLAUTH_SESSION_LIFETIME = timedelta(days=90)
 """
     # Add RS256 SIMPLE_JWT config if keys were generated successfully
     if rs256_ok:

@@ -89,6 +89,12 @@ Authentication
 
 **URL Name:** ``token_refresh``
 
+.. note::
+
+    Rotation does not extend a session forever. Once the session reaches ``JWT_ALLAUTH_SESSION_LIFETIME``
+    (default: 90 days since login), the session is revoked and the endpoint responds ``401`` with code
+    ``session_expired``, so the client must authenticate again.
+
 **/logout/** (POST) ``[Authenticated]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

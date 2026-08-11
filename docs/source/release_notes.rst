@@ -13,6 +13,8 @@ Security
 
 - **JWT signing key warning**: A runtime warning is now emitted when ``JWT_ALLAUTH_SECRET_KEY`` is not configured and ``DEBUG=False``. Using Django's ``SECRET_KEY`` as the JWT signing key is insecure for production — a dedicated ``JWT_ALLAUTH_SECRET_KEY`` is strongly recommended.
 
+- **Absolute session lifetime**: refresh token rotation no longer extends a session indefinitely. Refresh tokens now carry a ``session_iat`` claim, set when the session starts and preserved across every rotation. Once ``JWT_ALLAUTH_SESSION_LIFETIME`` (default: **90 days**) has elapsed, the refresh endpoint revokes the whole session and responds ``401`` with code ``session_expired``, forcing re-authentication. Refresh and access tokens are also never issued with an expiration beyond the session deadline. Previously, a leaked refresh token could be renewed forever by calling the refresh endpoint once per refresh token lifetime. Sessions already active during the upgrade have their start anchored at their first rotation. The limit can be disabled with ``JWT_ALLAUTH_SESSION_LIFETIME = None``, which is discouraged.
+
 - **Reduced default refresh token lifetime** from 90 days to **14 days**. The previous 90-day window was excessively long in case of token leakage. Existing installations using the old ``JWT_REFRESH_TOKEN_LIFETIME`` setting are not affected — it continues to work.
 
 - **Forced secure cookies in production**: The refresh token cookie ``secure`` flag is now forced to ``True`` when ``DEBUG=False``, regardless of the ``JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SECURE`` setting. If the setting is explicitly ``False`` while in production, a warning is emitted. This prevents accidental cookie exposure over plain HTTP.
