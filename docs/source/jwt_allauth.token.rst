@@ -24,3 +24,11 @@ jwt\_allauth.tokens.serializers module
    :members:
    :show-inheritance:
    :undoc-members:
+
+jwt\_allauth.tokens.purge module
+--------------------------------
+
+.. automodule:: jwt_allauth.tokens.purge
+   :members:
+   :show-inheritance:
+   :undoc-members:

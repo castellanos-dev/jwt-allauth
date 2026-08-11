@@ -32,7 +32,13 @@ from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.tokens.tokens import GenericToken
-from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m, build_token_response
+from jwt_allauth.utils import (
+    build_token_response,
+    get_user_agent,
+    load_capability_user,
+    sensitive_post_parameters_m,
+)
+from jwt_allauth.csrf import ensure_csrf_cookie
 from jwt_allauth.mfa.storage import create_setup_challenge
 
 
@@ -121,7 +127,7 @@ class PasswordResetConfirmView(GenericAPIView):
 
         user = self.get_user(kwargs["uidb64"])
 
-        if user is not None:
+        if user is not None and user.is_active:
             if GenericToken(request=self.request, purpose=PASS_RESET).check_token(user, kwargs["token"]):
 
                 refresh_token = RefreshToken()
@@ -132,6 +138,9 @@ class PasswordResetConfirmView(GenericAPIView):
                 response = HttpResponseRedirect(
                     self.form_url if self.form_url else reverse_lazy('default_password_reset')
                 )
+                # The form this redirects to has to send a CSRF token back with the new
+                # password, so the cookie holding it goes out together with the capability.
+                ensure_csrf_cookie(self.request)
                 response.set_cookie(
                     key=PASS_RESET_COOKIE,
                     value=str(access_token),
@@ -198,8 +207,9 @@ class ResetPasswordView(GenericAPIView):
         if not GenericTokenModel.consume(request.auth['jti'], PASS_RESET_ACCESS):
             raise InvalidToken()
 
-        # Load the user in the request
-        request.user = get_user_model().objects.get(id=self.request.user.id)
+        # Load the user in the request, rejecting an account that has been deleted or
+        # deactivated since the capability was issued.
+        request.user = load_capability_user(self.request.user.id)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -237,11 +247,9 @@ class SetPasswordView(GenericAPIView):
         if not GenericTokenModel.consume(request.auth['jti'], PASS_SET_ACCESS):
             raise InvalidToken()
 
-        # Load the user in the request
-        try:
-            request.user = get_user_model().objects.get(id=self.request.user.id)
-        except get_user_model().DoesNotExist:
-            raise InvalidToken()
+        # Load the user in the request, rejecting an account that has been deleted or
+        # deactivated since the capability was issued.
+        request.user = load_capability_user(self.request.user.id)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()

@@ -25,6 +25,10 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION`` - whether following the sign-up confirmation link opens a session on the browser that follows it, delivered as a refresh token cookie on the redirect (default: ``False``). Confirming an address added later to an account that is already usable never opens a session. Ignored when ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE = False``, as a redirect has no body to carry the token. Enabling it makes the confirmation link a credential: whoever the email reaches gets the session. See :doc:`email_verification`.
 
+    - ``JWT_ALLAUTH_CAPABILITY_COOKIE_CSRF`` - whether the endpoints authenticated by a capability cookie (``/password/reset/set-new/`` and ``/registration/set-password/``) require a CSRF token (default: ``True``). The redirects that hand the cookie out also set the CSRF cookie, so the form has the token to send back in ``X-CSRFToken``. Turn it off only while a frontend that does not send it yet catches up: without it, the ``SameSite`` policy of the capability cookie is all that stands between another origin and those endpoints.
+
+    - ``JWT_ALLAUTH_TOKEN_RETENTION`` - dictionary mapping a stored token purpose to the ``timedelta`` past which its rows can be deleted (default: ``{}``). Extends and overrides the built-in retentions used by ``python manage.py jwt_allauth_purge_tokens``. Example: ``{'MY_PURPOSE': timedelta(hours=6)}``.
+
     - ``JWT_ALLAUTH_COLLECT_USER_AGENT`` - whether to collect user agent and IP information (default: ``False``).
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` - whether to send refresh tokens as HTTP-only cookies instead of in the JSON response payload (default: ``True``).

@@ -5,6 +5,8 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from allauth.account.models import EmailAddress
+from django.conf import settings as django_settings
+from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import override_settings
 from django.urls import reverse
@@ -12,7 +14,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 from jwt_allauth.constants import (
     PASS_RESET, PASS_RESET_ACCESS, PASS_RESET_COOKIE, FOR_USER, ONE_TIME_PERMISSION,
@@ -21,7 +23,8 @@ from jwt_allauth.constants import (
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.tokens import GenericToken
-from .mixins import TestsMixin
+from jwt_allauth.utils import load_capability_user
+from .mixins import APIClient, TestsMixin
 
 
 class PasswordResetTests(TestsMixin):
@@ -460,3 +463,148 @@ class PasswordResetTests(TestsMixin):
 
         # Check that cookie was NOT set
         self.assertNotIn(REFRESH_TOKEN_COOKIE, response.cookies)
+
+
+class PasswordResetAccountStateTests(TestsMixin):
+    """
+    The state of the account is re-read when the capability is used.
+
+    A capability is minted once and carries the id of the account it was issued for, so
+    nothing about the account it names is checked again unless the endpoint that consumes
+    it looks the account up.
+    """
+
+    SET_NEW_DATA = {"new_password1": "P@sw0rd-set", "new_password2": "P@sw0rd-set"}
+
+    def setUp(self):
+        self.init()
+
+    def _capability(self):
+        """Hand the client a valid password reset capability."""
+        refresh_token = RefreshToken()
+        refresh_token[FOR_USER] = self.USER.id
+        refresh_token[ONE_TIME_PERMISSION] = PASS_RESET_ACCESS
+        access_token = refresh_token.access_token
+        GenericTokenModel.objects.create(
+            token=access_token['jti'], purpose=PASS_RESET_ACCESS, user=self.USER
+        )
+        self.client.cookies.load({PASS_RESET_COOKIE: str(access_token)})
+        return access_token
+
+    def _set_new_password(self):
+        return self.client.post(
+            reverse('rest_password_reset_set_new'),
+            data=self.SET_NEW_DATA,
+            content_type='application/json',
+        )
+
+    def test_reset_rejected_for_deactivated_account(self):
+        self._capability()
+        get_user_model().objects.filter(pk=self.USER.pk).update(is_active=False)
+
+        resp = self._set_new_password()
+
+        self.assertEqual(resp.status_code, 401)
+        # No password change and, above all, no session for a deactivated account.
+        self.USER.refresh_from_db()
+        self.assertTrue(self.USER.check_password(self.PASS))
+        self.assertNotIn(REFRESH_TOKEN_COOKIE, resp.cookies)
+
+    def test_capability_is_spent_by_the_rejected_attempt(self):
+        """The capability does not survive the account being deactivated."""
+        self._capability()
+        get_user_model().objects.filter(pk=self.USER.pk).update(is_active=False)
+        self._set_new_password()
+
+        get_user_model().objects.filter(pk=self.USER.pk).update(is_active=True)
+        self.assertEqual(self._set_new_password().status_code, 401)
+        self.assertFalse(GenericTokenModel.objects.filter(purpose=PASS_RESET_ACCESS).exists())
+
+    def test_confirm_link_issues_no_capability_for_a_deactivated_account(self):
+        token = GenericToken(purpose=PASS_RESET).make_token(self.USER)
+        uid = urlsafe_base64_encode(force_bytes(self.USER.pk))
+        get_user_model().objects.filter(pk=self.USER.pk).update(is_active=False)
+
+        resp = self.client.get(reverse('password_reset_confirm', args=(uid, token)))
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn(PASS_RESET_COOKIE, resp.cookies)
+        self.assertFalse(GenericTokenModel.objects.filter(purpose=PASS_RESET_ACCESS).exists())
+
+    def test_capability_user_gone(self):
+        """A capability naming an account that no longer exists is rejected, not a 500."""
+        user_id = self.USER.id
+        self.USER.delete()
+        with self.assertRaises(InvalidToken):
+            load_capability_user(user_id)
+
+    def test_capability_user_deactivated(self):
+        get_user_model().objects.filter(pk=self.USER.pk).update(is_active=False)
+        with self.assertRaises(InvalidToken):
+            load_capability_user(self.USER.id)
+
+
+class PasswordResetCSRFTests(TestsMixin):
+    """
+    The capability travels in a cookie, so the reset endpoint needs a CSRF token.
+
+    Nothing else stands between another origin and the endpoint once the cookie is
+    configured with ``SameSite='None'``, which a frontend on a different site requires.
+    """
+
+    SET_NEW_DATA = {"new_password1": "P@sw0rd-set", "new_password2": "P@sw0rd-set"}
+
+    def setUp(self):
+        self.init()
+        # The default client skips CSRF entirely; these tests need it enforced.
+        self.client = APIClient(enforce_csrf_checks=True)
+
+    def _follow_reset_link(self):
+        """Walk the reset flow up to the redirect that hands out the capability."""
+        token = GenericToken(purpose=PASS_RESET).make_token(self.USER)
+        uid = urlsafe_base64_encode(force_bytes(self.USER.pk))
+        return self.client.get(reverse('password_reset_confirm', args=(uid, token)))
+
+    def _set_new_password(self, **extra):
+        return self.client.post(
+            reverse('rest_password_reset_set_new'),
+            data=self.SET_NEW_DATA,
+            content_type='application/json',
+            **extra,
+        )
+
+    def test_capability_redirect_hands_out_a_csrf_cookie(self):
+        resp = self._follow_reset_link()
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(PASS_RESET_COOKIE, resp.cookies)
+        self.assertIn(django_settings.CSRF_COOKIE_NAME, resp.cookies)
+
+    def test_reset_without_csrf_token_is_rejected(self):
+        self._follow_reset_link()
+
+        resp = self._set_new_password()
+
+        self.assertEqual(resp.status_code, 403)
+        self.USER.refresh_from_db()
+        self.assertTrue(self.USER.check_password(self.PASS))
+        # The capability is not spent by a request that never got through.
+        self.assertTrue(GenericTokenModel.objects.filter(purpose=PASS_RESET_ACCESS).exists())
+
+    def test_reset_with_csrf_token_goes_through(self):
+        self._follow_reset_link()
+        csrf_token = self.client.cookies[django_settings.CSRF_COOKIE_NAME].value
+
+        resp = self._set_new_password(HTTP_X_CSRFTOKEN=csrf_token)
+
+        self.assertEqual(resp.status_code, 200)
+        self.USER.refresh_from_db()
+        self.assertTrue(self.USER.check_password(self.SET_NEW_DATA['new_password1']))
+
+    @override_settings(JWT_ALLAUTH_CAPABILITY_COOKIE_CSRF=False)
+    def test_check_can_be_turned_off(self):
+        self._follow_reset_link()
+
+        resp = self._set_new_password()
+
+        self.assertEqual(resp.status_code, 200)

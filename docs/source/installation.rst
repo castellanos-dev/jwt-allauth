@@ -135,3 +135,21 @@ To make migrations persistent across environments (recommended for Docker), conf
     python manage.py migrate
 
 Done! ``django-jwt-allauth`` will configure ``django-allauth`` and ``djangorestframework-simplejwt`` for you.
+
+Maintenance
+===========
+
+Tokens are stored while they can still be used and removed when they are used: the single-use ones — password
+reset and password set links, the capabilities they are exchanged for, email confirmations and the MFA
+challenges — and the whitelisted refresh tokens behind the sessions. Nothing removes the ones nobody comes back
+for: an unopened reset link, an invitation nobody accepts, a session left on a device that never logs out. So
+schedule:
+
+.. code-block:: bash
+
+    python manage.py jwt_allauth_purge_tokens
+
+It deletes only what is past the lifetime of the flow that issued it — an expired refresh token is rejected on
+its own ``exp`` before the whitelist is read, and every other flow checks its own expiry too — so nothing that
+could still be honoured is removed. It also reports the purposes it left alone because no retention is
+configured for them (see ``JWT_ALLAUTH_TOKEN_RETENTION``). Add ``--dry-run`` to count without deleting.

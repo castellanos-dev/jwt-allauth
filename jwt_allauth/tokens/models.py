@@ -66,6 +66,19 @@ class GenericTokenModel(BaseToken):
     token = models.CharField(_("token"), max_length=255, blank=False)
     purpose = models.CharField(_("purpose"), max_length=32, blank=False)
 
+    class Meta:
+        verbose_name = _("generic token")
+        verbose_name_plural = _("generic tokens")
+        # Every lookup on this table narrows by purpose, together with either the token
+        # (single-use validation) or the user (MFA bookkeeping, invalidation of the
+        # capabilities of an account). Without these, each of them scans a table that
+        # only grows, and so does the retention purge.
+        indexes = [
+            models.Index(fields=["token", "purpose"], name="ja_gen_token_token_idx"),
+            models.Index(fields=["user", "purpose"], name="ja_gen_token_user_idx"),
+            models.Index(fields=["purpose", "created"], name="ja_gen_token_purpose_idx"),
+        ]
+
     @classmethod
     def consume(cls, token, purpose):
         """
