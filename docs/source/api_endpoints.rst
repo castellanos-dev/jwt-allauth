@@ -476,10 +476,22 @@ Registration
      - Description
    * - Redirect / HTML page
      - Redirects to the UI configured by ``EMAIL_VERIFIED_REDIRECT`` or renders the verified page.
+   * - Cookie (HTTP-only, optional)
+     - ``refresh_token``. Only when ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION = True`` (see the note below).
 
 **URL Name:** ``account_confirm_email``
 
 .. note:: Disabled when ``EMAIL_VERIFICATION = False``.
+
+.. note::
+
+    **Session on verification.** With ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION = True`` (off by
+    default) the redirect carries a refresh token cookie, so the browser that follows the link lands
+    on the frontend already authenticated and can call ``/refresh/`` for an access token. It applies
+    to the sign-up confirmation only — confirming an address added later to an account that is
+    already usable never opens a session — and regardless of whether registration hides address
+    conflicts. Bear in mind that it turns the confirmation link into a credential: whoever the email
+    reaches gets the session, not just a verified address.
 
 **/registration/set-password/** (POST) ``[Cookie]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

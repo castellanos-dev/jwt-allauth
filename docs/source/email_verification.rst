@@ -20,3 +20,7 @@ To enable the email verification, configure the email provider in your ``setting
     like a fresh registration: its owner is notified instead of receiving a confirmation link, and
     the response carries no refresh token. See :doc:`api_endpoints` for the details and for how to
     opt out through ``ACCOUNT_PREVENT_ENUMERATION``.
+
+    Since registration hands out no session in that mode, set
+    ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION = True`` to have the confirmation link open one
+    instead: the redirect then carries a refresh token cookie for the browser that followed it.

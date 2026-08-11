@@ -1,3 +1,5 @@
+import re
+
 from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -218,6 +220,46 @@ class RegistrationTests(TestsMixin):
         data['email'] = self.EMAIL
         resp = self.post(self.register_url, data=data, status_code=400)
         self.assertEqual(resp['email'][0], u'A user is already registered with this e-mail address.')
+
+    @override_settings(ACCOUNT_EMAIL_VERIFICATION='optional')
+    def test_registration_existing_email_without_mandatory_verification(self):
+        """
+        allauth only sends the confirmation mail the cover story relies on when
+        verification is mandatory, so both settings have to agree before the conflict
+        can be hidden.
+        """
+        data = self.REGISTRATION_DATA.copy()
+        data['email'] = self.EMAIL
+        resp = self.post(self.register_url, data=data, status_code=400)
+        self.assertEqual(resp['email'][0], u'A user is already registered with this e-mail address.')
+
+    @override_settings(JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION=True)
+    def test_verification_link_starts_the_session(self):
+        """
+        End to end: the session registration no longer hands out is picked up by the
+        browser that follows the confirmation link, with conflicts hidden or not.
+        """
+        for prevent, email in ((True, 'hidden@email.com'), (False, 'reported@email.com')):
+            with self.subTest(prevent_enumeration=prevent), \
+                    override_settings(ACCOUNT_PREVENT_ENUMERATION=prevent):
+                data = self.REGISTRATION_DATA.copy()
+                data['email'] = email
+                mail.outbox = []
+                self.post(self.register_url, data=data, status_code=201)
+                self.assertEqual(len(mail.outbox), 1)
+
+                key = self._verification_key_from_mail(mail.outbox[0])
+                resp = self.client.get(f'{self.verify_email_url}{key}/')
+                self.assertEqual(resp.status_code, 302)
+                self.assertIn(REFRESH_TOKEN_COOKIE, resp.cookies)
+
+                self.client.cookies[REFRESH_TOKEN_COOKIE] = resp.cookies[REFRESH_TOKEN_COOKIE].value
+                self.post(self.refresh_url, data={}, status_code=200)
+
+    def _verification_key_from_mail(self, message):
+        match = re.search(r'/registration/verification/([^/\s"\'<>]+)/', self._mail_body(message))
+        self.assertIsNotNone(match)
+        return match.group(1)
 
     @staticmethod
     def _mail_body(message):

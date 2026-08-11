@@ -82,16 +82,22 @@ def enumeration_prevented():
     Follows allauth's ``ACCOUNT_PREVENT_ENUMERATION`` (enabled by default), so that a
     single setting governs the behaviour of the whole project.
 
-    Hiding the conflict is only possible while e-mail verification is mandatory: when
-    it is disabled a successful registration answers with session tokens straight
-    away, and those cannot be produced for an address that belongs to somebody else.
-    In that case the conflict is reported to the caller as before.
+    Hiding the conflict is only possible while e-mail verification is mandatory, and
+    both settings that govern it have to agree: ``EMAIL_VERIFICATION``, which decides
+    whether registration hands out a usable session, and allauth's
+    ``ACCOUNT_EMAIL_VERIFICATION``, which decides whether the confirmation mail the
+    cover story relies on is sent at all. ``ACCOUNT_EMAIL_VERIFICATION`` is derived
+    from ``EMAIL_VERIFICATION`` unless the project sets it itself, so the two only
+    part ways on purpose. When either falls short the conflict is reported to the
+    caller as before — the same choice allauth makes in ``assess_unique_email``.
 
     Returns:
         bool: ``True`` when the registration endpoint must answer a conflicting
         address exactly as it answers a fresh sign-up.
     """
     if not bool(getattr(settings, 'EMAIL_VERIFICATION', False)):
+        return False
+    if allauth_settings.EMAIL_VERIFICATION != allauth_settings.EmailVerificationMethod.MANDATORY:
         return False
     return bool(allauth_settings.PREVENT_ENUMERATION)
 

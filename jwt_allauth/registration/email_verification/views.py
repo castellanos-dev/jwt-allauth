@@ -18,6 +18,7 @@ from jwt_allauth.constants import (
     FOR_USER,
     ONE_TIME_PERMISSION,
     PASS_SET_ACCESS,
+    REFRESH_TOKEN_COOKIE,
     SET_PASSWORD_COOKIE,
     EMAIL_CONFIRMATION,
     EMAIL_VERIFICATION_FAILED_TEMPLATE,
@@ -26,7 +27,13 @@ from jwt_allauth.registration.email_verification.serializers import VerifyEmailS
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
-from jwt_allauth.utils import get_template_path, hash_token
+from jwt_allauth.utils import (
+    _get_cookie_max_age,
+    _get_cookie_secure,
+    get_template_path,
+    get_user_agent,
+    hash_token,
+)
 
 
 class VerifyEmailView(APIView, ConfirmEmailView):
@@ -47,6 +54,47 @@ class VerifyEmailView(APIView, ConfirmEmailView):
             status=400
         )
 
+    @staticmethod
+    def _start_session(response, request, user):
+        """
+        Hand the browser that followed the link a session, as a refresh token cookie.
+
+        Registration cannot deliver that session itself: while address conflicts are
+        hidden it issues no token at all, and even when it does, the token belongs to
+        whichever client filled in the form, which is often not the one the link is
+        opened on. Here the account has just proven control over the mailbox, which is
+        the same standing the password reset link is already given.
+
+        Off unless ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION`` is enabled: it turns
+        the confirmation link into a credential, so whoever the mail reaches -- a
+        forwarded copy, a shared inbox -- lands on the account logged in rather than
+        only confirming the address.
+
+        Args:
+            response (HttpResponse): Redirect the cookie is attached to.
+            request (HttpRequest): Request being served.
+            user (AbstractBaseUser): Owner of the address that was just confirmed.
+        """
+        if not getattr(settings, 'JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION', False):
+            return
+        if not getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True):
+            # Installations that carry refresh tokens in the response body have no
+            # body to carry it in here, and the URL is not an option: it would end up
+            # in the browser history and in every log along the way.
+            return
+
+        refresh_token = RefreshToken.for_user(user, request, enabled=True)
+        response.set_cookie(
+            key=REFRESH_TOKEN_COOKIE,
+            value=str(refresh_token),
+            httponly=getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_HTTP_ONLY", True),
+            secure=_get_cookie_secure(),
+            samesite=getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SAME_SITE", "Lax"),
+            max_age=_get_cookie_max_age(),
+            path=getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_PATH", "/"),
+        )
+
+    @get_user_agent
     def get(self, request, *args, **kwargs):
         # If admin-managed registration is enabled, validate the confirmation key and
         # issue a one-time token to allow the user to set their password.
@@ -128,17 +176,27 @@ class VerifyEmailView(APIView, ConfirmEmailView):
 
         # Default flow: just confirm the email and enable refresh tokens
         confirmation = self.get_object()
+        user = confirmation.email_address.user
 
         # Enable refresh token
-        refresh = RefreshTokenWhitelistModel.objects.filter(user=confirmation.email_address.user).first()
+        refresh = RefreshTokenWhitelistModel.objects.filter(user=user).first()
         if refresh:
             refresh.enabled = True
             refresh.save()
 
+        # Only the sign-up confirmation completes a registration. Confirming a
+        # secondary address added later to an account that is already usable is not an
+        # invitation to open a session on the browser that happened to receive it.
+        completes_signup = not EmailAddress.objects.filter(user=user, verified=True).exists()
+
         confirmation.confirm(self.request)
-        return HttpResponseRedirect(
+
+        response = HttpResponseRedirect(
             getattr(settings, EMAIL_VERIFIED_REDIRECT, reverse('jwt_allauth_email_verified'))
         )
+        if completes_signup:
+            self._start_session(response, request, user)
+        return response
 
     def post(self, request, *args, **kwargs):
         return HttpResponseNotAllowed(['GET'])
