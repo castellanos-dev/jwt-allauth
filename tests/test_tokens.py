@@ -1,10 +1,11 @@
 import time
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
 
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.db import IntegrityError, transaction
 from django.test import override_settings
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.utils import aware_utcnow, datetime_from_epoch, datetime_to_epoch
@@ -14,7 +15,7 @@ from jwt_allauth.utils import get_session_lifetime
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from jwt_allauth.tokens.tokens import RefreshToken
 from jwt_allauth.tokens.tokens import RefreshToken as RefreshTokenClass
-from .mixins import TestsMixin
+from .mixins import APIClient, TestsMixin
 from jwt_allauth.constants import REFRESH_TOKEN_COOKIE, SESSION_IAT_CLAIM
 
 
@@ -123,6 +124,50 @@ class TokenTests(TestsMixin):
 
         resp = self.post(self.refresh_url, data={}, status_code=401)
         self.assertEqual(resp['code'], u'token_not_valid')
+
+    def test_whitelisted_jti_is_unique(self):
+        """
+        The ``IntegrityError`` guard of the rotation is only a guard if the database
+        refuses to whitelist the same credential twice.
+        """
+        entry = RefreshTokenWhitelistModel.objects.get(jti=self.TOKEN.payload['jti'])
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            RefreshTokenWhitelistModel.objects.create(
+                jti=entry.jti, user=entry.user, session=entry.session
+            )
+
+    def test_concurrent_refresh_does_not_split_the_session(self):
+        """
+        A single refresh token must never yield two live sessions.
+
+        The competing request is fired from inside the first one, right after the
+        whitelist entry has been read and before it is claimed: the exact window two
+        simultaneous rotations share.
+        """
+        original_sync = RefreshTokenClass.sync_user_claims
+        race = {}
+
+        def sync_and_race(token, user):
+            original_sync(token, user)
+            if 'response' in race:  # the competing request must not race itself
+                return
+            race['response'] = None
+            competitor = APIClient()
+            competitor.cookies[REFRESH_TOKEN_COOKIE] = str(self.TOKEN)
+            race['response'] = competitor.post(self.refresh_url, data={}, format='json')
+
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = str(self.TOKEN)
+        with patch.object(RefreshTokenClass, 'sync_user_claims', sync_and_race):
+            first = self.client.post(self.refresh_url, data={}, format='json')
+
+        self.assertEqual(
+            sorted([first.status_code, race['response'].status_code]), [200, 401]
+        )
+        # The rejected rotation is a replay as far as the server can tell, so the whole
+        # session is revoked: what must never happen is both credentials surviving.
+        self.assertEqual(
+            RefreshTokenWhitelistModel.objects.filter(session=self.TOKEN.payload['session']).count(), 0
+        )
 
     def test_refresh_methods_not_allowed(self):
         resp = self.get(self.refresh_url, status_code=405)

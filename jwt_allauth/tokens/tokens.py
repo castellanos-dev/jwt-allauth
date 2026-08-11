@@ -220,7 +220,7 @@ class GenericToken(PasswordResetTokenGenerator):
         result = super().check_token(user, token)
         if result:
             hashed_token = hashlib.sha256(str(token).encode()).hexdigest()
-            if GenericTokenModel.objects.filter(token=hashed_token, purpose=self.purpose).count() == 0:
-                return False
-            GenericTokenModel.objects.filter(token=hashed_token, purpose=self.purpose).delete()
+            # Single use: claiming the row atomically keeps two concurrent clicks on the
+            # same link from both being honoured.
+            return GenericTokenModel.consume(hashed_token, self.purpose)
         return result
