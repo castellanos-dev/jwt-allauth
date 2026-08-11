@@ -51,6 +51,12 @@ Configure these variables in the ``settings.py`` file of your project.
         - ``'optional'`` - MFA TOTP is optional; users can configure it voluntarily but login does not require it.
         - ``'required'`` - MFA TOTP is mandatory; users must configure it and cannot log in without providing a TOTP code.
 
+    - ``JWT_ALLAUTH_MFA_CHALLENGE_MAX_ATTEMPTS`` - failed MFA verifications tolerated on a single login challenge before it is invalidated (default: ``5``). Set to ``0`` to disable this limit.
+
+    - ``JWT_ALLAUTH_MFA_MAX_ATTEMPTS`` - failed MFA verifications tolerated per user, across every challenge, within ``JWT_ALLAUTH_MFA_LOCKOUT_SECONDS`` (default: ``10``). Once spent, the user is locked out of the MFA step and ``/mfa/verify/``, ``/mfa/verify-recovery/`` and ``/login/`` answer ``429``. Set to ``0`` to disable this limit. See :doc:`mfa_totp`.
+
+    - ``JWT_ALLAUTH_MFA_LOCKOUT_SECONDS`` - sliding window used to count failed MFA verifications, and therefore how long a locked out user waits (default: ``900``).
+
     - ``JWT_ALLAUTH_TOTP_ISSUER`` - custom TOTP issuer name displayed in authenticator apps like Google Authenticator (default: ``'JWT-Allauth'``). The JWT All-Auth MFA adapter is automatically configured when ``jwt_allauth`` is in ``INSTALLED_APPS``. If not set, defaults to ``'JWT-Allauth'``. Set to empty string to use the current site name instead. See :doc:`mfa_totp` for more details.
 
 - JWT signing
