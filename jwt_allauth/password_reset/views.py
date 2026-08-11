@@ -101,6 +101,14 @@ class DefaultSetPasswordView(GenericAPIView):
 
 
 class PasswordResetConfirmView(GenericAPIView):
+    """
+    Validates the password reset link and hands over a one-time reset cookie.
+
+    This endpoint is reached by anonymous users clicking the link sent by
+    email, so it must stay public regardless of the project's
+    ``DEFAULT_PERMISSION_CLASSES``.
+    """
+    permission_classes = (AllowAny,)
     form_url = getattr(settings, PASSWORD_RESET_REDIRECT, None)
 
     @get_user_agent
