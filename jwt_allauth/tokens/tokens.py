@@ -1,4 +1,6 @@
 import hashlib
+from datetime import datetime
+from typing import Optional
 from django.conf import settings
 from uuid import uuid4
 from inspect import getattr_static
@@ -6,15 +8,17 @@ from inspect import getattr_static
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.exceptions import InvalidToken
-from rest_framework_simplejwt.tokens import RefreshToken as DefaultRefreshToken
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken as DefaultRefreshToken
+from rest_framework_simplejwt.utils import aware_utcnow, datetime_from_epoch, datetime_to_epoch
 
+from jwt_allauth.constants import SESSION_IAT_CLAIM
 from jwt_allauth.tokens.models import GenericTokenModel
 from jwt_allauth.tokens.serializers import RefreshTokenWhitelistSerializer, GenericTokenModelSerializer
-from jwt_allauth.utils import user_agent_dict
+from jwt_allauth.utils import get_session_lifetime, user_agent_dict
 
 # Claims managed by the token itself. They are never regenerated from the
 # user attribute configuration.
-RESERVED_CLAIMS = ('token_type', 'exp', 'iat', 'jti', 'user_id', 'session', 'role')
+RESERVED_CLAIMS = ('token_type', 'exp', 'iat', 'jti', 'user_id', 'session', SESSION_IAT_CLAIM, 'role')
 
 
 class RefreshToken(DefaultRefreshToken):
@@ -26,6 +30,53 @@ class RefreshToken(DefaultRefreshToken):
         if id_ is None:
             id_ = uuid4().hex
         self.payload['session'] = id_
+
+    def set_session_iat(self, at_time: Optional[datetime] = None):
+        """
+        Timestamp at which the session started.
+
+        Unlike ``iat``, this claim is carried over to every rotated refresh token, which
+        makes it possible to enforce an absolute session lifetime.
+        """
+        self.set_iat(claim=SESSION_IAT_CLAIM, at_time=at_time)
+
+    def session_deadline(self) -> Optional[datetime]:
+        """
+        Instant at which the session reaches its absolute lifetime, or ``None`` when the
+        limit is disabled or the token carries no session start (e.g. one-time tokens).
+        """
+        lifetime = get_session_lifetime()
+        if lifetime is None or SESSION_IAT_CLAIM not in self.payload:
+            return None
+        return datetime_from_epoch(self.payload[SESSION_IAT_CLAIM]) + lifetime
+
+    def session_expired(self, at_time: Optional[datetime] = None) -> bool:
+        """
+        Whether the session has already reached its absolute lifetime.
+        """
+        deadline = self.session_deadline()
+        if deadline is None:
+            return False
+        return deadline <= (at_time if at_time is not None else aware_utcnow())
+
+    def cap_exp_to_session(self):
+        """
+        Shorten the ``exp`` claim so that the token never outlives the session deadline.
+        """
+        deadline = self.session_deadline()
+        if deadline is not None and 'exp' in self.payload:
+            self.payload['exp'] = min(self.payload['exp'], datetime_to_epoch(deadline))
+
+    @property
+    def access_token(self) -> AccessToken:
+        """
+        Access token derived from this refresh token, never outliving the session deadline.
+        """
+        access = super().access_token
+        deadline = self.session_deadline()
+        if deadline is not None:
+            access.payload['exp'] = min(access.payload['exp'], datetime_to_epoch(deadline))
+        return access
 
     @staticmethod
     def _attribute_map():
@@ -120,6 +171,8 @@ class RefreshToken(DefaultRefreshToken):
         """
         token = super().for_user(user)
         token.set_session()  # type: ignore
+        token.set_session_iat()  # type: ignore
+        token.cap_exp_to_session()  # type: ignore
         token.set_user_role(user)  # type: ignore
         token.set_user_attributes(user)  # type: ignore
         # Store the token in the database

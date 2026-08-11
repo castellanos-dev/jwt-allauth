@@ -3,15 +3,19 @@ from unittest.mock import Mock
 from datetime import datetime, timedelta
 
 from allauth.account.models import EmailAddress
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.test import override_settings
 from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.utils import aware_utcnow, datetime_from_epoch, datetime_to_epoch
 
 from jwt_allauth.roles import STAFF_CODE, USER_CODE
+from jwt_allauth.utils import get_session_lifetime
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from jwt_allauth.tokens.tokens import RefreshToken
 from jwt_allauth.tokens.tokens import RefreshToken as RefreshTokenClass
 from .mixins import TestsMixin
-from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
+from jwt_allauth.constants import REFRESH_TOKEN_COOKIE, SESSION_IAT_CLAIM
 
 
 class TokenTests(TestsMixin):
@@ -604,3 +608,130 @@ class TokenTests(TestsMixin):
         self.assertEqual(token.payload['email'], 'test@example.com')
         self.assertEqual(token.payload['username'], 'testuser')
         self.assertEqual(token.payload['title'], 'Developer')
+
+
+class SessionLifetimeTests(TestsMixin):
+    """Optional absolute session lifetime, off unless JWT_ALLAUTH_SESSION_LIFETIME is set."""
+
+    def setUp(self):
+        self.init()
+
+    def _refresh(self, token, status_code=200):
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = str(token)
+        response = self.client.post(self.refresh_url, data={}, format='json')
+        self.assertEqual(response.status_code, status_code)
+        return response
+
+    def _backdate_session(self, token, age):
+        """Rewrite the session start of a whitelisted token so it looks `age` old."""
+        token.payload[SESSION_IAT_CLAIM] = datetime_to_epoch(aware_utcnow() - age)
+        return token
+
+    def test_session_iat_is_set_on_token_creation(self):
+        token = RefreshTokenClass.for_user(self.USER)
+
+        self.assertIn(SESSION_IAT_CLAIM, token.payload)
+        self.assertAlmostEqual(
+            token.payload[SESSION_IAT_CLAIM], datetime_to_epoch(aware_utcnow()), delta=10)
+        # The session start is also visible from the derived access token
+        self.assertEqual(token.access_token.payload[SESSION_IAT_CLAIM], token.payload[SESSION_IAT_CLAIM])
+
+    def test_session_iat_is_preserved_across_rotations(self):
+        token = self.TOKEN
+        session_iat = token.payload[SESSION_IAT_CLAIM]
+
+        for _ in range(3):
+            response = self._refresh(token)
+            token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+            # `iat` is renewed on every rotation, the session start is not
+            self.assertEqual(token.payload[SESSION_IAT_CLAIM], session_iat)
+            self.assertGreaterEqual(token.payload['iat'], session_iat)
+
+    @override_settings(JWT_ALLAUTH_SESSION_LIFETIME=timedelta(days=30))
+    def test_refresh_rejected_once_session_lifetime_is_exceeded(self):
+        token = self._backdate_session(self.TOKEN, timedelta(days=31))
+
+        response = self._refresh(token, status_code=401)
+        self.assertEqual(response.json()['code'], 'session_expired')
+
+        # The whole session is revoked, no further rotation is possible
+        self.assertFalse(
+            RefreshTokenWhitelistModel.objects.filter(session=token.payload['session']).exists())
+
+    @override_settings(JWT_ALLAUTH_SESSION_LIFETIME=timedelta(days=30))
+    def test_refresh_allowed_within_session_lifetime(self):
+        token = self._backdate_session(self.TOKEN, timedelta(days=29))
+
+        response = self._refresh(token)
+        new_token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+        self.assertEqual(new_token.payload[SESSION_IAT_CLAIM], token.payload[SESSION_IAT_CLAIM])
+
+    @override_settings(JWT_ALLAUTH_SESSION_LIFETIME=timedelta(days=30))
+    def test_rotated_token_expiration_is_capped_to_the_session_deadline(self):
+        # Five minutes of session left: shorter than both the refresh and the access lifetimes
+        token = self._backdate_session(self.TOKEN, timedelta(days=30) - timedelta(minutes=5))
+        deadline = datetime_to_epoch(
+            datetime_from_epoch(token.payload[SESSION_IAT_CLAIM]) + timedelta(days=30))
+
+        response = self._refresh(token)
+        new_token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+
+        self.assertEqual(new_token.payload['exp'], deadline)
+        # ... and so is the access token issued along with it
+        access = AccessToken(response.json()['access'])
+        self.assertEqual(access.payload['exp'], deadline)
+
+    @override_settings(JWT_ALLAUTH_SESSION_LIFETIME=timedelta(minutes=5))
+    def test_new_token_expiration_is_capped_to_the_session_deadline(self):
+        token = RefreshTokenClass.for_user(self.USER)
+
+        deadline = datetime_to_epoch(
+            datetime_from_epoch(token.payload[SESSION_IAT_CLAIM]) + timedelta(minutes=5))
+        self.assertEqual(token.payload['exp'], deadline)
+        self.assertEqual(token.access_token.payload['exp'], deadline)
+
+    def test_legacy_token_without_session_iat_is_anchored_on_rotation(self):
+        """Tokens issued before this feature existed get their session start stamped once."""
+        token = self.TOKEN
+        del token.payload[SESSION_IAT_CLAIM]
+
+        response = self._refresh(token)
+        new_token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+
+        self.assertIn(SESSION_IAT_CLAIM, new_token.payload)
+        self.assertAlmostEqual(
+            new_token.payload[SESSION_IAT_CLAIM], datetime_to_epoch(aware_utcnow()), delta=10)
+
+    def test_sessions_are_unlimited_by_default(self):
+        """No setting configured: rotation keeps extending the session, as it always did."""
+        self.assertIsNone(get_session_lifetime())
+
+        token = self._backdate_session(self.TOKEN, timedelta(days=1000))
+        self.assertIsNone(token.session_deadline())
+
+        response = self._refresh(token)
+        new_token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+        self.assertEqual(new_token.payload[SESSION_IAT_CLAIM], token.payload[SESSION_IAT_CLAIM])
+        # The expiration is a full refresh token lifetime away, not capped by the session
+        expected_exp = datetime_to_epoch(aware_utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'])
+        self.assertAlmostEqual(new_token.payload['exp'], expected_exp, delta=10)
+
+    @override_settings(JWT_ALLAUTH_SESSION_LIFETIME=None)
+    def test_session_lifetime_can_be_disabled_explicitly(self):
+        token = self._backdate_session(self.TOKEN, timedelta(days=1000))
+
+        response = self._refresh(token)
+        new_token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+        self.assertEqual(new_token.payload[SESSION_IAT_CLAIM], token.payload[SESSION_IAT_CLAIM])
+
+    @override_settings(JWT_ALLAUTH_SESSION_LIFETIME='30 days')
+    def test_invalid_session_lifetime_setting_is_rejected(self):
+        with self.assertRaises(ImproperlyConfigured):
+            get_session_lifetime()
+
+    def test_one_time_tokens_have_no_session_deadline(self):
+        """Password reset / set password tokens carry no session and must not be capped."""
+        token = RefreshTokenClass()
+
+        self.assertIsNone(token.session_deadline())
+        self.assertFalse(token.session_expired())

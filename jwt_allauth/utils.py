@@ -1,9 +1,11 @@
 import warnings
+from datetime import timedelta
 from importlib import import_module
 from typing import Any, Dict, Optional
 
 from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress
+from django.core.exceptions import ImproperlyConfigured
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
@@ -36,6 +38,24 @@ def _get_cookie_max_age():
     if lifetime is not None:
         return int(lifetime.total_seconds())
     return None
+
+
+def get_session_lifetime():
+    """Resolve the absolute lifetime of a session.
+
+    ``None`` (the default) keeps the sliding behaviour: a session stays alive for as
+    long as it is used, and only dies after ``REFRESH_TOKEN_LIFETIME`` of inactivity.
+
+    When ``JWT_ALLAUTH_SESSION_LIFETIME`` is set to a timedelta, a session starts when
+    the user authenticates and cannot be extended past that limit by rotating the
+    refresh token: once it is reached the user has to log in again.
+    """
+    lifetime = getattr(settings, "JWT_ALLAUTH_SESSION_LIFETIME", None)
+    if lifetime is not None and not isinstance(lifetime, timedelta):
+        raise ImproperlyConfigured(
+            "jwt-allauth: JWT_ALLAUTH_SESSION_LIFETIME must be a datetime.timedelta or None."
+        )
+    return lifetime
 
 
 def _get_cookie_secure():

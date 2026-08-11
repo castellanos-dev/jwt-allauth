@@ -12,6 +12,12 @@ ONE_TIME_PERMISSION = 'one_time_permission'
 
 REFRESH_TOKEN_COOKIE = 'refresh_token'
 
+# Session
+# Claim holding the timestamp at which the session started. Unlike ``iat``, it is preserved
+# across refresh token rotations, so it is available as an anchor whenever an installation
+# opts into an absolute session lifetime through JWT_ALLAUTH_SESSION_LIFETIME.
+SESSION_IAT_CLAIM = 'session_iat'
+
 # Admin-managed registration & email confirmation flow
 PASS_SET = 'PASS_SET'
 PASS_SET_ACCESS = 'PASS_SET_ACCESS'

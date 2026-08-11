@@ -4,6 +4,8 @@ from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import InvalidToken
 
+from jwt_allauth.constants import SESSION_IAT_CLAIM
+from jwt_allauth.exceptions import SessionExpired
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import RefreshTokenWhitelistSerializer
@@ -27,6 +29,16 @@ class TokenRefreshSerializer(serializers.Serializer):
             is_email_verified(query_set[0].user, raise_exception=True)
             raise InvalidToken()
 
+        if SESSION_IAT_CLAIM not in refresh.payload:
+            # Token issued before absolute session lifetimes existed: the session start is
+            # unknown, so it is anchored at this first rotation.
+            refresh.set_session_iat()
+        elif refresh.session_expired():
+            # Rotation cannot extend a session past its absolute lifetime: the whole
+            # session is revoked and the user has to authenticate again.
+            RefreshTokenWhitelistModel.objects.filter(session=refresh.payload["session"]).delete()
+            raise SessionExpired()
+
         user = query_set[0].user
         if not user.is_active:
             # Deactivated accounts must not be able to keep rotating tokens.
@@ -44,6 +56,7 @@ class TokenRefreshSerializer(serializers.Serializer):
         refresh.set_jti()
         refresh.set_exp()
         refresh.set_iat()
+        refresh.cap_exp_to_session()
 
         data["refresh"] = str(refresh)
 
