@@ -4,7 +4,7 @@ Release Notes
 Version 1.2.5
 -------------
 
-Released: TBD
+Released: August 11, 2026
 
 Security
 ~~~~~~~~
