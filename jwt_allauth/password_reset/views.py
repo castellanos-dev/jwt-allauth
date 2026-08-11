@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.db import transaction
 from django.http import HttpResponseRedirect, HttpResponseNotFound
 from django.shortcuts import render
 from django.urls import reverse_lazy
@@ -107,6 +108,14 @@ class DefaultSetPasswordView(GenericAPIView):
 
 
 class PasswordResetConfirmView(GenericAPIView):
+    """
+    Validates the password reset link and hands over a one-time reset cookie.
+
+    This endpoint is reached by anonymous users clicking the link sent by
+    email, so it must stay public regardless of the project's
+    ``DEFAULT_PERMISSION_CLASSES``.
+    """
+    permission_classes = (AllowAny,)
     form_url = getattr(settings, PASSWORD_RESET_REDIRECT, None)
 
     @get_user_agent
@@ -147,7 +156,12 @@ class PasswordResetConfirmView(GenericAPIView):
                     'purpose': PASS_RESET_ACCESS
                 })
                 token_serializer.is_valid(raise_exception=True)
-                token_serializer.save()
+
+                with transaction.atomic():
+                    # Requesting a second reset must not leave the capability handed out
+                    # by an earlier link usable: only the latest one stays alive.
+                    GenericTokenModel.objects.filter(user=user, purpose=PASS_RESET_ACCESS).delete()
+                    token_serializer.save()
 
                 return response
         return render(self.request, 'password/reset.html', {
@@ -188,11 +202,10 @@ class ResetPasswordView(GenericAPIView):
         return super(ResetPasswordView, self).dispatch(*args, **kwargs)
 
     def post(self, request):
-        # check the token has not been used
-        query_set = GenericTokenModel.objects.filter(token=request.auth['jti'], purpose=PASS_RESET_ACCESS)
-        if len(query_set) != 1:
+        # Claim the capability atomically: two requests arriving at once with the same
+        # cookie must not both get to set a password.
+        if not GenericTokenModel.consume(request.auth['jti'], PASS_RESET_ACCESS):
             raise InvalidToken()
-        query_set.delete()  # single use
 
         # Load the user in the request, rejecting an account that has been deleted or
         # deactivated since the capability was issued.
@@ -229,11 +242,10 @@ class SetPasswordView(GenericAPIView):
         return super(SetPasswordView, self).dispatch(*args, **kwargs)
 
     def post(self, request):
-        # check the token has not been used
-        query_set = GenericTokenModel.objects.filter(token=request.auth['jti'], purpose=PASS_SET_ACCESS)
-        if len(query_set) != 1:
+        # Claim the capability atomically: two requests arriving at once with the same
+        # cookie must not both get to set a password.
+        if not GenericTokenModel.consume(request.auth['jti'], PASS_SET_ACCESS):
             raise InvalidToken()
-        query_set.delete()  # single use
 
         # Load the user in the request, rejecting an account that has been deleted or
         # deactivated since the capability was issued.
