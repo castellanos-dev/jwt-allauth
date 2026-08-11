@@ -16,7 +16,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import InvalidToken
 
-from jwt_allauth.constants import TEMPLATE_PATHS, REFRESH_TOKEN_COOKIE, DEFAULT_SESSION_LIFETIME
+from jwt_allauth.constants import TEMPLATE_PATHS, REFRESH_TOKEN_COOKIE
 from jwt_allauth.exceptions import NotVerifiedEmail, IncorrectCredentials
 
 string_types = (str,)
@@ -43,14 +43,14 @@ def _get_cookie_max_age():
 def get_session_lifetime():
     """Resolve the absolute lifetime of a session.
 
-    A session starts when the user authenticates and cannot be extended past this
-    limit by rotating the refresh token: once it is reached the user has to log in
-    again.  Defaults to ``DEFAULT_SESSION_LIFETIME``.
+    ``None`` (the default) keeps the sliding behaviour: a session stays alive for as
+    long as it is used, and only dies after ``REFRESH_TOKEN_LIFETIME`` of inactivity.
 
-    Setting ``JWT_ALLAUTH_SESSION_LIFETIME`` to ``None`` disables the limit, which
-    means a leaked refresh token can be renewed indefinitely.  This is discouraged.
+    When ``JWT_ALLAUTH_SESSION_LIFETIME`` is set to a timedelta, a session starts when
+    the user authenticates and cannot be extended past that limit by rotating the
+    refresh token: once it is reached the user has to log in again.
     """
-    lifetime = getattr(settings, "JWT_ALLAUTH_SESSION_LIFETIME", DEFAULT_SESSION_LIFETIME)
+    lifetime = getattr(settings, "JWT_ALLAUTH_SESSION_LIFETIME", None)
     if lifetime is not None and not isinstance(lifetime, timedelta):
         raise ImproperlyConfigured(
             "jwt-allauth: JWT_ALLAUTH_SESSION_LIFETIME must be a datetime.timedelta or None."

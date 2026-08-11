@@ -22,21 +22,29 @@ The following constants should be included in the settings.py file:
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` - whether to send refresh tokens as HTTP-only cookies instead of in the JSON response payload (default: ``True``).
 
-    - ``JWT_ALLAUTH_SESSION_LIFETIME`` - absolute lifetime of a session (default: ``timedelta(days=90)``). Set to ``None`` to disable the limit.
+    - ``JWT_ALLAUTH_SESSION_LIFETIME`` - absolute lifetime of a session (default: ``None``, no limit).
 
 Session lifetime
 ----------------
 
-Every refresh token carries a ``session_iat`` claim with the instant at which the session started. Unlike
-``iat``, it is copied unchanged into each rotated token, so refreshing renews the token but never restarts
-the session clock. When ``session_iat + JWT_ALLAUTH_SESSION_LIFETIME`` is reached, the refresh endpoint
-deletes every whitelisted token of that session and responds ``401`` with code ``session_expired``: the user
-has to log in again. Tokens are also issued with an expiration capped at the session deadline, so neither a
-refresh nor an access token can outlive its session.
+Sessions are sliding by design: every rotation moves the expiration forward, so a session that keeps being
+used stays alive indefinitely, and one that stops being used dies after ``JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME``
+of inactivity. This is what allows mobile clients to stay logged in without asking the user for credentials
+again. Leaked tokens are handled by revocation: reusing a rotated token destroys the whole session, and
+``/logout/``, ``/logout-all/``, a password change or a password reset remove the affected tokens from the
+whitelist.
 
-This bounds the damage of a leaked refresh token, which would otherwise be renewable forever. Disabling the
-limit with ``None`` restores that unbounded behaviour and is discouraged. Sessions that were already active
-when upgrading have no ``session_iat``; their session start is anchored at their first rotation.
+Every refresh token also carries a ``session_iat`` claim with the instant at which the session started.
+Unlike ``iat``, it is copied unchanged into each rotated token, so it always points at the login that opened
+the session. Setting ``JWT_ALLAUTH_SESSION_LIFETIME`` to a ``timedelta`` turns it into a hard deadline: once
+``session_iat + JWT_ALLAUTH_SESSION_LIFETIME`` is reached the refresh endpoint deletes every whitelisted
+token of that session and responds ``401`` with code ``session_expired``, and until then no refresh or access
+token is issued with an expiration beyond that deadline.
+
+Enable it when re-authentication has to happen on a schedule regardless of activity — a compliance
+requirement such as NIST SP 800-63B, or to bound the exposure of a refresh token that leaked from a client
+the legitimate user has stopped using, where token reuse never gets detected. Sessions started before the
+limit was enabled have no ``session_iat``; their session start is anchored at their first rotation.
 
 When ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` is ``True`` (default), refresh tokens are sent as secure HTTP-only cookies,
 which provides enhanced security by making them inaccessible to JavaScript and reducing the risk of XSS attacks. When

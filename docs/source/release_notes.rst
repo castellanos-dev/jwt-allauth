@@ -13,7 +13,10 @@ Security
 
 - **Refresh rejected for deactivated accounts**: rotating a refresh token now requires the account to be active. When ``is_active`` is ``False`` the refresh is rejected and the user's whitelisted refresh tokens are removed, which ends every session of the account. Previously only ``LoginView`` checked ``is_active``, so a deactivated user kept its sessions alive by refreshing.
 
-- **Absolute session lifetime**: rotation used to recompute the expiration from the current time, so a leaked refresh token could be renewed forever with one call to the refresh endpoint per refresh token lifetime. Refresh tokens now carry a ``session_iat`` claim, set when the session starts and preserved across rotations, and no token is issued with an expiration beyond ``session_iat + JWT_ALLAUTH_SESSION_LIFETIME`` (new setting, default **90 days**, ``None`` to disable). Once that deadline is reached the refresh endpoint revokes the whole session and answers ``401`` with code ``session_expired``. Sessions already active when upgrading have their start anchored at their first rotation.
+New Features
+~~~~~~~~~~~~
+
+- **Optional absolute session lifetime**: sessions remain sliding by default — they stay alive for as long as they are used and expire after ``JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME`` of inactivity — but the new ``JWT_ALLAUTH_SESSION_LIFETIME`` setting (default ``None``, no limit) caps how long a session may live in total, no matter how often it is refreshed. Refresh tokens now carry a ``session_iat`` claim, set when the session starts and preserved across rotations, so the limit is measured from the login instead of the last rotation. When it is reached the refresh endpoint revokes the whole session and answers ``401`` with code ``session_expired``; until then no token is issued with an expiration beyond that deadline. Useful for deployments that must re-authenticate on a schedule (e.g. NIST SP 800-63B).
 
 Version 1.2.4
 -------------

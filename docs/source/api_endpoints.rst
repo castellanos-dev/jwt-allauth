@@ -91,8 +91,8 @@ Authentication
 
 .. note::
 
-    Rotation does not extend a session forever. Once the session reaches ``JWT_ALLAUTH_SESSION_LIFETIME``
-    (default: 90 days since login), the session is revoked and the endpoint responds ``401`` with code
+    When ``JWT_ALLAUTH_SESSION_LIFETIME`` is configured (disabled by default), rotation stops extending the
+    session once that limit is reached: the session is revoked and the endpoint responds ``401`` with code
     ``session_expired``, so the client must authenticate again.
 
 **/logout/** (POST) ``[Authenticated]``

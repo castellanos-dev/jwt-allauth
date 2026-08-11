@@ -6,8 +6,6 @@ import allauth.app_settings
 import rest_framework_simplejwt.settings
 from django.apps import AppConfig
 
-from jwt_allauth.constants import DEFAULT_SESSION_LIFETIME
-
 
 class JWTAllauthAppConfig(AppConfig):
     name = 'jwt_allauth'
@@ -56,7 +54,7 @@ class JWTAllauthAppConfig(AppConfig):
         if getattr(settings, 'BLACKLIST_AFTER_ROTATION', False):
             raise ValueError('Token blacklist is not supported.')
 
-        session_lifetime = getattr(settings, 'JWT_ALLAUTH_SESSION_LIFETIME', DEFAULT_SESSION_LIFETIME)
+        session_lifetime = getattr(settings, 'JWT_ALLAUTH_SESSION_LIFETIME', None)
         if session_lifetime is not None and not isinstance(session_lifetime, timedelta):
             raise ValueError('JWT_ALLAUTH_SESSION_LIFETIME must be a datetime.timedelta or None.')
 

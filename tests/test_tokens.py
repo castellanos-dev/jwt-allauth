@@ -3,6 +3,7 @@ from unittest.mock import Mock
 from datetime import datetime, timedelta
 
 from allauth.account.models import EmailAddress
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.test import override_settings
 from rest_framework_simplejwt.tokens import AccessToken
@@ -610,7 +611,7 @@ class TokenTests(TestsMixin):
 
 
 class SessionLifetimeTests(TestsMixin):
-    """Absolute session lifetime: rotation must not extend a session forever."""
+    """Optional absolute session lifetime, off unless JWT_ALLAUTH_SESSION_LIFETIME is set."""
 
     def setUp(self):
         self.init()
@@ -701,8 +702,22 @@ class SessionLifetimeTests(TestsMixin):
         self.assertAlmostEqual(
             new_token.payload[SESSION_IAT_CLAIM], datetime_to_epoch(aware_utcnow()), delta=10)
 
+    def test_sessions_are_unlimited_by_default(self):
+        """No setting configured: rotation keeps extending the session, as it always did."""
+        self.assertIsNone(get_session_lifetime())
+
+        token = self._backdate_session(self.TOKEN, timedelta(days=1000))
+        self.assertIsNone(token.session_deadline())
+
+        response = self._refresh(token)
+        new_token = RefreshToken(response.cookies[REFRESH_TOKEN_COOKIE].value)
+        self.assertEqual(new_token.payload[SESSION_IAT_CLAIM], token.payload[SESSION_IAT_CLAIM])
+        # The expiration is a full refresh token lifetime away, not capped by the session
+        expected_exp = datetime_to_epoch(aware_utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'])
+        self.assertAlmostEqual(new_token.payload['exp'], expected_exp, delta=10)
+
     @override_settings(JWT_ALLAUTH_SESSION_LIFETIME=None)
-    def test_session_lifetime_can_be_disabled(self):
+    def test_session_lifetime_can_be_disabled_explicitly(self):
         token = self._backdate_session(self.TOKEN, timedelta(days=1000))
 
         response = self._refresh(token)
