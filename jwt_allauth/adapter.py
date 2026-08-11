@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 
 from jwt_allauth.constants import EMAIL_CONFIRMATION
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
-from jwt_allauth.utils import get_template_path
+from jwt_allauth.utils import get_template_path, hash_token
 
 
 class JWTAllAuthAdapter(DefaultAccountAdapter):
@@ -119,12 +119,13 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
             template_path=template_path
         )
 
-        # Persist the confirmation key as a generic token so that the verify view
-        # can enforce single-use semantics.
+        # Persist the digest of the confirmation key as a generic token so that the
+        # verify view can enforce single-use semantics without storing a usable
+        # credential in the database.
         if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
             token_serializer = GenericTokenModelSerializer(
                 data={
-                    "token": confirmation_key,
+                    "token": hash_token(confirmation_key),
                     "user": emailconfirmation.email_address.user.id,
                     "purpose": EMAIL_CONFIRMATION,
                 }

@@ -26,7 +26,7 @@ from jwt_allauth.registration.email_verification.serializers import VerifyEmailS
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
-from jwt_allauth.utils import get_template_path
+from jwt_allauth.utils import get_template_path, hash_token
 
 
 class VerifyEmailView(APIView, ConfirmEmailView):
@@ -63,8 +63,11 @@ class VerifyEmailView(APIView, ConfirmEmailView):
             cutoff = timezone.now() - timedelta(
                 days=allauth_app_settings.EMAIL_CONFIRMATION_EXPIRE_DAYS
             )
+            # Keys are stored as digests. In-flight confirmations issued by a previous
+            # version are still stored in plain text, so they are accepted as well until
+            # they expire.
             token_entry = GenericTokenModel.objects.filter(
-                token=kwargs['key'],
+                token__in=(hash_token(kwargs['key']), kwargs['key']),
                 purpose=EMAIL_CONFIRMATION,
                 created__gte=cutoff,
             ).first()
