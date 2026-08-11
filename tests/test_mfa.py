@@ -17,6 +17,7 @@ from allauth.mfa.models import Authenticator
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.conf import settings
+from django.db import transaction
 from django.test import override_settings
 from django.urls import reverse, clear_url_caches
 from django.utils import timezone
@@ -25,15 +26,16 @@ from jwt_allauth.constants import (
     SET_PASSWORD_COOKIE, REFRESH_TOKEN_COOKIE,
     MFA_TOTP_REQUIRED, MFA_TOKEN_MAX_AGE_SECONDS, MFA_TOTP_DISABLED,
     FOR_USER, ONE_TIME_PERMISSION, PASS_SET_ACCESS,
-    MFA_PURPOSE_LOGIN_CHALLENGE,
+    MFA_PURPOSE_LOGIN_ATTEMPT, MFA_PURPOSE_LOGIN_CHALLENGE,
 )
+from jwt_allauth.mfa import storage
 from jwt_allauth.mfa.storage import (
     create_login_challenge,
     get_login_challenge_user,
     load_setup_secret,
 )
 from jwt_allauth.tokens.app_settings import RefreshToken
-from jwt_allauth.tokens.models import GenericTokenModel
+from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from .mixins import TestsMixin
 from allauth.account.models import EmailAddress
@@ -764,6 +766,226 @@ class MFAVerifyRecoveryTests(TestsMixin):
         self.assertEqual(resp['detail'], 'MFA TOTP is disabled.')
 
 
+@override_settings(
+    JWT_ALLAUTH_MFA_CHALLENGE_MAX_ATTEMPTS=2,
+    JWT_ALLAUTH_MFA_MAX_ATTEMPTS=3,
+    JWT_ALLAUTH_MFA_LOCKOUT_SECONDS=600,
+)
+class MFABruteForceLimitTests(TestsMixin):
+    """
+    Tests for the brute force limits of the MFA verification step.
+
+    The per-challenge limit alone is not a brake: an attacker who already has the
+    password can login again for a fresh challenge and keep guessing. These tests cover
+    the per-user budget and the lockout that closes that loop.
+    """
+
+    def setUp(self):
+        self.init()
+        self.verify_url = reverse('jwt_allauth_mfa_verify')
+        self.verify_recovery_url = reverse('jwt_allauth_mfa_verify_recovery')
+        self.totp_authenticator = Authenticator.objects.create(
+            user=self.USER,
+            type=Authenticator.Type.TOTP.value,
+            data={'secret': 'test_secret'}
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    def _attempt_count(self):
+        return GenericTokenModel.objects.filter(
+            user=self.USER,
+            purpose=MFA_PURPOSE_LOGIN_ATTEMPT,
+        ).count()
+
+    def _fail_verification(self, challenge_id, status_code=400):
+        with patch('jwt_allauth.mfa.views.TOTP') as mock_totp_class:
+            mock_totp_class.return_value.validate_code.return_value = False
+            return self.post(
+                self.verify_url,
+                data={'challenge_id': challenge_id, 'code': '000000'},
+                status_code=status_code,
+            )
+
+    def test_challenge_invalidated_after_max_attempts(self):
+        """Test that a challenge is dropped once its own attempt budget is spent"""
+        challenge_id = create_login_challenge(self.USER.id)
+
+        resp = self._fail_verification(challenge_id)
+        self.assertEqual(resp['detail'], 'Invalid code.')
+
+        resp = self._fail_verification(challenge_id)
+        self.assertEqual(resp['detail'], 'Too many failed attempts. Challenge invalidated.')
+
+        self.assertIsNone(get_login_challenge_user(challenge_id))
+
+    def test_new_challenge_does_not_reset_the_user_budget(self):
+        """Test that requesting a fresh challenge does not buy more guesses"""
+        # First challenge: spends its 2 attempts.
+        first_challenge = create_login_challenge(self.USER.id)
+        self._fail_verification(first_challenge)
+        self._fail_verification(first_challenge)
+
+        # Second challenge: only 1 attempt is left of the per-user budget of 3.
+        second_challenge = create_login_challenge(self.USER.id)
+        resp = self._fail_verification(second_challenge, status_code=429)
+        self.assertEqual(resp['detail'], 'Too many failed MFA attempts. Try again later.')
+        self.assertEqual(self._attempt_count(), 3)
+
+        # And the challenge is gone, so it cannot be reused during the lockout.
+        self.assertIsNone(get_login_challenge_user(second_challenge))
+
+    def test_lockout_drops_every_outstanding_challenge(self):
+        """Test that a lockout invalidates challenges issued before it started"""
+        spare_challenge = create_login_challenge(self.USER.id)
+        challenge_id = create_login_challenge(self.USER.id)
+
+        self._fail_verification(challenge_id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(create_login_challenge(self.USER.id), status_code=429)
+
+        self.assertIsNone(get_login_challenge_user(spare_challenge))
+
+    def test_login_refuses_to_issue_a_challenge_while_locked_out(self):
+        """Test that login returns 429 instead of a new challenge for a locked out user"""
+        challenge_id = create_login_challenge(self.USER.id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(create_login_challenge(self.USER.id), status_code=429)
+
+        resp = self.post(self.login_url, data=self.LOGIN_PAYLOAD, status_code=429)
+        self.assertIn('Too many failed MFA attempts.', resp['detail'])
+        self.assertIn('Retry-After', self.response.headers)
+        self.assertNotIn('challenge_id', resp)
+
+    def test_lockout_rejects_a_valid_code_without_checking_it(self):
+        """Test that a locked out user cannot verify at all, even with the right code"""
+        challenge_id = create_login_challenge(self.USER.id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(create_login_challenge(self.USER.id), status_code=429)
+
+        # The lockout also has to survive a challenge minted straight in the storage layer.
+        fresh_challenge = create_login_challenge(self.USER.id)
+        with patch('jwt_allauth.mfa.views.TOTP') as mock_totp_class:
+            mock_totp_class.return_value.validate_code.return_value = True
+            resp = self.post(
+                self.verify_url,
+                data={'challenge_id': fresh_challenge, 'code': '123456'},
+                status_code=429,
+            )
+            mock_totp_class.return_value.validate_code.assert_not_called()
+
+        self.assertEqual(resp['detail'], 'Too many failed MFA attempts. Try again later.')
+        # Counted down from the oldest attempt still inside the 600s window.
+        self.assertIn(int(self.response.headers['Retry-After']), range(590, 601))
+
+    def test_lockout_is_released_when_attempts_age_out(self):
+        """Test that the attempt window slides instead of locking the account forever"""
+        challenge_id = create_login_challenge(self.USER.id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(create_login_challenge(self.USER.id), status_code=429)
+
+        GenericTokenModel.objects.filter(
+            user=self.USER,
+            purpose=MFA_PURPOSE_LOGIN_ATTEMPT,
+        ).update(created=timezone.now() - timedelta(seconds=601))
+
+        challenge_id = create_login_challenge(self.USER.id)
+        with patch('jwt_allauth.mfa.views.TOTP') as mock_totp_class:
+            mock_totp_class.return_value.validate_code.return_value = True
+            resp = self.post(
+                self.verify_url,
+                data={'challenge_id': challenge_id, 'code': '123456'},
+                status_code=200,
+            )
+        self.assertIn('access', resp)
+
+    def test_recovery_code_failures_share_the_user_budget(self):
+        """Test that failures cannot be spread across the two verification endpoints"""
+        Authenticator.objects.create(
+            user=self.USER,
+            type=Authenticator.Type.RECOVERY_CODES.value,
+            data={'codes': ['CODE1', 'CODE2']}
+        )
+        challenge_id = create_login_challenge(self.USER.id)
+        self._fail_verification(challenge_id)
+        self._fail_verification(challenge_id)
+
+        with patch('jwt_allauth.mfa.views.RecoveryCodes') as mock_recovery_class:
+            mock_recovery_class.return_value.validate_code.return_value = False
+            resp = self.post(
+                self.verify_recovery_url,
+                data={
+                    'challenge_id': create_login_challenge(self.USER.id),
+                    'recovery_code': 'INVALID-CODE',
+                },
+                status_code=429,
+            )
+        self.assertEqual(resp['detail'], 'Too many failed MFA attempts. Try again later.')
+
+    def test_successful_verification_clears_the_user_budget(self):
+        """Test that a legitimate verification resets the failed attempt counter"""
+        challenge_id = create_login_challenge(self.USER.id)
+        self._fail_verification(challenge_id)
+        self.assertEqual(self._attempt_count(), 1)
+
+        with patch('jwt_allauth.mfa.views.TOTP') as mock_totp_class:
+            mock_totp_class.return_value.validate_code.return_value = True
+            self.post(
+                self.verify_url,
+                data={'challenge_id': challenge_id, 'code': '123456'},
+                status_code=200,
+            )
+
+        self.assertEqual(self._attempt_count(), 0)
+
+    def test_attempt_is_recorded_under_a_user_row_lock(self):
+        """Test that the count is not read-modify-written outside a lock"""
+        observed = {}
+        original_lock = storage._lock_user
+
+        def spy(user_id):
+            observed['locked'] = user_id
+            observed['in_atomic_block'] = transaction.get_connection().in_atomic_block
+            observed['attempts_at_lock_time'] = storage._failed_attempts_qs(user_id).count()
+            return original_lock(user_id)
+
+        challenge_id = create_login_challenge(self.USER.id)
+        with patch.object(storage, '_lock_user', side_effect=spy):
+            self._fail_verification(challenge_id)
+
+        # The lock is taken before the attempt is written, so a concurrent request cannot
+        # read a stale count and slip under the threshold.
+        self.assertEqual(observed['locked'], self.USER.pk)
+        self.assertTrue(observed['in_atomic_block'])
+        self.assertEqual(observed['attempts_at_lock_time'], 0)
+        self.assertEqual(self._attempt_count(), 1)
+
+    @override_settings(JWT_ALLAUTH_MFA_MAX_ATTEMPTS=0)
+    def test_per_user_limit_can_be_disabled(self):
+        """Test that JWT_ALLAUTH_MFA_MAX_ATTEMPTS = 0 falls back to per-challenge only"""
+        for _ in range(3):
+            challenge_id = create_login_challenge(self.USER.id)
+            self._fail_verification(challenge_id)
+
+        self.assertFalse(storage.is_login_locked_out(self.USER.id))
+
+    def test_expired_attempts_are_purged(self):
+        """Test that attempt rows do not pile up beyond the window"""
+        challenge_id = create_login_challenge(self.USER.id)
+        self._fail_verification(challenge_id)
+        GenericTokenModel.objects.filter(
+            user=self.USER,
+            purpose=MFA_PURPOSE_LOGIN_ATTEMPT,
+        ).update(created=timezone.now() - timedelta(seconds=601))
+
+        self._fail_verification(create_login_challenge(self.USER.id))
+        self.assertEqual(self._attempt_count(), 1)
+
+
 class MFACompleteFlowTests(TestsMixin):
     """
     Integration tests for complete MFA flow
@@ -1239,6 +1461,24 @@ class MFARequiredModeRegistrationTests(TestsMixin):
         self.assertNotIn('refresh', resp)
         self.assertEqual(get_user_model().objects.all().count(), user_count + 1)
 
+    def test_required_mode_registration_existing_email_is_not_disclosed(self):
+        """A taken address gets the same challenge-shaped response, leading nowhere."""
+        user_count = get_user_model().objects.all().count()
+        data = self.REGISTRATION_DATA.copy()
+        data['email'] = self.EMAIL
+
+        resp = self.post(self.register_url, data=data, status_code=201)
+        self.assertTrue(resp['mfa_setup_required'])
+        self.assertIn('setup_challenge_id', resp)
+        self.assertEqual(get_user_model().objects.all().count(), user_count)
+
+        # Redeeming it fails exactly like redeeming an expired challenge does.
+        self.post(
+            self.setup_url,
+            data={'setup_challenge_id': resp['setup_challenge_id']},
+            status_code=401
+        )
+
     def test_required_mode_registration_email_verification_true_includes_message(self):
         """Test that detail message is included when EMAIL_VERIFICATION=True"""
         resp = self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
@@ -1247,44 +1487,96 @@ class MFARequiredModeRegistrationTests(TestsMixin):
         self.assertIn('detail', resp)
         self.assertIn('Verification e-mail sent', str(resp['detail']))
 
-    def test_required_mode_mfa_activate_with_setup_challenge_returns_tokens(self):
-        """Test that /mfa/activate/ with setup_challenge_id returns access token and recovery codes"""
-        # Register to get setup_challenge_id
+    def _register_and_setup(self):
+        """Register in REQUIRED mode and start the TOTP setup, returning the challenge id."""
         resp = self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
         setup_challenge_id = resp['setup_challenge_id']
-
-        # Setup
         self.post(
             self.setup_url,
             data={'setup_challenge_id': setup_challenge_id},
             status_code=200
         )
+        return setup_challenge_id
 
-        # Activate with setup_challenge_id should return tokens
+    def _activate(self, setup_challenge_id, recovery_codes=('RC1', 'RC2')):
+        """Activate TOTP through the bootstrap flow and return the raw response."""
         with patch('jwt_allauth.mfa.views.TOTP.validate_code', return_value=True), \
              patch('jwt_allauth.mfa.views.RecoveryCodes') as mock_recovery_class:
 
             mock_recovery_instance = MagicMock()
-            mock_recovery_instance.get_unused_codes.return_value = ['RC1', 'RC2']
+            mock_recovery_instance.get_unused_codes.return_value = list(recovery_codes)
             mock_recovery_class.activate.return_value = mock_recovery_instance
 
-            response = self.client.post(
+            return self.client.post(
                 self.activate_url,
                 data={'code': '123456', 'setup_challenge_id': setup_challenge_id},
                 format='json'
             )
-            self.assertEqual(response.status_code, 200)
-            resp = response.json()
-            self.assertTrue(resp['success'])
-            self.assertIn('recovery_codes', resp)
-            # Bootstrap mode returns access token
-            self.assertIn('access', resp)
-            # Refresh token is in response or cookie depending on JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE
-            use_cookie = getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True)
-            if not use_cookie:
-                self.assertIn('refresh', resp)
-            else:
-                self.assertIn('refresh_token', response.cookies)
+
+    @override_settings(EMAIL_VERIFICATION=False)
+    def test_required_mode_mfa_activate_with_setup_challenge_returns_tokens(self):
+        """Test that /mfa/activate/ with setup_challenge_id returns access token and recovery codes"""
+        setup_challenge_id = self._register_and_setup()
+
+        # Activate with setup_challenge_id should return tokens
+        response = self._activate(setup_challenge_id)
+        self.assertEqual(response.status_code, 200)
+        resp = response.json()
+        self.assertTrue(resp['success'])
+        self.assertIn('recovery_codes', resp)
+        # Bootstrap mode returns access token
+        self.assertIn('access', resp)
+        # Refresh token is in response or cookie depending on JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE
+        use_cookie = getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True)
+        if not use_cookie:
+            self.assertIn('refresh', resp)
+        else:
+            self.assertIn('refresh_token', response.cookies)
+
+    @override_settings(EMAIL_VERIFICATION=True, JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False)
+    def test_required_mode_mfa_activate_does_not_bypass_email_verification(self):
+        """
+        The setup_challenge_id is handed to an anonymous caller by /registration/, so
+        completing the bootstrap must not grant a usable session while the e-mail
+        address is still unverified.
+        """
+        setup_challenge_id = self._register_and_setup()
+
+        response = self._activate(setup_challenge_id)
+        self.assertEqual(response.status_code, 200)
+        resp = response.json()
+        self.assertTrue(resp['success'])
+        self.assertIn('recovery_codes', resp)
+
+        # No session credentials are handed out before the e-mail is confirmed
+        self.assertNotIn('access', resp)
+        self.assertNotIn('refresh_token', response.cookies)
+        self.assertIn('Verification e-mail sent', str(resp['detail']))
+
+        # The refresh token is issued but disabled, exactly like plain registration
+        self.assertIn('refresh', resp)
+        user = get_user_model().objects.get(email=self.REGISTRATION_EMAIL)
+        whitelist = RefreshTokenWhitelistModel.objects.filter(user=user)
+        self.assertEqual(whitelist.count(), 1)
+        self.assertFalse(whitelist.first().enabled)
+
+        # And it cannot be exchanged for an access token
+        self.post(self.refresh_url, data={'refresh': resp['refresh']}, status_code=401)
+
+    @override_settings(EMAIL_VERIFICATION=True, JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False)
+    def test_required_mode_mfa_activate_issues_session_once_email_verified(self):
+        """Once the e-mail is verified, the bootstrap flow issues a full session."""
+        setup_challenge_id = self._register_and_setup()
+
+        user = get_user_model().objects.get(email=self.REGISTRATION_EMAIL)
+        EmailAddress.objects.filter(user=user).update(verified=True)
+
+        response = self._activate(setup_challenge_id)
+        self.assertEqual(response.status_code, 200)
+        resp = response.json()
+        self.assertIn('access', resp)
+        self.assertIn('refresh', resp)
+        self.assertTrue(RefreshTokenWhitelistModel.objects.get(user=user).enabled)
 
     def test_required_mode_mfa_activate_without_setup_challenge_no_tokens(self):
         """Test that /mfa/activate/ without setup_challenge_id (normal auth) doesn't return tokens"""
@@ -1353,9 +1645,10 @@ class MFARequiredModeRegistrationTests(TestsMixin):
             resp = response.json()
             self.assertTrue(resp['success'])
             self.assertIn('recovery_codes', resp)
-            # Bootstrap mode should return access token via build_token_response
-            self.assertIn('access', resp)
-            # With JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False, refresh token should be in response
+            # The e-mail is still unverified, so no session credentials are issued yet
+            self.assertNotIn('access', resp)
+            # With JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False, the (disabled) refresh
+            # token is returned in the response body, as in plain registration
             self.assertIn('refresh', resp)
 
         # Verify MFA was created

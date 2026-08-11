@@ -32,9 +32,11 @@ class BaseToken(models.Model):
 
 
 class AbstractRefreshToken(BaseToken):
-    jti = models.CharField(_("jti"), max_length=32, blank=False)
+    # Both columns are looked up on every rotation, and `session` also on every
+    # authenticated request when the access token session check is enabled.
+    jti = models.CharField(_("jti"), max_length=32, blank=False, db_index=True)
     enabled = models.BooleanField(_("enabled"), default=True)
-    session = models.CharField(_("session"), max_length=32, blank=False)
+    session = models.CharField(_("session"), max_length=32, blank=False, db_index=True)
 
     class Meta:
         abstract = True

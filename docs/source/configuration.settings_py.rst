@@ -21,6 +21,10 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``JWT_ALLAUTH_SESSION_LIFETIME`` - absolute lifetime of a session (default: ``None``, no limit). By default sessions are sliding: they stay alive for as long as they are used and expire after ``JWT_ALLAUTH_REFRESH_TOKEN_LIFETIME`` of inactivity. Set a ``timedelta`` to also cap the total life of a session: rotation can no longer extend it past that deadline, the refresh endpoint then revokes the session and the user has to log in again. Useful when a policy requires periodic re-authentication (e.g. NIST SP 800-63B) or to bound the exposure of a leaked refresh token that the legitimate user never rotates again.
 
+    - ``JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK`` - whether every authenticated request checks that the session behind the access token is still whitelisted (default: ``False``). Enabling it makes revocation effective immediately instead of when the access token expires, at the cost of one indexed query per request. See :doc:`refresh_token`.
+
+    - ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION`` - whether following the sign-up confirmation link opens a session on the browser that follows it, delivered as a refresh token cookie on the redirect (default: ``False``). Confirming an address added later to an account that is already usable never opens a session. Ignored when ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE = False``, as a redirect has no body to carry the token. Enabling it makes the confirmation link a credential: whoever the email reaches gets the session. See :doc:`email_verification`.
+
     - ``JWT_ALLAUTH_COLLECT_USER_AGENT`` - whether to collect user agent and IP information (default: ``False``).
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` - whether to send refresh tokens as HTTP-only cookies instead of in the JSON response payload (default: ``True``).
@@ -48,6 +52,12 @@ Configure these variables in the ``settings.py`` file of your project.
         - ``'disabled'`` - MFA TOTP is completely disabled and cannot be configured by users.
         - ``'optional'`` - MFA TOTP is optional; users can configure it voluntarily but login does not require it.
         - ``'required'`` - MFA TOTP is mandatory; users must configure it and cannot log in without providing a TOTP code.
+
+    - ``JWT_ALLAUTH_MFA_CHALLENGE_MAX_ATTEMPTS`` - failed MFA verifications tolerated on a single login challenge before it is invalidated (default: ``5``). Set to ``0`` to disable this limit.
+
+    - ``JWT_ALLAUTH_MFA_MAX_ATTEMPTS`` - failed MFA verifications tolerated per user, across every challenge, within ``JWT_ALLAUTH_MFA_LOCKOUT_SECONDS`` (default: ``10``). Once spent, the user is locked out of the MFA step and ``/mfa/verify/``, ``/mfa/verify-recovery/`` and ``/login/`` answer ``429``. Set to ``0`` to disable this limit. See :doc:`mfa_totp`.
+
+    - ``JWT_ALLAUTH_MFA_LOCKOUT_SECONDS`` - sliding window used to count failed MFA verifications, and therefore how long a locked out user waits (default: ``900``).
 
     - ``JWT_ALLAUTH_TOTP_ISSUER`` - custom TOTP issuer name displayed in authenticator apps like Google Authenticator (default: ``'JWT-Allauth'``). The JWT All-Auth MFA adapter is automatically configured when ``jwt_allauth`` is in ``INSTALLED_APPS``. If not set, defaults to ``'JWT-Allauth'``. Set to empty string to use the current site name instead. See :doc:`mfa_totp` for more details.
 
@@ -115,6 +125,8 @@ Configure these variables in the ``settings.py`` file of your project.
         - ``ADMIN_EMAIL_VERIFICATION_SUBJECT`` - subject of the email verification sent for admin-managed invitations (default: ``email/admin_invite/email_subject.txt``).
         - ``ADMIN_EMAIL_VERIFICATION`` - template of the email verification sent for admin-managed invitations (default: ``email/admin_invite/email_message.html``).
         - ``EMAIL_VERIFICATION_FAILED_TEMPLATE`` - template rendered when an invalid or expired verification link is accessed (default: ``registration/verification_failed.html``).
+        - ``ACCOUNT_EXISTS_SUBJECT`` - subject of the notice sent when somebody signs up with an address that is already in use (default: ``email/account_exists/email_subject.txt``).
+        - ``ACCOUNT_EXISTS`` - template of that notice (default: ``email/account_exists/email_message.html``).
 
     Example:
 

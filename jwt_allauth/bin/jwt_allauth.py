@@ -218,7 +218,7 @@ AUTHENTICATION_BACKENDS = (
 # Django Rest Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTStatelessUserAuthentication',
+        'jwt_allauth.authentication.JWTAllAuthAuthentication',
     )
 }
 
