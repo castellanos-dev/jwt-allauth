@@ -347,18 +347,16 @@ When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, both self-service and admin-man
     POST /mfa/activate/
     # ... receives tokens
 
-    # If EMAIL_VERIFICATION=True and the address has not been confirmed yet,
-    # /mfa/activate/ completes the TOTP setup but withholds the session:
-    Response (200 OK - e-mail still unverified):
+    # While the address is unverified, activation completes the TOTP setup but
+    # withholds the session: no access token, and the refresh token is disabled
+    # until the verification link is followed.
+    Response (200 OK - email still unverified):
     {
         "success": true,
         "recovery_codes": ["ABC12345DEF67890", ...],
         "detail": "Verification e-mail sent.",
         "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
     }
-
-    # No access token is issued, and the refresh token stays disabled until the
-    # verification link is followed - exactly as in registration without MFA.
 
 **Admin-Managed Registration** (``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``)
 

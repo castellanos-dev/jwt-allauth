@@ -169,18 +169,17 @@ class MFAActivateView(APIView):
         # issue tokens for immediate login/registration completion.
         # This covers both login bootstrap and registration bootstrap flows.
         if is_bootstrap and get_mfa_totp_mode() == MFA_TOTP_REQUIRED:
-            # The registration bootstrap hands out the setup challenge to an anonymous
-            # caller before the e-mail address has been confirmed, so completing the
-            # setup must not grant a session that EMAIL_VERIFICATION withholds.
-            # The login and set-password bootstraps already require a verified e-mail,
-            # so they are unaffected by this check.
+            # Registration hands the setup challenge to an anonymous caller before the
+            # address is confirmed, so the bootstrap must not grant a session that
+            # EMAIL_VERIFICATION withholds. Login and set-password already require a
+            # verified address and are unaffected.
             verification_pending = bool(settings.EMAIL_VERIFICATION) and not is_email_verified(user)
 
             refresh = RefreshToken.for_user(user, enabled=not verification_pending)
 
             if verification_pending:
-                # Mirror RegisterView.get_response_data: no access token is issued and
-                # the refresh token stays disabled until the verification link is used.
+                # Same shape as RegisterView.get_response_data: disabled refresh token,
+                # no access token until the verification link is used.
                 return Response(
                     {
                         "success": True,

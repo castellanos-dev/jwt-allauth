@@ -15,6 +15,8 @@ Security
 
 - **Email confirmation keys hashed at rest**: in admin-managed registration the confirmation key was stored verbatim in ``GenericTokenModel``, so read access to the database exposed a usable link for every pending invitation. Only its SHA-256 digest is persisted now, matching how the other single-use tokens are already stored. This change is backward compatible — confirmations issued by a prior version remain in plain text and keep working until they expire.
 
+- **Email verification is no longer bypassable through the MFA bootstrap**: when ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, ``POST /registration/`` answers an anonymous caller with a ``setup_challenge_id`` before the address is confirmed, and ``/mfa/activate/`` exchanged that challenge for a fully enabled session — so anyone could register an address they do not own, complete the TOTP setup with their own authenticator, and obtain a working session on the account despite ``EMAIL_VERIFICATION = True``. The bootstrap now checks the account's verification state: while the address is unverified no access token is issued and the refresh token is created disabled, matching registration without MFA. The login and set-password bootstraps already require a verified address and keep issuing a full session.
+
 - **Refresh rejected for deactivated accounts**: rotating a refresh token now requires the account to be active. When ``is_active`` is ``False`` the refresh is rejected and the user's whitelisted refresh tokens are removed, which ends every session of the account. Previously only ``LoginView`` checked ``is_active``, so a deactivated user kept its sessions alive by refreshing.
 
 New Features
@@ -37,8 +39,6 @@ Security
 - **Reduced default refresh token lifetime** from 90 days to **14 days**. The previous 90-day window was excessively long in case of token leakage. Existing installations using the old ``JWT_REFRESH_TOKEN_LIFETIME`` setting are not affected — it continues to work.
 
 - **Forced secure cookies in production**: The refresh token cookie ``secure`` flag is now forced to ``True`` when ``DEBUG=False``, regardless of the ``JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SECURE`` setting. If the setting is explicitly ``False`` while in production, a warning is emitted. This prevents accidental cookie exposure over plain HTTP.
-
-- **E-mail verification is no longer bypassable through the MFA bootstrap**: when ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, ``POST /registration/`` returns a ``setup_challenge_id`` to an anonymous caller before the address is confirmed. ``/mfa/activate/`` used to exchange that challenge for a fully enabled session, granting access to an account registered with somebody else's e-mail address even with ``EMAIL_VERIFICATION = True``. The bootstrap branch now checks the user's verification state: while the address is unverified it issues no access token and the refresh token is created disabled, matching registration without MFA. The login and set-password bootstraps already require a verified address and are unaffected.
 
 - **Rate limiting on MFA verification**: ``MFAVerifyView`` and ``MFAVerifyRecoveryView`` now enforce ``AnonRateThrottle``. Additionally, the login challenge is automatically invalidated after 5 consecutive failed verification attempts, preventing brute-force attacks on TOTP codes and recovery codes.
 
