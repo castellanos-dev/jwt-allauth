@@ -1,8 +1,11 @@
+import sys
 import time
+from importlib import reload
 
 from allauth.account.models import EmailAddress, EmailConfirmationHMAC
+from django.conf import settings
 from django.test import override_settings
-from django.urls import reverse
+from django.urls import NoReverseMatch, clear_url_caches, reverse
 
 from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
 
@@ -88,6 +91,35 @@ class EmailVerificationTests(TestsMixin):
 
         resp = self.get(f'{self.verify_email_url}{key}/', status_code=302)
         self.assertRedirects(resp, expected_url='/test-verified/', fetch_redirect_response=False)
+
+    def test_email_verification_redirect_url_without_the_built_in_page(self):
+        """
+        The built-in page is only routed while ``EMAIL_VERIFIED_REDIRECT`` is unset, so
+        resolving the redirect through its URL name answers ``500`` in every installation
+        that configured one.
+        """
+        email_object = self._unverify()
+        key = EmailConfirmationHMAC(email_object).key
+
+        try:
+            with override_settings(EMAIL_VERIFIED_REDIRECT='/test-verified/'):
+                self._reload_urls()
+                with self.assertRaises(NoReverseMatch):
+                    reverse('jwt_allauth_email_verified')
+
+                resp = self.get(f'{self.verify_email_url}{key}/', status_code=302)
+                self.assertRedirects(resp, expected_url='/test-verified/', fetch_redirect_response=False)
+        finally:
+            self._reload_urls()
+
+    @staticmethod
+    def _reload_urls():
+        """Rebuild the URLconf so that it is routed under the settings in force."""
+        clear_url_caches()
+        for name in ('jwt_allauth.registration.urls', 'jwt_allauth.urls', settings.ROOT_URLCONF):
+            module = sys.modules.get(name)
+            if module is not None:
+                reload(module)
 
     def _unverify(self):
         email_object = EmailAddress.objects.get(user=self.USER, email=self.EMAIL)

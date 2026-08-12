@@ -47,7 +47,7 @@ Authentication
 
 **URL Name:** ``rest_login``
 
-.. note:: Django Rest Framework throttling enabled, see: https://www.django-rest-framework.org/api-guide/throttling/
+.. note:: Django Rest Framework throttling enabled, on top of the ``DEFAULT_THROTTLE_CLASSES`` of the project, see: https://www.django-rest-framework.org/api-guide/throttling/ and :doc:`configuration.settings_py`
 
 **/refresh/** (POST)
 ^^^^^^^^^^^^^^^^^^^^
@@ -181,7 +181,7 @@ Authentication
 
 **URL Name:** ``rest_password_reset``
 
-.. note:: Django Rest Framework throttling enabled, see: https://www.django-rest-framework.org/api-guide/throttling/
+.. note:: Django Rest Framework throttling enabled, on top of the ``DEFAULT_THROTTLE_CLASSES`` of the project, see: https://www.django-rest-framework.org/api-guide/throttling/ and :doc:`configuration.settings_py`
 
 .. warning:: Requires an email server configured.
 
@@ -545,7 +545,7 @@ Registration
 
 **URL Name:** ``rest_set_password``
 
-.. note:: Only available when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. This endpoint is reached after the invited user clicks the verification link. The GET verification drops a one-time access token in the ``set_password_access_token`` cookie and redirects to the UI configured by ``PASSWORD_SET_REDIRECT``. Throttled with ``UserRateThrottle`` by default.
+.. note:: Only available when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. This endpoint is reached after the invited user clicks the verification link. The GET verification drops a one-time access token in the ``set_password_access_token`` cookie and redirects to the UI configured by ``PASSWORD_SET_REDIRECT``. Throttled with ``UserRateThrottle`` by default, in addition to the throttles configured by the project.
 
 **/registration/account_email_verification_sent/** (GET)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

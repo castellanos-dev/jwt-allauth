@@ -51,6 +51,14 @@ jwt\_allauth.exceptions module
    :show-inheritance:
    :undoc-members:
 
+jwt\_allauth.throttling module
+------------------------------
+
+.. automodule:: jwt_allauth.throttling
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 jwt\_allauth.utils module
 -------------------------
 

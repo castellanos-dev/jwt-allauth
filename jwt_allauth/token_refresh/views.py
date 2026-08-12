@@ -8,11 +8,12 @@ from rest_framework.throttling import UserRateThrottle
 from jwt_allauth.token_refresh.serializers import TokenRefreshSerializer
 from jwt_allauth.utils import get_user_agent, user_agent_dict, _get_cookie_secure, _get_cookie_max_age
 from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
+from jwt_allauth.throttling import ExtraThrottlesMixin
 
 
-class TokenRefreshView(DefaultTokenRefreshView):
+class TokenRefreshView(ExtraThrottlesMixin, DefaultTokenRefreshView):
     serializer_class = TokenRefreshSerializer
-    throttle_classes = [UserRateThrottle]
+    extra_throttle_classes = (UserRateThrottle,)
 
     @get_user_agent
     def post(self, request: Request, *args, **kwargs) -> Response:

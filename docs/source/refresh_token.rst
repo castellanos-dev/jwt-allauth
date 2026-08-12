@@ -18,6 +18,11 @@ A refresh token is consumed exactly once. The rotation runs in a single transact
 and claims it by deleting it, so two requests presenting the same token at the same time cannot both obtain a
 successor: one rotates, the other is treated as a reused token and its whole session is revoked.
 
+That transaction also takes a row lock on the user before it starts, and so does every revocation. Rotation
+replaces one whitelist row with another, and a revocation running at the same time would not see the successor
+— a session would survive the logout that reported it closed. The lock orders them, at the cost of serializing
+the concurrent rotations belonging to one user.
+
 The following constants should be included in the settings.py file:
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN`` - refresh token class (default: ``jwt_allauth.tokens.tokens.RefreshToken``).

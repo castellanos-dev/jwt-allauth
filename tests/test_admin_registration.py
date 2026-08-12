@@ -307,11 +307,11 @@ class AdminManagedRegistrationTests(TestsMixin):
             GenericTokenModel.objects.filter(user=established, purpose=PASS_SET_ACCESS).exists()
         )
 
-    def test_confirmation_of_user_with_password_grants_nothing(self):
+    def test_confirmation_of_user_with_password_grants_no_capability(self):
         """
         Even with a perfectly valid confirmation key, an account that already has a
         password must never be handed a password-set capability: that would be a password
-        reset outside of the reset flow.
+        reset outside of the reset flow. The address it was sent to is still confirmed.
         """
         established = get_user_model().objects.create_user(
             'established_valid', email='established_valid@demo.com', password='A-1_strong'
@@ -328,11 +328,59 @@ class AdminManagedRegistrationTests(TestsMixin):
 
         resp = self.client.get(reverse('account_confirm_email', args=[key]))
 
-        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, reverse('jwt_allauth_email_verified'))
         self.assertNotIn(SET_PASSWORD_COOKIE, self.client.cookies)
         self.assertFalse(
             GenericTokenModel.objects.filter(user=established, purpose=PASS_SET_ACCESS).exists()
         )
+        secondary.refresh_from_db()
+        self.assertTrue(secondary.verified)
+
+    def test_pending_account_with_password_is_verified_by_its_link(self):
+        """
+        A sign-up that chose a password before the installation moved to admin-managed
+        registration is not walled off: its link confirms the address, so the account can
+        log in with the password it already has. No capability is handed out.
+        """
+        pending = get_user_model().objects.create_user(
+            'pending_with_password', email='pending_with_password@demo.com', password='A-1_strong'
+        )
+        email_addr = EmailAddress.objects.create(
+            user=pending, email='pending_with_password@demo.com', verified=False, primary=True
+        )
+
+        key = EmailConfirmationHMAC(email_addr).key
+        GenericTokenModel.objects.create(user=pending, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+
+        resp = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, reverse('jwt_allauth_email_verified'))
+        self.assertNotIn(SET_PASSWORD_COOKIE, self.client.cookies)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(user=pending, purpose=PASS_SET_ACCESS).exists()
+        )
+        email_addr.refresh_from_db()
+        self.assertTrue(email_addr.verified)
+
+    @override_settings(EMAIL_VERIFIED_REDIRECT='/verified-ui/')
+    def test_confirmation_without_capability_honours_the_configured_redirect(self):
+        """The built-in page is only routed when the project configured none of its own."""
+        established = get_user_model().objects.create_user(
+            'established_redirect', email='established_redirect@demo.com', password='A-1_strong'
+        )
+        email_addr = EmailAddress.objects.create(
+            user=established, email='established_redirect@demo.com', verified=False, primary=True
+        )
+
+        key = EmailConfirmationHMAC(email_addr).key
+        GenericTokenModel.objects.create(user=established, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+
+        resp = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, '/verified-ui/')
 
     def test_only_latest_password_set_capability_stays_valid(self):
         """
@@ -404,6 +452,36 @@ class AdminManagedRegistrationTests(TestsMixin):
         self.assertNotIn(REFRESH_TOKEN_COOKIE, resp.cookies)
         invited.refresh_from_db()
         self.assertFalse(invited.has_usable_password())
+
+    def test_set_password_completes_with_an_authorization_header_attached(self):
+        """
+        Authorization here is the one-time cookie, and the permission behind it turns down
+        a request that arrives already authenticated. A native client attaching its bearer
+        token to every request must still be able to finish the invitation.
+        """
+        invited, key = self._invite('invited_with_bearer')
+        staff = get_user_model().objects.create_user(
+            'bearer_staff', email='bearer_staff@demo.com', password='A-1_strong', is_staff=True
+        )
+        EmailAddress.objects.create(user=staff, email=staff.email, verified=True, primary=True)
+        bearer = 'Bearer %s' % RefreshToken.for_user(staff).access_token
+
+        verify_resp = self.client.get(
+            reverse('account_confirm_email', args=[key]), HTTP_AUTHORIZATION=bearer
+        )
+        self.assertEqual(verify_resp.status_code, 302)
+        self.assertIn(SET_PASSWORD_COOKIE, self.client.cookies)
+
+        resp = self.client.post(
+            self.set_password_url,
+            data={"new_password1": "A-1_newpass", "new_password2": "A-1_newpass"},
+            content_type='application/json',
+            HTTP_AUTHORIZATION=bearer,
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        invited.refresh_from_db()
+        self.assertTrue(invited.has_usable_password())
 
     def test_set_password_requires_a_csrf_token(self):
         """

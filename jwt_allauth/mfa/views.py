@@ -15,6 +15,7 @@ from jwt_allauth.constants import (
     MFA_TOTP_REQUIRED,
 )
 
+from jwt_allauth.throttling import ExtraThrottlesMixin
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.utils import build_token_response, is_email_verified, load_user
 from .serializers import (
@@ -67,9 +68,9 @@ except Exception:  # pragma: no cover - optional dependency guard
         )
 
 
-class MFASetupView(APIView):
+class MFASetupView(ExtraThrottlesMixin, APIView):
     permission_classes = [IsAuthenticatedOrHasMFASetupChallenge]
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
+    extra_throttle_classes = (AnonRateThrottle, UserRateThrottle)
 
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
@@ -112,10 +113,10 @@ class MFASetupView(APIView):
         })
 
 
-class MFAActivateView(APIView):
+class MFAActivateView(ExtraThrottlesMixin, APIView):
     permission_classes = [IsAuthenticatedOrHasMFASetupChallenge]
     serializer_class = MFAActivateSerializer
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
+    extra_throttle_classes = (AnonRateThrottle, UserRateThrottle)
 
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
@@ -264,9 +265,9 @@ def _locked_out_response(retry_after: int) -> Response:
     return response
 
 
-class MFAVerifyView(APIView):
+class MFAVerifyView(ExtraThrottlesMixin, APIView):
     serializer_class = MFAVerifySerializer
-    throttle_classes = [AnonRateThrottle]
+    extra_throttle_classes = (AnonRateThrottle,)
 
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
@@ -315,9 +316,9 @@ class MFAVerifyView(APIView):
         return build_token_response(refresh)
 
 
-class MFAVerifyRecoveryView(APIView):
+class MFAVerifyRecoveryView(ExtraThrottlesMixin, APIView):
     serializer_class = MFAVerifyRecoverySerializer
-    throttle_classes = [AnonRateThrottle]
+    extra_throttle_classes = (AnonRateThrottle,)
 
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:

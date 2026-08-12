@@ -1,5 +1,6 @@
 import uuid
 
+from allauth.core.ratelimit import consume as consume_ratelimit
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured, ValidationError
@@ -10,6 +11,7 @@ from django.urls import reverse_lazy
 from django.utils.http import urlsafe_base64_decode
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status
+from rest_framework.exceptions import NotAuthenticated, Throttled
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -31,12 +33,14 @@ from jwt_allauth.password_reset.serializers import SetPasswordSerializer
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
+from jwt_allauth.throttling import ExtraThrottlesMixin
 from jwt_allauth.tokens.tokens import GenericToken
 from jwt_allauth.utils import (
     build_token_response,
     get_user_agent,
     load_capability_user,
     sensitive_post_parameters_m,
+    user_sessions_lock,
 )
 from jwt_allauth.csrf import ensure_csrf_cookie
 from jwt_allauth.mfa.storage import create_setup_challenge
@@ -53,7 +57,34 @@ def get_mfa_totp_mode() -> str:
     return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
 
 
-class PasswordResetView(GenericAPIView):
+class CapabilityCookieViewMixin:
+    """
+    Shared wiring for the endpoints authorized by a one-time capability cookie.
+
+    No authentication class runs on them. Authorization is the cookie, and the permission
+    behind it turns down a request that arrives already authenticated, since it replaces
+    ``request.user`` with the holder of the capability: a native client that attaches its
+    bearer token to every request would be locked out of the flow. A stale or malformed
+    header is worse still -- the authentication class rejects it before the cookie is ever
+    looked at.
+
+    Without an authenticator declared, DRF reports a denied permission as ``403`` and
+    degrades a ``401`` into one, since it has no scheme to challenge with. The cookie is a
+    credential, so a missing or spent one keeps answering ``401`` the way it always has;
+    the scheme named in ``WWW-Authenticate`` is the cookie itself. A failed CSRF check
+    raises on its own and stays a ``403``.
+    """
+    authentication_classes = ()
+    authenticate_header = 'Cookie'
+
+    def permission_denied(self, request, message=None, code=None):
+        raise NotAuthenticated(detail=message, code=code)
+
+    def get_authenticate_header(self, request):
+        return self.authenticate_header
+
+
+class PasswordResetView(ExtraThrottlesMixin, GenericAPIView):
     """
     Calls Django Auth PasswordResetForm save method.
 
@@ -62,13 +93,28 @@ class PasswordResetView(GenericAPIView):
     """
     serializer_class = PasswordResetSerializer
     permission_classes = (AllowAny,)
-    throttle_classes = [AnonRateThrottle]
+    extra_throttle_classes = (AnonRateThrottle,)
 
     @get_user_agent
     def post(self, request):
         # Create a serializer with request.data
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        # The throttle above counts requests per address of origin, which does not
+        # protect the mailbox on the other end: rotating the origin is enough to keep a
+        # victim's inbox under a stream of reset links. allauth's own ``reset_password``
+        # limit is consumed here as well, keyed by the address being targeted (``5/m/key``
+        # by default, alongside its ``20/m/ip``). It is consumed before the account is
+        # looked up, so an address that is not registered answers exactly like one that
+        # is. Set ``ACCOUNT_RATE_LIMITS = {'reset_password': None}`` to lift it.
+        if not consume_ratelimit(
+            request=getattr(request, '_request', request),
+            action='reset_password',
+            key=serializer.validated_data['email'],
+        ):
+            raise Throttled(detail=_('Too many password reset requests for this e-mail address.'))
+
         serializer.save()
         # Return the success message with OK HTTP status
         return Response(
@@ -113,8 +159,11 @@ class PasswordResetConfirmView(GenericAPIView):
 
     This endpoint is reached by anonymous users clicking the link sent by
     email, so it must stay public regardless of the project's
-    ``DEFAULT_PERMISSION_CLASSES``.
+    ``DEFAULT_PERMISSION_CLASSES``. It authenticates nobody either: a stale or
+    malformed ``Authorization`` header that a native client attaches to every request
+    would otherwise answer ``401`` to a link that carries its own credential.
     """
+    authentication_classes = ()
     permission_classes = (AllowAny,)
     form_url = getattr(settings, PASSWORD_RESET_REDIRECT, None)
 
@@ -186,7 +235,7 @@ class PasswordResetConfirmView(GenericAPIView):
         return user
 
 
-class ResetPasswordView(GenericAPIView):
+class ResetPasswordView(CapabilityCookieViewMixin, ExtraThrottlesMixin, GenericAPIView):
     """
     Calls Django Auth SetPasswordForm save method.
 
@@ -195,7 +244,7 @@ class ResetPasswordView(GenericAPIView):
     """
     serializer_class = SetPasswordSerializer
     permission_classes = (ResetPasswordPermission,)
-    throttle_classes = [UserRateThrottle]
+    extra_throttle_classes = (UserRateThrottle,)
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
@@ -216,7 +265,10 @@ class ResetPasswordView(GenericAPIView):
 
         # Revoke old sessions
         if getattr(settings, 'LOGOUT_ON_PASSWORD_CHANGE', True):
-            RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
+            # Ordered against the rotations in flight: a refresh committing after this
+            # deletion started would leave the session it renews open past the reset.
+            with user_sessions_lock(self.request.user.id):
+                RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
 
         refresh_token = RefreshToken.for_user(request.user)
         return build_token_response(
@@ -225,7 +277,7 @@ class ResetPasswordView(GenericAPIView):
         )
 
 
-class SetPasswordView(GenericAPIView):
+class SetPasswordView(CapabilityCookieViewMixin, ExtraThrottlesMixin, GenericAPIView):
     """
     Set password for admin-managed registration.
     Accepts: new_password1, new_password2
@@ -233,7 +285,7 @@ class SetPasswordView(GenericAPIView):
     """
     serializer_class = SetPasswordSerializer
     permission_classes = (SetPasswordPermission,)
-    throttle_classes = [UserRateThrottle]
+    extra_throttle_classes = (UserRateThrottle,)
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
@@ -256,7 +308,10 @@ class SetPasswordView(GenericAPIView):
 
         # Revoke old sessions
         if getattr(settings, 'LOGOUT_ON_PASSWORD_CHANGE', True):
-            RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
+            # Ordered against the rotations in flight: a refresh committing after this
+            # deletion started would leave the session it renews open past the reset.
+            with user_sessions_lock(self.request.user.id):
+                RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
 
         # Invalidate the email confirmation token now that the password has been set
         GenericTokenModel.objects.filter(user=request.user, purpose=EMAIL_CONFIRMATION).delete()

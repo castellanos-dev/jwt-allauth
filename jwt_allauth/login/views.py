@@ -9,11 +9,12 @@ from rest_framework.throttling import AnonRateThrottle
 from jwt_allauth.app_settings import LoginSerializer
 from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m, build_token_response
 from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
+from jwt_allauth.throttling import ExtraThrottlesMixin
 
 
-class LoginView(TokenObtainPairView):
+class LoginView(ExtraThrottlesMixin, TokenObtainPairView):
     serializer_class = LoginSerializer
-    throttle_classes = [AnonRateThrottle]
+    extra_throttle_classes = (AnonRateThrottle,)
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):

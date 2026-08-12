@@ -945,7 +945,7 @@ class MFABruteForceLimitTests(TestsMixin):
     def test_attempt_is_recorded_under_a_user_row_lock(self):
         """Test that the count is not read-modify-written outside a lock"""
         observed = {}
-        original_lock = storage._lock_user
+        original_lock = storage.lock_user
 
         def spy(user_id):
             observed['locked'] = user_id
@@ -954,7 +954,7 @@ class MFABruteForceLimitTests(TestsMixin):
             return original_lock(user_id)
 
         challenge_id = create_login_challenge(self.USER.id)
-        with patch.object(storage, '_lock_user', side_effect=spy):
+        with patch.object(storage, 'lock_user', side_effect=spy):
             self._fail_verification(challenge_id)
 
         # The lock is taken before the attempt is written, so a concurrent request cannot

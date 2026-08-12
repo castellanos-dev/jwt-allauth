@@ -23,6 +23,7 @@ from jwt_allauth.registration.app_settings import register_permission_classes
 from jwt_allauth.app_settings import RegisterSerializer
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.permissions import RegisterUsersPermission
+from jwt_allauth.throttling import ExtraThrottlesMixin
 from jwt_allauth.registration.serializers import UserRegisterSerializer
 # from jwt_allauth.registration.serializers import (
 #     SocialLoginSerializer, SocialAccountSerializer, SocialConnectSerializer)
@@ -47,10 +48,10 @@ def get_mfa_totp_mode() -> str:
     return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
 
 
-class RegisterView(CreateAPIView):
+class RegisterView(ExtraThrottlesMixin, CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = register_permission_classes()
-    throttle_classes = [AnonRateThrottle]
+    extra_throttle_classes = (AnonRateThrottle,)
     token_model = TokenModel
     jwt_token = RefreshToken
 
