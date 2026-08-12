@@ -10,7 +10,6 @@ from allauth.account.utils import setup_user_email
 # from allauth.socialaccount.models import SocialAccount
 # from allauth.socialaccount.providers.base import AuthProcess
 from allauth.utils import get_username_max_length
-from django.conf import settings as django_settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 # from django.http import HttpRequest
@@ -19,7 +18,7 @@ from django.utils.translation import gettext_lazy as _
 # from requests.exceptions import HTTPError
 from rest_framework import serializers
 
-from jwt_allauth.utils import enumeration_prevented
+from jwt_allauth.utils import enumeration_prevented, verification_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -231,7 +230,7 @@ class RegisterSerializer(serializers.Serializer):
         self.custom_signup(request, user)
         user.save()
         setup_user_email(request, user, [])
-        if not bool(django_settings.EMAIL_VERIFICATION):
+        if not verification_enabled():
             email = EmailAddress.objects.filter(user=user.id).first()
             if email is not None:
                 adapter.confirm_email(request, email)

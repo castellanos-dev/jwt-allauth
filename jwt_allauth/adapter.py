@@ -7,7 +7,7 @@ from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
 
-from jwt_allauth.constants import EMAIL_CONFIRMATION
+from jwt_allauth.constants import EMAIL_CONFIRMATION, PASSWORD_RESET_REQUEST_URL
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.utils import get_template_path, hash_token
 
@@ -40,6 +40,26 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
         email = email.strip().lower()
         return email
 
+    @staticmethod
+    def get_password_reset_request_url():
+        """
+        Absolute address of the page on which a user asks for a password reset.
+
+        Read from the ``PASSWORD_RESET_REQUEST_URL`` setting, which the project has to
+        provide: this library serves the endpoint that consumes a reset link, not the
+        form that requests one. A path is resolved against the current request.
+
+        Returns:
+            str|None: Address of the form, or ``None`` when it is not configured.
+        """
+        url = getattr(settings, PASSWORD_RESET_REQUEST_URL, None)
+        if not url:
+            return None
+        request = allauth_ctx.request
+        if request is None:
+            return url
+        return request.build_absolute_uri(url)
+
     def send_account_already_exists_mail(self, email):
         """
         Warn the owner of an address that somebody tried to sign up with it.
@@ -48,6 +68,14 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
         is already in use (see ``ACCOUNT_PREVENT_ENUMERATION``), so that the person
         behind a genuine second attempt is not left waiting for a link that is never
         going to arrive.
+
+        It is also the only warning the owner of the address gets, which is what makes
+        it more than a courtesy: whoever attempted the sign-up may be trying to settle
+        on an address that is not theirs, and the recipient has to be told that the way
+        to take the account back is the password reset -- which revokes every session
+        the other party may hold. The address of the reset form comes from
+        ``PASSWORD_RESET_REQUEST_URL``; without it the mail still says so, but cannot
+        link to it.
 
         allauth's implementation links to its own signup and password reset views,
         which a REST installation does not serve, hence the dedicated templates.
@@ -58,7 +86,7 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
         self.send_mail(
             "email/account_exists/email_account_exists",
             email,
-            {},
+            {"password_reset_url": self.get_password_reset_request_url()},
             subject_path=get_template_path(
                 'ACCOUNT_EXISTS_SUBJECT',
                 "email/account_exists/email_subject.txt",

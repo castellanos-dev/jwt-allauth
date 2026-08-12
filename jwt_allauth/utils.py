@@ -78,28 +78,83 @@ def get_session_lifetime():
     return lifetime
 
 
+def _configured_verification_method():
+    """The method named by ``EMAIL_VERIFICATION``, or ``None`` when it is a boolean.
+
+    :meth:`jwt_allauth.apps.JWTAllauthAppConfig.ready` normalises the setting to a
+    boolean at startup and puts the method in allauth's ``ACCOUNT_EMAIL_VERIFICATION``,
+    so a string only reaches here when it is set afterwards — ``override_settings`` in a
+    test, most of the time. Reading it at call time keeps that honest rather than having
+    ``bool('none')`` quietly answer ``True``.
+    """
+    configured = getattr(settings, 'EMAIL_VERIFICATION', False)
+    if isinstance(configured, str):
+        return configured.lower()
+    return None
+
+
+def verification_enabled() -> bool:
+    """Whether addresses are confirmed at all, by either method.
+
+    ``False`` means an address is confirmed as the account is created and no link is
+    ever sent, which is what the confirmation URL and the sign-up auto-confirmation ask
+    about — neither cares whether the method is ``'mandatory'`` or ``'optional'``.
+    """
+    method = _configured_verification_method()
+    if method is not None:
+        return method != 'none'
+    return bool(getattr(settings, 'EMAIL_VERIFICATION', False))
+
+
+def verification_is_mandatory() -> bool:
+    """Whether an unverified account is barred from having a session at all.
+
+    ``EMAIL_VERIFICATION`` is this library's setting and names the method:
+    ``'mandatory'``, ``'optional'`` or ``'none'``, with ``True`` and ``False`` still
+    accepted as the first and the last. allauth's ``ACCOUNT_EMAIL_VERIFICATION`` is
+    derived from it at startup, and a project that declares that one instead has it
+    honoured; the two are reconciled in
+    :meth:`jwt_allauth.apps.JWTAllauthAppConfig.ready`, so by the time anything asks
+    they agree.
+
+    ``'optional'`` is why the distinction matters: allauth sends the confirmation mail
+    but does not block, which is the usual shape of the web — the account is usable from
+    sign-up and verification gates individual features rather than the session itself.
+    Gate those features on the ``email_verified`` claim, through
+    :class:`jwt_allauth.permissions.IsEmailVerified` or your own check.
+
+    Returns:
+        bool: ``True`` when an account whose address is not confirmed must not be able
+        to log in, and the token registration hands out must be born disabled.
+    """
+    method = _configured_verification_method()
+    if method is not None:
+        return method == 'mandatory'
+    if not bool(getattr(settings, 'EMAIL_VERIFICATION', False)):
+        return False
+    return (
+        allauth_settings.EMAIL_VERIFICATION
+        == allauth_settings.EmailVerificationMethod.MANDATORY
+    )
+
+
 def enumeration_prevented():
     """Whether sign-up must hide that an e-mail address is already in use.
 
     Follows allauth's ``ACCOUNT_PREVENT_ENUMERATION`` (enabled by default), so that a
     single setting governs the behaviour of the whole project.
 
-    Hiding the conflict is only possible while e-mail verification is mandatory, and
-    both settings that govern it have to agree: ``EMAIL_VERIFICATION``, which decides
-    whether registration hands out a usable session, and allauth's
-    ``ACCOUNT_EMAIL_VERIFICATION``, which decides whether the confirmation mail the
-    cover story relies on is sent at all. ``ACCOUNT_EMAIL_VERIFICATION`` is derived
-    from ``EMAIL_VERIFICATION`` unless the project sets it itself, so the two only
-    part ways on purpose. When either falls short the conflict is reported to the
-    caller as before — the same choice allauth makes in ``assess_unique_email``.
+    Hiding the conflict is only possible while verification is mandatory (see
+    :func:`verification_is_mandatory`): the cover story is a confirmation mail that is
+    never followed by a usable session, and neither half of it holds otherwise. When it
+    falls short the conflict is reported to the caller as before — the same choice
+    allauth makes in ``assess_unique_email``.
 
     Returns:
         bool: ``True`` when the registration endpoint must answer a conflicting
         address exactly as it answers a fresh sign-up.
     """
-    if not bool(getattr(settings, 'EMAIL_VERIFICATION', False)):
-        return False
-    if allauth_settings.EMAIL_VERIFICATION != allauth_settings.EmailVerificationMethod.MANDATORY:
+    if not verification_is_mandatory():
         return False
     return bool(allauth_settings.PREVENT_ENUMERATION)
 
@@ -340,6 +395,10 @@ def allauth_authenticate(**kwargs):
     """
     Authenticate user using allauth's adapter with enhanced verification.
 
+    An unconfirmed address only bars the login while verification is mandatory. Under
+    ``ACCOUNT_EMAIL_VERIFICATION = 'optional'`` the account is usable from sign-up and
+    the verification state travels in the ``email_verified`` claim instead.
+
     Args:
         **kwargs: Authentication credentials (typically username/email + password)
 
@@ -348,12 +407,13 @@ def allauth_authenticate(**kwargs):
 
     Raises:
         IncorrectCredentials: If authentication fails
-        NotVerifiedEmail: If email is not verified
+        NotVerifiedEmail: If email is not verified and verification is mandatory
     """
     user = get_adapter().authenticate(**kwargs)
     if user is None:
         raise IncorrectCredentials()
-    is_email_verified(user, raise_exception=True)
+    if verification_is_mandatory():
+        is_email_verified(user, raise_exception=True)
     return user
 
 

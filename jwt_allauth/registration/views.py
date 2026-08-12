@@ -27,7 +27,12 @@ from jwt_allauth.throttling import ExtraThrottlesMixin
 from jwt_allauth.registration.serializers import UserRegisterSerializer
 # from jwt_allauth.registration.serializers import (
 #     SocialLoginSerializer, SocialAccountSerializer, SocialConnectSerializer)
-from jwt_allauth.utils import enumeration_prevented, get_user_agent, sensitive_post_parameters_m
+from jwt_allauth.utils import (
+    enumeration_prevented,
+    get_user_agent,
+    sensitive_post_parameters_m,
+    verification_is_mandatory,
+)
 from jwt_allauth.constants import (
     MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
@@ -61,7 +66,11 @@ class RegisterView(ExtraThrottlesMixin, CreateAPIView):
 
     @staticmethod
     def get_response_data(token):
-        if settings.EMAIL_VERIFICATION:
+        # Only mandatory verification withholds the session. Under
+        # ``ACCOUNT_EMAIL_VERIFICATION = 'optional'`` the confirmation mail goes out all
+        # the same, but the account is usable right away and the response carries the
+        # tokens, exactly as it does when verification is off.
+        if verification_is_mandatory():
             data = {"detail": _("Verification e-mail sent.")}
             # While the address conflict is hidden, no refresh token is handed out:
             # it could only ever be minted for an account that was really created,
@@ -121,8 +130,9 @@ class RegisterView(ExtraThrottlesMixin, CreateAPIView):
                 "mfa_setup_required": True,
                 "setup_challenge_id": setup_challenge_id,
             }
-            # If email verification is enabled, include the informative message
-            if settings.EMAIL_VERIFICATION:
+            # Only mandatory verification leaves the caller waiting for a link before
+            # the session is of any use; say so only then.
+            if verification_is_mandatory():
                 data["detail"] = _("Verification e-mail sent.")
 
             return data
@@ -134,7 +144,7 @@ class RegisterView(ExtraThrottlesMixin, CreateAPIView):
 
         # Normal behavior when MFA is not REQUIRED:
         refresh = self.jwt_token.for_user(
-            user, self.request, enabled=not bool(settings.EMAIL_VERIFICATION))
+            user, self.request, enabled=not verification_is_mandatory())
 
         return refresh
 

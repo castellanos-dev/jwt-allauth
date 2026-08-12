@@ -315,12 +315,22 @@ Authentication
    * - Status
      - Description
    * - ``200 OK``
-     - Password changed successfully. Optionally logs the user out of other sessions when ``LOGOUT_ON_PASSWORD_CHANGE = True``.
+     - Password changed successfully. With ``LOGOUT_ON_PASSWORD_CHANGE = True`` (default) every session is revoked, the caller's included, and the response carries a replacement session: ``access`` in the body and the refresh token as a cookie (or in the body when ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE = False``). With it set to ``False`` nothing is revoked and the response holds only ``detail``.
 
 **URL Name:** ``rest_password_change``
 
 .. note:: ``OLD_PASSWORD_FIELD_ENABLED = True`` to use old_password (default).
-.. note:: ``LOGOUT_ON_PASSWORD_CHANGE = True`` to logout from the remaining sessions.
+
+.. note::
+
+    **The caller's session goes too.** A password change is a handover of the account, so with
+    ``LOGOUT_ON_PASSWORD_CHANGE = True`` it takes down every session, every capability still
+    outstanding (unused reset and set-password links, e-mail confirmation tokens, MFA setup
+    challenges) and every unconfirmed secondary address queued up behind the primary one. Sparing
+    the session that asked for the change would spare it for whoever is holding it. The client
+    replaces its tokens with the ones in the response; the refresh token cookie is overwritten for
+    it. The old refresh token stops rotating at once, and any access token already issued stays
+    usable until it expires unless ``JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK`` is on.
 
 **/user/** (GET, PUT, PATCH) ``[Authenticated]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -407,13 +417,13 @@ Registration
      - Description
    * - Body (JSON)
      - ``detail``
-     - Message indicating that a verification e-mail has been sent when email verification is enabled.
+     - Message indicating that a verification e-mail has been sent. Only when verification is mandatory.
    * - Body (JSON, optional)
      - ``refresh``
-     - Refresh token. Only when ``EMAIL_VERIFICATION = False``, or when enumeration prevention is turned off (see the note below).
+     - Refresh token. Always present unless enumeration prevention withholds it (see the note below). Born disabled, and unusable until the address is confirmed, while verification is mandatory.
    * - Body (JSON, optional)
      - ``access``
-     - Access token, only when ``EMAIL_VERIFICATION = False``.
+     - Access token. Only when verification is not mandatory, i.e. ``EMAIL_VERIFICATION = False`` or ``ACCOUNT_EMAIL_VERIFICATION = 'optional'``.
    * - Body (JSON, optional)
      - ``mfa_setup_required``
      - When MFA mode is REQUIRED. The response contains a ``setup_challenge_id`` to bootstrap MFA setup.
@@ -432,6 +442,14 @@ Registration
     address is verified anyway (authenticate through ``/login/`` once it is). Set
     ``ACCOUNT_PREVENT_ENUMERATION = False``, or disable ``EMAIL_VERIFICATION``, to reject a
     conflicting address with ``400`` and get the refresh token back.
+
+.. note::
+
+    **Optional verification.** With ``ACCOUNT_EMAIL_VERIFICATION = 'optional'`` the confirmation
+    mail goes out but the account is usable straight away: the response carries ``access`` and a
+    working ``refresh``, exactly as it does with verification off, and address conflicts are
+    reported with ``400``. Gate the features that need a confirmed address on the
+    ``email_verified`` claim instead — see :doc:`email_verification`.
 
 **/registration/user-register/** (POST) ``[Admin role]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -5,12 +5,110 @@ from importlib import reload
 import allauth.app_settings
 import rest_framework_simplejwt.settings
 from django.apps import AppConfig
+from django.core.exceptions import ImproperlyConfigured
+
+#: The three states e-mail verification can be in, in allauth's vocabulary.
+MANDATORY = 'mandatory'
+OPTIONAL = 'optional'
+NONE = 'none'
+VERIFICATION_METHODS = (MANDATORY, OPTIONAL, NONE)
 
 
 class JWTAllauthAppConfig(AppConfig):
     name = 'jwt_allauth'
     verbose_name = "JWT Allauth"
     default_auto_field = 'django.db.models.BigAutoField'
+
+    @staticmethod
+    def _resolve_email_verification(settings):
+        """
+        Settle on one verification method and make both settings say it.
+
+        ``EMAIL_VERIFICATION`` is this library's setting and the authoritative one. It
+        accepts the three methods by name -- ``'mandatory'``, ``'optional'``,
+        ``'none'`` -- as well as the booleans it has always taken, where ``True`` means
+        ``'mandatory'`` and ``False`` means ``'none'``.
+
+        allauth's ``ACCOUNT_EMAIL_VERIFICATION`` is derived from it, and a project may
+        still declare it instead: that is how ``'optional'`` was reachable before
+        ``EMAIL_VERIFICATION`` could name it, and it keeps working. What it cannot do is
+        contradict a method spelled out here.
+
+        The two used to govern different halves of the feature -- ``EMAIL_VERIFICATION``
+        the routing of the confirmation URL and the auto-confirmation at sign-up,
+        allauth's whether the mail is sent -- with nothing to keep them in step, so a
+        disagreeing pair produced a state nobody designed. They are reconciled here,
+        once, and everything downstream reads a boolean ``EMAIL_VERIFICATION`` and a
+        method that agrees with it.
+
+        Args:
+            settings: Django settings module being configured.
+
+        Returns:
+            str: The resolved method, one of :data:`VERIFICATION_METHODS`.
+
+        Raises:
+            ImproperlyConfigured: if ``EMAIL_VERIFICATION`` names something that is not
+                a verification method.
+        """
+        configured = getattr(settings, 'EMAIL_VERIFICATION', False)
+        declared = getattr(settings, 'ACCOUNT_EMAIL_VERIFICATION', None)
+        if declared is not None:
+            declared = str(declared).lower()
+
+        if isinstance(configured, str):
+            method = configured.lower()
+            if method not in VERIFICATION_METHODS:
+                raise ImproperlyConfigured(
+                    f"jwt-allauth: EMAIL_VERIFICATION must be one of {VERIFICATION_METHODS}, "
+                    f"or a boolean, not {configured!r}."
+                )
+            if declared is not None and declared != method:
+                warnings.warn(
+                    f"jwt-allauth: EMAIL_VERIFICATION = {configured!r} and "
+                    f"ACCOUNT_EMAIL_VERIFICATION = {declared!r} disagree. "
+                    f"EMAIL_VERIFICATION is this library's own setting and wins; drop "
+                    f"ACCOUNT_EMAIL_VERIFICATION, which is derived from it.",
+                    stacklevel=2,
+                )
+            return method
+
+        if not configured:
+            # The boolean is off, which has always meant that addresses are confirmed at
+            # sign-up and no link is ever sent. A method declared next to it never took
+            # effect, so honouring it now would turn verification on under a deployment
+            # that has been running without it.
+            if declared is not None and declared != NONE:
+                warnings.warn(
+                    f"jwt-allauth: ACCOUNT_EMAIL_VERIFICATION = {declared!r} is ignored while "
+                    f"EMAIL_VERIFICATION is False -- addresses are confirmed at sign-up and no "
+                    f"confirmation link is sent. Set EMAIL_VERIFICATION = {declared!r} to get "
+                    f"the verification you asked for.",
+                    stacklevel=2,
+                )
+            return NONE
+
+        if declared is None:
+            return MANDATORY
+        if declared == NONE:
+            # Nothing could ever come of this pair: the confirmation URL is routed and
+            # addresses are left unconfirmed, but allauth sends no link to confirm them
+            # with, so every account stays unverified for good. Resolved to the method
+            # that was asked for rather than left half-applied.
+            warnings.warn(
+                "jwt-allauth: EMAIL_VERIFICATION = True with ACCOUNT_EMAIL_VERIFICATION = 'none' "
+                "never delivers a confirmation link, so no address could ever be verified. "
+                "Treating it as 'none'; set EMAIL_VERIFICATION = 'mandatory' or 'optional' to "
+                "verify addresses.",
+                stacklevel=2,
+            )
+            return NONE
+        if declared not in VERIFICATION_METHODS:
+            raise ImproperlyConfigured(
+                f"jwt-allauth: ACCOUNT_EMAIL_VERIFICATION must be one of {VERIFICATION_METHODS}, "
+                f"not {declared!r}."
+            )
+        return declared
 
     @staticmethod
     def _get_signing_key(settings):
@@ -58,7 +156,13 @@ class JWTAllauthAppConfig(AppConfig):
         if session_lifetime is not None and not isinstance(session_lifetime, timedelta):
             raise ValueError('JWT_ALLAUTH_SESSION_LIFETIME must be a datetime.timedelta or None.')
 
-        settings.EMAIL_VERIFICATION = getattr(settings, 'EMAIL_VERIFICATION', False)
+        # Both settings end up saying the same thing: a boolean EMAIL_VERIFICATION for
+        # everything that only asks whether the feature is on -- the confirmation URL,
+        # the auto-confirmation at sign-up -- and the method itself in allauth's setting.
+        verification_method = self._resolve_email_verification(settings)
+        settings.ACCOUNT_EMAIL_VERIFICATION = verification_method
+        settings.EMAIL_VERIFICATION = verification_method != NONE
+
         if not hasattr(settings, 'ACCOUNT_ADAPTER'):
             settings.ACCOUNT_ADAPTER = 'jwt_allauth.adapter.JWTAllAuthAdapter'
         if not hasattr(settings, 'MFA_ADAPTER'):
@@ -75,8 +179,6 @@ class JWTAllauthAppConfig(AppConfig):
 
         if not hasattr(settings, 'SITE_ID'):
             settings.SITE_ID = 1
-        if not hasattr(settings, 'ACCOUNT_EMAIL_VERIFICATION'):
-            settings.ACCOUNT_EMAIL_VERIFICATION = 'mandatory' if settings.EMAIL_VERIFICATION else 'none'
         if not hasattr(settings, 'UNIQUE_EMAIL'):
             settings.UNIQUE_EMAIL = True
         if not hasattr(settings, 'ACCOUNT_EMAIL_SUBJECT_PREFIX'):

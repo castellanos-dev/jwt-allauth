@@ -17,7 +17,7 @@ from jwt_allauth.constants import (
 
 from jwt_allauth.throttling import ExtraThrottlesMixin
 from jwt_allauth.tokens.app_settings import RefreshToken
-from jwt_allauth.utils import build_token_response, is_email_verified, load_user
+from jwt_allauth.utils import build_token_response, is_email_verified, load_user, verification_is_mandatory
 from .serializers import (
     MFAActivateSerializer,
     MFAVerifySerializer,
@@ -173,9 +173,11 @@ class MFAActivateView(ExtraThrottlesMixin, APIView):
         if is_bootstrap and get_mfa_totp_mode() == MFA_TOTP_REQUIRED:
             # Registration hands the setup challenge to an anonymous caller before the
             # address is confirmed, so the bootstrap must not grant a session that
-            # EMAIL_VERIFICATION withholds. Login and set-password already require a
-            # verified address and are unaffected.
-            verification_pending = bool(settings.EMAIL_VERIFICATION) and not is_email_verified(user)
+            # mandatory verification withholds. Login and set-password already require a
+            # verified address and are unaffected, and under
+            # ``ACCOUNT_EMAIL_VERIFICATION = 'optional'`` there is no session to
+            # withhold: registration itself hands one out.
+            verification_pending = verification_is_mandatory() and not is_email_verified(user)
 
             refresh = RefreshToken.for_user(user, enabled=not verification_pending)
 

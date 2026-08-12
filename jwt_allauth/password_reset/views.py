@@ -30,8 +30,9 @@ from jwt_allauth.constants import (
 )
 from jwt_allauth.password_reset.permissions import ResetPasswordPermission, SetPasswordPermission
 from jwt_allauth.password_reset.serializers import SetPasswordSerializer
+from jwt_allauth.revocation import revoke_on_credential_change
 from jwt_allauth.tokens.app_settings import RefreshToken
-from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
+from jwt_allauth.tokens.models import GenericTokenModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.throttling import ExtraThrottlesMixin
 from jwt_allauth.tokens.tokens import GenericToken
@@ -40,7 +41,6 @@ from jwt_allauth.utils import (
     get_user_agent,
     load_capability_user,
     sensitive_post_parameters_m,
-    user_sessions_lock,
 )
 from jwt_allauth.csrf import ensure_csrf_cookie
 from jwt_allauth.mfa.storage import create_setup_challenge
@@ -263,12 +263,9 @@ class ResetPasswordView(CapabilityCookieViewMixin, ExtraThrottlesMixin, GenericA
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        # Revoke old sessions
-        if getattr(settings, 'LOGOUT_ON_PASSWORD_CHANGE', True):
-            # Ordered against the rotations in flight: a refresh committing after this
-            # deletion started would leave the session it renews open past the reset.
-            with user_sessions_lock(self.request.user.id):
-                RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
+        # Revoke every session, every capability still outstanding and every address
+        # change in flight: this is the moment the account changes hands.
+        revoke_on_credential_change(self.request.user.id)
 
         refresh_token = RefreshToken.for_user(request.user)
         return build_token_response(
@@ -306,14 +303,13 @@ class SetPasswordView(CapabilityCookieViewMixin, ExtraThrottlesMixin, GenericAPI
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        # Revoke old sessions
-        if getattr(settings, 'LOGOUT_ON_PASSWORD_CHANGE', True):
-            # Ordered against the rotations in flight: a refresh committing after this
-            # deletion started would leave the session it renews open past the reset.
-            with user_sessions_lock(self.request.user.id):
-                RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
+        # Revoke every session, every capability still outstanding -- the e-mail
+        # confirmation token that led here included -- and every address change in
+        # flight: this is the moment the account changes hands.
+        revoke_on_credential_change(self.request.user.id)
 
-        # Invalidate the email confirmation token now that the password has been set
+        # The confirmation token is what makes the invitation link re-clickable, so it
+        # goes even when the installation opted out of revoking sessions.
         GenericTokenModel.objects.filter(user=request.user, purpose=EMAIL_CONFIRMATION).delete()
 
         # If MFA TOTP is REQUIRED, return setup challenge instead of tokens
