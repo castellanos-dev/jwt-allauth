@@ -444,7 +444,7 @@ def load_user(f):
 
 def load_capability_user(user_id):
     """
-    Load the account a one-time capability was issued for.
+    Load the account a credential was issued for, before it is used to open a session.
 
     A capability is self-contained: it carries the id of the account it was minted for
     and stays valid until it expires or is consumed, so the state of that account has
@@ -454,11 +454,15 @@ def load_capability_user(user_id):
     afterwards. An account deleted in the meantime is rejected the same way, rather
     than surfacing as a server error.
 
+    The password change is loaded through here for the same reason: the access token it
+    is authenticated with was also minted before the deactivation, and the flow ends by
+    handing out a fresh session.
+
     Args:
-        user_id (int|str): Identifier carried by the capability.
+        user_id (int|str): Identifier carried by the credential.
 
     Returns:
-        User: The account behind the capability.
+        User: The account behind the credential.
 
     Raises:
         InvalidToken: if the account no longer exists or is not active.
@@ -470,6 +474,45 @@ def load_capability_user(user_id):
     if not user.is_active:
         raise InvalidToken()
     return user
+
+
+def refresh_token_as_cookie() -> bool:
+    """
+    Whether the refresh token is delivered as a cookie rather than in the response body.
+
+    Read at call time so that ``override_settings`` and runtime changes are honoured.
+    """
+    return bool(getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE", True))
+
+
+def set_refresh_token_cookie(response, refresh_token, cookie_settings: Optional[Dict[str, Any]] = None):
+    """
+    Attach a refresh token to a response as the session cookie.
+
+    Every endpoint that opens or extends a session goes through here, so the flags that
+    keep the cookie out of reach of scripts and off plain HTTP are decided in one place.
+
+    Args:
+        response (HttpResponse): Response the cookie is attached to.
+        refresh_token: Refresh token, or anything that renders as one.
+        cookie_settings (dict): Overrides for the defaults resolved from settings.
+
+    Returns:
+        HttpResponse: The same response, for chaining.
+    """
+    defaults = {
+        'key': REFRESH_TOKEN_COOKIE,
+        'value': str(refresh_token),
+        'httponly': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_HTTP_ONLY", True),
+        'secure': _get_cookie_secure(),
+        'samesite': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SAME_SITE", "Lax"),
+        'max_age': _get_cookie_max_age(),
+        'path': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_PATH", "/"),
+    }
+    if cookie_settings:
+        defaults.update(cookie_settings)
+    response.set_cookie(**defaults)
+    return response
 
 
 def build_token_response(
@@ -537,7 +580,7 @@ def build_token_response(
     response_data: Dict[str, Any] = {"access": access_token}
 
     # Add refresh token to response if not using cookies
-    use_cookie = getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE", True)
+    use_cookie = refresh_token_as_cookie()
     if not use_cookie:
         response_data["refresh"] = str(refresh_token)
 
@@ -550,21 +593,6 @@ def build_token_response(
 
     # Set cookie if configured
     if use_cookie:
-        # Prepare default cookie settings
-        default_settings = {
-            'key': REFRESH_TOKEN_COOKIE,
-            'value': str(refresh_token),
-            'httponly': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_HTTP_ONLY", True),
-            'secure': _get_cookie_secure(),
-            'samesite': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SAME_SITE", "Lax"),
-            'max_age': _get_cookie_max_age(),
-            'path': getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_PATH", "/"),
-        }
-
-        # Override with custom settings if provided
-        if cookie_settings:
-            default_settings.update(cookie_settings)
-
-        response.set_cookie(**default_settings)
+        set_refresh_token_cookie(response, refresh_token, cookie_settings)
 
     return response

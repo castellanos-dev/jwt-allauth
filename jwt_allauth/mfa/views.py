@@ -69,6 +69,13 @@ except Exception:  # pragma: no cover - optional dependency guard
 
 
 class MFASetupView(ExtraThrottlesMixin, APIView):
+    """
+    Start TOTP enrolment: returns the secret, its provisioning URI and a QR code.
+
+    Authorized by the session, or by the ``setup_challenge_id`` handed out when MFA is
+    required and the account has none configured yet. The authenticator is not active
+    until ``/mfa/activate/`` confirms a code from it.
+    """
     permission_classes = [IsAuthenticatedOrHasMFASetupChallenge]
     extra_throttle_classes = (AnonRateThrottle, UserRateThrottle)
 
@@ -114,6 +121,13 @@ class MFASetupView(ExtraThrottlesMixin, APIView):
 
 
 class MFAActivateView(ExtraThrottlesMixin, APIView):
+    """
+    Confirm a code from the authenticator being enrolled and activate it.
+
+    Returns the recovery codes, which are shown once and never again. When the
+    enrolment was bootstrapped from a setup challenge, it also opens the session the
+    account was waiting on.
+    """
     permission_classes = [IsAuthenticatedOrHasMFASetupChallenge]
     serializer_class = MFAActivateSerializer
     extra_throttle_classes = (AnonRateThrottle, UserRateThrottle)
@@ -268,6 +282,12 @@ def _locked_out_response(retry_after: int) -> Response:
 
 
 class MFAVerifyView(ExtraThrottlesMixin, APIView):
+    """
+    Complete a login with a TOTP code and open the session.
+
+    Takes the ``challenge_id`` returned by ``/login/`` and the current code. Answers
+    like ``/login/`` does: access token in the body, refresh token as a cookie.
+    """
     serializer_class = MFAVerifySerializer
     extra_throttle_classes = (AnonRateThrottle,)
 
@@ -319,6 +339,12 @@ class MFAVerifyView(ExtraThrottlesMixin, APIView):
 
 
 class MFAVerifyRecoveryView(ExtraThrottlesMixin, APIView):
+    """
+    Complete a login with a recovery code and open the session.
+
+    The same as ``/mfa/verify/`` for an authenticator that is out of reach. Each code
+    is spent by the request that uses it.
+    """
     serializer_class = MFAVerifyRecoverySerializer
     extra_throttle_classes = (AnonRateThrottle,)
 

@@ -35,6 +35,14 @@ jwt\_allauth.authentication module
    :show-inheritance:
    :undoc-members:
 
+jwt\_allauth.checks module
+--------------------------
+
+.. automodule:: jwt_allauth.checks
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 jwt\_allauth.csrf module
 ------------------------
 
@@ -47,6 +55,14 @@ jwt\_allauth.exceptions module
 ------------------------------
 
 .. automodule:: jwt_allauth.exceptions
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+jwt\_allauth.schema module
+--------------------------
+
+.. automodule:: jwt_allauth.schema
    :members:
    :show-inheritance:
    :undoc-members:

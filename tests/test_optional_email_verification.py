@@ -58,11 +58,18 @@ class OptionalEmailVerificationTests(TestsMixin):
         return match.group(1)
 
     def _register(self):
-        """Sign up and return the response together with the confirmation key."""
+        """
+        Sign up and return the response, the session it opened and the confirmation key.
+
+        The refresh token travels in the ``refresh_token`` cookie, as it does everywhere
+        else in the library, so it is read from there rather than from the body.
+        """
         mail.outbox = []
         resp = self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
         self.assertEqual(len(mail.outbox), 1)
-        return resp, self._verification_key_from_mail(mail.outbox[0])
+        self.assertNotIn('refresh', resp)
+        refresh = self.response.cookies[REFRESH_TOKEN_COOKIE].value
+        return resp, refresh, self._verification_key_from_mail(mail.outbox[0])
 
     @staticmethod
     def _claim(access_token):
@@ -75,10 +82,10 @@ class OptionalEmailVerificationTests(TestsMixin):
         The confirmation mail is still sent, but the sign-up answers with tokens that
         work: the account is usable from the start.
         """
-        resp, _key = self._register()
+        resp, refresh, _key = self._register()
 
         self.assertIn('access', resp)
-        self.assertIn('refresh', resp)
+        self.assertTrue(refresh)
 
         new_user = get_user_model().objects.latest('id')
         self.assertFalse(EmailAddress.objects.get(user=new_user, email=self.REGISTRATION_EMAIL).verified)
@@ -94,16 +101,16 @@ class OptionalEmailVerificationTests(TestsMixin):
         self.assertIn('access', resp)
 
     def test_rotation_of_an_unverified_account_works(self):
-        resp, _key = self._register()
+        resp, refresh, _key = self._register()
 
-        self.client.cookies[REFRESH_TOKEN_COOKIE] = resp['refresh']
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = refresh
         refreshed = self.post(self.refresh_url, data={}, status_code=200)
         self.assertIn('access', refreshed)
 
     # -- The claim -------------------------------------------------------------------
 
     def test_claim_is_false_until_the_address_is_confirmed(self):
-        resp, _key = self._register()
+        resp, _refresh, _key = self._register()
         self.assertIs(self._claim(resp['access']), False)
 
     def test_claim_turns_on_after_the_link_and_a_refresh(self):
@@ -111,14 +118,14 @@ class OptionalEmailVerificationTests(TestsMixin):
         No dedicated endpoint: the frontend calls ``/refresh/`` and the next access
         token carries the claim.
         """
-        resp, key = self._register()
+        resp, refresh, key = self._register()
 
         self.get(f'{self.verify_email_url}{key}/', status_code=302)
 
         # The token the user is holding still says False -- it was minted before.
         self.assertIs(self._claim(resp['access']), False)
 
-        self.client.cookies[REFRESH_TOKEN_COOKIE] = resp['refresh']
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = refresh
         refreshed = self.post(self.refresh_url, data={}, status_code=200)
         self.assertIs(self._claim(refreshed['access']), True)
 
@@ -126,13 +133,13 @@ class OptionalEmailVerificationTests(TestsMixin):
 
     @patch("jwt_allauth.user_details.views.UserDetailsView.permission_classes", [IsEmailVerified])
     def test_gated_endpoint_follows_the_claim(self):
-        resp, key = self._register()
+        resp, refresh, key = self._register()
 
         self.token = resp['access']
         self.get(self.user_url, status_code=403)
 
         self.get(f'{self.verify_email_url}{key}/', status_code=302)
-        self.client.cookies[REFRESH_TOKEN_COOKIE] = resp['refresh']
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = refresh
         refreshed = self.post(self.refresh_url, data={}, status_code=200)
 
         self.token = refreshed['access']
@@ -146,13 +153,13 @@ class OptionalEmailVerificationTests(TestsMixin):
         """
         'regular and verified' needs no permission class of its own.
         """
-        resp, key = self._register()
+        resp, refresh, key = self._register()
 
         self.token = resp['access']
         self.get(self.user_url, status_code=403)
 
         self.get(f'{self.verify_email_url}{key}/', status_code=302)
-        self.client.cookies[REFRESH_TOKEN_COOKIE] = resp['refresh']
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = refresh
         refreshed = self.post(self.refresh_url, data={}, status_code=200)
 
         self.token = refreshed['access']
@@ -172,7 +179,7 @@ class OptionalEmailVerificationTests(TestsMixin):
     # -- The confirmation link --------------------------------------------------------
 
     def test_the_link_alone_starts_no_session(self):
-        _resp, key = self._register()
+        _resp, _refresh, key = self._register()
 
         response = self.client.get(f'{self.verify_email_url}{key}/')
         self.assertEqual(response.status_code, 302)
@@ -180,7 +187,7 @@ class OptionalEmailVerificationTests(TestsMixin):
 
     @override_settings(JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION=True)
     def test_the_link_starts_a_session_when_asked_to(self):
-        _resp, key = self._register()
+        _resp, _refresh, key = self._register()
 
         response = self.client.get(f'{self.verify_email_url}{key}/')
         self.assertEqual(response.status_code, 302)
@@ -193,8 +200,8 @@ class OptionalEmailVerificationTests(TestsMixin):
         The account changing hands is the whole point: whoever signed up with somebody
         else's address keeps nothing once the owner sets a password.
         """
-        resp, _key = self._register()
-        intruder_refresh = resp['refresh']
+        resp, refresh, _key = self._register()
+        intruder_refresh = refresh
 
         login = self.post(self.login_url, data=self.REGISTRATION_LOGIN_DATA, status_code=200)
         caller_refresh = self.client.cookies[REFRESH_TOKEN_COOKIE].value
