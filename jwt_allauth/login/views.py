@@ -9,10 +9,20 @@ from rest_framework.throttling import AnonRateThrottle
 from jwt_allauth.app_settings import LoginSerializer
 from jwt_allauth.utils import get_user_agent, sensitive_post_parameters_m, build_token_response
 from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
+from jwt_allauth.schema import login_schema
 from jwt_allauth.throttling import ExtraThrottlesMixin
 
 
+@login_schema
 class LoginView(ExtraThrottlesMixin, TokenObtainPairView):
+    """
+    Authenticate with e-mail and password and open a session.
+
+    Returns the access token in the body and the refresh token as an HttpOnly cookie
+    (in the body when ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE = False``). When MFA is in
+    play the response carries a challenge instead of the tokens, to be completed through
+    the ``/mfa/`` endpoints.
+    """
     serializer_class = LoginSerializer
     extra_throttle_classes = (AnonRateThrottle,)
 

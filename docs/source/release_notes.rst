@@ -1,6 +1,25 @@
 Release Notes
 =============
 
+Version 1.3.1
+-------------
+
+Released: August 12, 2026
+
+Security
+~~~~~~~~
+
+- **Password change rejected for deactivated accounts**: the endpoint loaded the account straight from the database without checking ``is_active``, and it ends by handing out a session. Login and refresh both refuse a deactivated account, so this was the last way back into one: an access token issued before the deactivation could still be spent on a password change, and the response came back with a fresh, indefinitely renewable session. The account is re-read through ``load_capability_user`` now, as the reset and set-password flows already were, and a deactivated or deleted one answers ``401`` without touching the password.
+
+- **The refresh token from sign-up is delivered as a cookie**: ``POST /registration/`` built its response by hand and put the refresh token in the JSON body, while every other endpoint of the library delivers it in the HttpOnly ``refresh_token`` cookie under ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` (the default). Sign-up is the one response a script always reads, so the longest-lived credential ended up in the hands of JavaScript — and the CSRF check on rotation was guarding something already exposed. It now goes out the same way as everywhere else; installations on ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE = False`` still get it in the body. Clients that read ``refresh`` from the sign-up response have to pick it up from the cookie.
+
+Bug Fixes
+~~~~~~~~~
+
+- **The e-mail confirmation no longer answers 500 when its landing page is not routed**: the built-in "email verified" page is routed by the URLconf of ``jwt_allauth.registration``, and a project is free to wire its endpoints by hand. Reversing it then raised ``NoReverseMatch`` on a link an end user opens, rather than failing as the configuration error it is. The page is rendered in place when there is no URL to redirect to, and ``manage.py check`` reports the missing route at startup (``jwt_allauth.W001``), pointing at ``EMAIL_VERIFIED_REDIRECT``.
+
+- **Endpoints describe themselves in the OpenAPI schema**: ``ExtraThrottlesMixin`` comes first on the MRO of every view that carries it, so its docstring became the description of the login, registration, refresh, password and MFA endpoints — the login endpoint documented the throttling system. The mixin carries no docstring now (the explanation moved to its module) and those views describe themselves. Registration also derived its ``201`` from the serializer it validates the request with, announcing ``email`` and ``first_name`` where the response actually carries the session, so a frontend reading the schema could not find the token; the responses are declared, and the endpoints authorized by a capability cookie declare that cookie and the ``X-CSRFToken`` header instead of the bearer token they reject. The annotations are applied through `drf-spectacular <https://drf-spectacular.readthedocs.io/>`_ when the new ``schema`` extra is installed, and are inert otherwise — see :doc:`api_endpoints`.
+
 Version 1.3.0
 -------------
 

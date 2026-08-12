@@ -235,3 +235,30 @@ class PasswordChangeTests(TestsMixin):
 
         new_session_count = RefreshTokenWhitelistModel.objects.filter(user=self.USER).count()
         self.assertTrue(new_session_count >= session_count)
+
+    def test_password_change_rejected_for_deactivated_account(self):
+        """
+        Deactivating an account ends every session of it, and the change hands out a new
+        one: an access token minted before the deactivation must not buy a way back in.
+        """
+        self.token = self.ACCESS
+        self.USER.is_active = False
+        self.USER.save()
+
+        payload = {"old_password": self.PASS, "new_password1": "P@sw0rd-set", "new_password2": "P@sw0rd-set"}
+        resp = self.post(self.password_change_url, data=payload, status_code=401)
+        self.assertEqual(resp['code'], u'token_not_valid')
+
+        # Neither the password nor the sessions were touched.
+        self.USER.refresh_from_db()
+        self.assertTrue(self.USER.check_password(self.PASS))
+
+    def test_password_change_rejected_for_deleted_account(self):
+        """A deleted account answers 401 as well, rather than surfacing as a 500."""
+        self.token = self.ACCESS
+        RefreshTokenWhitelistModel.objects.filter(user=self.USER).delete()
+        self.USER.delete()
+
+        payload = {"old_password": self.PASS, "new_password1": "P@sw0rd-set", "new_password2": "P@sw0rd-set"}
+        resp = self.post(self.password_change_url, data=payload, status_code=401)
+        self.assertEqual(resp['code'], u'token_not_valid')

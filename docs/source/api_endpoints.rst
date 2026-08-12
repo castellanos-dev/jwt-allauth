@@ -316,6 +316,8 @@ Authentication
      - Description
    * - ``200 OK``
      - Password changed successfully. With ``LOGOUT_ON_PASSWORD_CHANGE = True`` (default) every session is revoked, the caller's included, and the response carries a replacement session: ``access`` in the body and the refresh token as a cookie (or in the body when ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE = False``). With it set to ``False`` nothing is revoked and the response holds only ``detail``.
+   * - ``401 Unauthorized``
+     - The account has been deactivated or deleted since the access token was issued.
 
 **URL Name:** ``rest_password_change``
 
@@ -418,9 +420,12 @@ Registration
    * - Body (JSON)
      - ``detail``
      - Message indicating that a verification e-mail has been sent. Only when verification is mandatory.
+   * - Cookie (HTTP-only, default)
+     - ``refresh_token``
+     - Refresh token, stored in the ``refresh_token`` cookie as it is everywhere else. Always present unless enumeration prevention withholds it (see the note below). Born disabled, and unusable until the address is confirmed, while verification is mandatory.
    * - Body (JSON, optional)
      - ``refresh``
-     - Refresh token. Always present unless enumeration prevention withholds it (see the note below). Born disabled, and unusable until the address is confirmed, while verification is mandatory.
+     - The same refresh token, in the body, when ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE = False``.
    * - Body (JSON, optional)
      - ``access``
      - Access token. Only when verification is not mandatory, i.e. ``EMAIL_VERIFICATION = False`` or ``ACCOUNT_EMAIL_VERIFICATION = 'optional'``.
@@ -600,6 +605,13 @@ Registration
 **URL Name:** ``jwt_allauth_email_verified``
 
 .. note:: Disabled if ``EMAIL_VERIFIED_REDIRECT`` is defined or ``EMAIL_VERIFICATION = False``.
+
+.. note::
+
+    A project that wires its URLs by hand can route the confirmation link without routing this
+    page. The confirmation then renders it in place instead of redirecting, and ``manage.py
+    check`` reports it (``jwt_allauth.W001``); set ``EMAIL_VERIFIED_REDIRECT`` to choose the
+    landing page.
 
 Multi-Factor Authentication (MFA)
 ----------------------------------
@@ -823,3 +835,13 @@ Recovery code failures share the same budgets as ``/mfa/verify/`` and answer ``4
    - ``'disabled'`` (default): MFA endpoints return 403 Forbidden when accessed.
    - ``'optional'``: Users can set up MFA but it's not required during login.
    - ``'required'``: Users must set up MFA and provide TOTP code during login. Deactivation is blocked.
+
+OpenAPI schema
+--------------
+
+Install the ``schema`` extra (``pip install django-jwt-allauth[schema]``) and set
+``'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'`` in ``REST_FRAMEWORK`` to have
+the endpoints describe themselves: what each one answers with — which is not the serializer it
+validates the request with — and, for the endpoints authorized by a capability cookie, the cookie
+and the ``X-CSRFToken`` header they expect instead of a bearer token. Without the extra the
+annotations are inert and nothing else changes.

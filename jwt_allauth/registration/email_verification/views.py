@@ -6,7 +6,7 @@ from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.http import Http404, HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -18,7 +18,6 @@ from jwt_allauth.constants import (
     FOR_USER,
     ONE_TIME_PERMISSION,
     PASS_SET_ACCESS,
-    REFRESH_TOKEN_COOKIE,
     SET_PASSWORD_COOKIE,
     EMAIL_CONFIRMATION,
     EMAIL_VERIFICATION_FAILED_TEMPLATE,
@@ -29,11 +28,11 @@ from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.utils import (
-    _get_cookie_max_age,
-    _get_cookie_secure,
     get_template_path,
     get_user_agent,
     hash_token,
+    refresh_token_as_cookie,
+    set_refresh_token_cookie,
 )
 
 
@@ -46,9 +45,39 @@ def _verified_redirect_url():
     its own.
 
     Returns:
-        str: URL configured through ``EMAIL_VERIFIED_REDIRECT``, or the built-in page.
+        str: URL configured through ``EMAIL_VERIFIED_REDIRECT``, or the built-in page,
+        or ``None`` when neither is available.
     """
-    return getattr(settings, EMAIL_VERIFIED_REDIRECT, None) or reverse('jwt_allauth_email_verified')
+    configured = getattr(settings, EMAIL_VERIFIED_REDIRECT, None)
+    if configured:
+        return configured
+    try:
+        return reverse('jwt_allauth_email_verified')
+    except NoReverseMatch:
+        # The built-in page is only routed by the URLconf of ``jwt_allauth.registration``,
+        # and a project is free to wire its endpoints by hand. That is a misconfiguration
+        # -- ``jwt_allauth.checks`` reports it at startup -- but it surfaces on a link an
+        # end user opens, so it must not be a 500 there. See ``_verified_response``.
+        return None
+
+
+def _verified_response(request):
+    """
+    Answer the browser that has just confirmed an address and needs nothing else.
+
+    A redirect to the configured landing page, or the built-in page rendered in place
+    when there is no URL to redirect to.
+
+    Args:
+        request (HttpRequest): Request being served.
+
+    Returns:
+        HttpResponse: Redirect, or the rendered confirmation page.
+    """
+    url = _verified_redirect_url()
+    if url is None:
+        return render(request, 'email/verified.html')
+    return HttpResponseRedirect(url)
 
 
 class VerifyEmailView(APIView, ConfirmEmailView):
@@ -92,22 +121,14 @@ class VerifyEmailView(APIView, ConfirmEmailView):
         """
         if not getattr(settings, 'JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION', False):
             return
-        if not getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', True):
+        if not refresh_token_as_cookie():
             # Installations that carry refresh tokens in the response body have no
             # body to carry it in here, and the URL is not an option: it would end up
             # in the browser history and in every log along the way.
             return
 
         refresh_token = RefreshToken.for_user(user, request, enabled=True)
-        response.set_cookie(
-            key=REFRESH_TOKEN_COOKIE,
-            value=str(refresh_token),
-            httponly=getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_HTTP_ONLY", True),
-            secure=_get_cookie_secure(),
-            samesite=getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_SAME_SITE", "Lax"),
-            max_age=_get_cookie_max_age(),
-            path=getattr(settings, "JWT_ALLAUTH_REFRESH_TOKEN_COOKIE_PATH", "/"),
-        )
+        set_refresh_token_cookie(response, refresh_token)
 
     @get_user_agent
     def get(self, request, *args, **kwargs):
@@ -166,7 +187,7 @@ class VerifyEmailView(APIView, ConfirmEmailView):
             # a verified address, so the link is the only thing that can hand it one -- and
             # it is not what closes the takeover. What was replayed is the capability.
             if user.has_usable_password():
-                return HttpResponseRedirect(_verified_redirect_url())
+                return _verified_response(request)
 
             # Create one-time access token to allow setting the password
             refresh_token = RefreshToken()
@@ -220,7 +241,7 @@ class VerifyEmailView(APIView, ConfirmEmailView):
 
         confirmation.confirm(self.request)
 
-        response = HttpResponseRedirect(_verified_redirect_url())
+        response = _verified_response(request)
         if completes_signup:
             self._start_session(response, request, user)
         return response

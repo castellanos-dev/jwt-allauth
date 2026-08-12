@@ -141,3 +141,13 @@ JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE = True
 
 # MFA Configuration
 JWT_ALLAUTH_MFA_TOTP_MODE = 'optional'
+
+# Schema generation. The annotations of the library are applied through drf-spectacular
+# when it is installed (the ``schema`` extra), and are inert otherwise, so the setting is
+# only declared when the package is there to back it.
+try:
+    import drf_spectacular  # noqa: F401
+except ImportError:
+    pass
+else:
+    REST_FRAMEWORK = {'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'}

@@ -147,6 +147,9 @@ class JWTAllauthAppConfig(AppConfig):
     def ready(self):
         from django.conf import settings
 
+        # Importing the module registers the checks it declares.
+        from jwt_allauth import checks  # noqa: F401
+
         if not getattr(settings, 'ROTATE_REFRESH_TOKENS', True):
             raise ValueError('Refresh token rotation is compulsory.')
         if getattr(settings, 'BLACKLIST_AFTER_ROTATION', False):

@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -7,17 +6,26 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
 from jwt_allauth.app_settings import PasswordChangeSerializer
+from jwt_allauth.schema import password_change_schema
 from jwt_allauth.throttling import ExtraThrottlesMixin
 from jwt_allauth.tokens.app_settings import RefreshToken
-from jwt_allauth.utils import build_token_response, get_user_agent, sensitive_post_parameters_m
+from jwt_allauth.utils import (
+    build_token_response,
+    get_user_agent,
+    load_capability_user,
+    sensitive_post_parameters_m,
+)
 
 
+@password_change_schema
 class PasswordChangeView(ExtraThrottlesMixin, GenericAPIView):
     """
-    Calls Django Auth SetPasswordForm save method.
+    Change the password of the authenticated account.
 
-    Accepts the following POST parameters: new_password1, new_password2
-    Returns the success/fail message.
+    Accepts the following POST parameters: new_password1, new_password2, and
+    old_password while ``OLD_PASSWORD_FIELD_ENABLED`` is on. Unless
+    ``LOGOUT_ON_PASSWORD_CHANGE = False``, every session is revoked -- the caller's
+    included -- and the response carries a replacement session minted after the change.
     """
     serializer_class = PasswordChangeSerializer
     permission_classes = (IsAuthenticated,)
@@ -29,8 +37,11 @@ class PasswordChangeView(ExtraThrottlesMixin, GenericAPIView):
 
     @get_user_agent
     def post(self, request):
-        # Load the user in the request
-        request.user = get_user_model().objects.get(id=self.request.user.id)
+        # Load the user in the request, rejecting an account that has been deleted or
+        # deactivated since the access token was issued: this flow ends by opening a
+        # session, and a deactivated account has none -- login and refresh both refuse
+        # it. Without the check it was the last way back into a disabled account.
+        request.user = load_capability_user(self.request.user.id)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()

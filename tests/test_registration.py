@@ -294,14 +294,17 @@ class RegistrationTests(TestsMixin):
     def test_registration_returns_refresh_token_without_enumeration_prevention(self):
         """
         Opting out of enumeration prevention restores the refresh token issued at
-        registration, which becomes usable once the address is verified.
+        registration, which becomes usable once the address is verified. It travels in
+        the cookie the rest of the library uses, not in the body a script always reads.
         """
         resp = self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
-        self.assertIn('refresh', resp)
+        self.assertNotIn('refresh', resp)
         self.assertEqual(resp['detail'], u'Verification e-mail sent.')
+        cookie = self.response.cookies[REFRESH_TOKEN_COOKIE]
+        self.assertTrue(cookie['httponly'])
 
         # Disabled until the address is verified.
-        self.client.cookies[REFRESH_TOKEN_COOKIE] = resp['refresh']
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = cookie.value
         self.post(self.refresh_url, data={}, status_code=401)
 
         new_user = get_user_model().objects.latest('id')
@@ -318,7 +321,8 @@ class RegistrationTests(TestsMixin):
         user_count = get_user_model().objects.all().count()
 
         resp = self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
-        self.assertIn('refresh', resp)
+        self.assertNotIn('refresh', resp)
+        self.assertTrue(self.response.cookies[REFRESH_TOKEN_COOKIE]['httponly'])
         self.assertIn('access', resp)
         self.assertEqual(get_user_model().objects.all().count(), user_count + 1)
 
@@ -336,6 +340,25 @@ class RegistrationTests(TestsMixin):
         self._login()
         self.get(self.user_url, status_code=200)
         self._logout()
+
+    @override_settings(EMAIL_VERIFICATION=False, JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False)
+    def test_registration_refresh_token_in_body_without_cookies(self):
+        """
+        Installations that carry refresh tokens in the body still get one from sign-up.
+        """
+        resp = self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
+        self.assertIn('refresh', resp)
+        self.assertIn('access', resp)
+        self.assertNotIn(REFRESH_TOKEN_COOKIE, self.response.cookies)
+
+        self.post(self.refresh_url, data={'refresh': resp['refresh']}, status_code=200)
+
+    @override_settings(EMAIL_VERIFICATION=False)
+    def test_registration_session_cookie_is_usable(self):
+        """The cookie the sign-up hands out is the session: it rotates straight away."""
+        self.post(self.register_url, data=self.REGISTRATION_DATA, status_code=201)
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = self.response.cookies[REFRESH_TOKEN_COOKIE].value
+        self.post(self.refresh_url, data={}, status_code=200)
 
     def test_registration_missing_first_name(self):
         data = self.REGISTRATION_DATA.copy()
