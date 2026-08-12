@@ -38,6 +38,24 @@
             padding-top: 20px;
             border-top: 1px solid #eee;
         }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #3498db;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border: 1px solid #ffeeba;
+        }
         @media only screen and (max-width: 600px) {
             .email-container {
                 padding: 20px;
@@ -57,7 +75,18 @@
 
             <p>{% trans "If it was you, sign in with your usual credentials. If you do not remember your password, request a password reset instead of signing up again." %}</p>
 
-            <p>{% trans "If it was not you, you can safely ignore this email." %}</p>
+            <div class="warning">
+                <p>{% blocktrans %}If it was not you and this address is yours, somebody else may be using it on an account you never created. Reset the password to take control of the account: doing so signs out everybody who is currently using it.{% endblocktrans %}</p>
+            </div>
+
+            {% if password_reset_url %}
+            <div style="text-align: center;">
+                <a href="{{ password_reset_url }}" class="button" style="color: #ffffff !important;">{% trans "Reset Password" %}</a>
+            </div>
+
+            <p>{% trans "If the button above doesn't work, you can also copy and paste the following link into your browser:" %}</p>
+            <p style="word-break: break-all;">{{ password_reset_url }}</p>
+            {% endif %}
         </div>
 
         <div class="footer">

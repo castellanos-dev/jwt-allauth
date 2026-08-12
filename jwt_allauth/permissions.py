@@ -1,6 +1,9 @@
 from rest_framework.permissions import BasePermission as DefaultBasePermission
 
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
+
+from jwt_allauth.constants import EMAIL_VERIFIED_CLAIM
 from jwt_allauth.roles import STAFF_CODE, SUPER_USER_CODE
 
 
@@ -103,6 +106,60 @@ class BasePermissionStaffExcluded(BasePermission):
             ValueError: If accepted_roles is not a list
         """
         return self._check_role_permission(request, include_staff=False)
+
+
+class IsEmailVerified(DefaultBasePermission):
+    """
+    Allows access only to tokens whose account has a confirmed e-mail address.
+
+    Reads the ``email_verified`` claim, which
+    :meth:`jwt_allauth.tokens.tokens.RefreshToken.set_email_verified` writes when the
+    session starts and refreshes on every rotation. Nothing is read from the database:
+    the check costs the same as the role check next to it.
+
+    This is the gate that makes ``ACCOUNT_EMAIL_VERIFICATION = 'optional'`` worth
+    having. With ``'optional'`` the account is usable from sign-up, so verification has
+    to govern features rather than the session; which endpoints it governs is the
+    project's decision, not this package's.
+
+    Behavior:
+
+        - Denies when the token carries no ``email_verified`` claim, which is the case
+          for tokens minted before the claim existed. The claim only ever turns on, so
+          a stale token denies and never grants: it fails closed by construction. The
+          holder gets it back by calling ``/refresh/``.
+        - Composes with the role permissions through DRF's operators, so *regular and
+          verified* needs no class of its own:
+
+          .. code-block:: python
+
+              from jwt_allauth.permissions import IsEmailVerified
+
+              class RegularUserPermission(BasePermission):
+                  accepted_roles = [REGULAR_USER_CODE]
+
+              class MyView(APIView):
+                  permission_classes = [RegularUserPermission & IsEmailVerified]
+    """
+    message = _('E-mail address is not verified.')
+
+    def has_permission(self, request, view):
+        """
+        Determine if the request should be permitted based on the verification claim.
+
+        Args:
+            request (Request): DRF request object containing JWT in auth attribute
+            view (View): DRF view being accessed
+
+        Returns:
+            bool: True if the token states that the address is verified, False otherwise
+        """
+        auth = getattr(request, 'auth', None)
+        if not auth:
+            return False
+        if EMAIL_VERIFIED_CLAIM not in auth:
+            return False
+        return bool(auth[EMAIL_VERIFIED_CLAIM])
 
 
 class RegisterUsersPermission(BasePermissionStaffExcluded):

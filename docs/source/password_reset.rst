@@ -49,4 +49,4 @@ The behaviour of the password reset can be configured thanks to the following ``
 
     - ``PASSWORD_RESET_COOKIE_MAX_AGE`` - maximum age of the cookie in seconds (default: ``3600``).
 
-    - ``LOGOUT_ON_PASSWORD_CHANGE`` - whether to revoke the existing sessions of the user (default: ``True``).
+    - ``LOGOUT_ON_PASSWORD_CHANGE`` - whether to revoke the existing sessions of the user (default: ``True``). Setting the password also drops every capability still outstanding and every unconfirmed secondary address, so nobody who held the account before keeps a way back in.

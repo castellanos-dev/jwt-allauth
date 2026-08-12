@@ -76,28 +76,52 @@ def get_session_lifetime():
     return lifetime
 
 
+def verification_is_mandatory() -> bool:
+    """Whether an unverified account is barred from having a session at all.
+
+    Two settings govern e-mail verification and both have to agree before a session is
+    withheld: ``EMAIL_VERIFICATION``, which turns the feature on for this library, and
+    allauth's ``ACCOUNT_EMAIL_VERIFICATION``, which decides whether the confirmation
+    mail is sent and — in allauth's own vocabulary — how hard the door is shut.
+    ``ACCOUNT_EMAIL_VERIFICATION`` is derived from ``EMAIL_VERIFICATION`` in
+    :meth:`jwt_allauth.apps.JWTAllauthAppConfig.ready` unless the project sets it
+    itself, so the two only part ways on purpose.
+
+    ``'optional'`` is that purpose: allauth sends the confirmation mail but does not
+    block, which is the usual shape of the web — the account is usable from sign-up and
+    verification gates individual features rather than the session itself. Gate those
+    features on the ``email_verified`` claim, through
+    :class:`jwt_allauth.permissions.IsEmailVerified` or your own check.
+
+    Returns:
+        bool: ``True`` when an account whose address is not confirmed must not be able
+        to log in, and the token registration hands out must be born disabled.
+    """
+    if not bool(getattr(settings, 'EMAIL_VERIFICATION', False)):
+        return False
+    return (
+        allauth_settings.EMAIL_VERIFICATION
+        == allauth_settings.EmailVerificationMethod.MANDATORY
+    )
+
+
 def enumeration_prevented():
     """Whether sign-up must hide that an e-mail address is already in use.
 
     Follows allauth's ``ACCOUNT_PREVENT_ENUMERATION`` (enabled by default), so that a
     single setting governs the behaviour of the whole project.
 
-    Hiding the conflict is only possible while e-mail verification is mandatory, and
-    both settings that govern it have to agree: ``EMAIL_VERIFICATION``, which decides
-    whether registration hands out a usable session, and allauth's
-    ``ACCOUNT_EMAIL_VERIFICATION``, which decides whether the confirmation mail the
-    cover story relies on is sent at all. ``ACCOUNT_EMAIL_VERIFICATION`` is derived
-    from ``EMAIL_VERIFICATION`` unless the project sets it itself, so the two only
-    part ways on purpose. When either falls short the conflict is reported to the
-    caller as before — the same choice allauth makes in ``assess_unique_email``.
+    Hiding the conflict is only possible while verification is mandatory (see
+    :func:`verification_is_mandatory`): the cover story is a confirmation mail that is
+    never followed by a usable session, and neither half of it holds otherwise. When it
+    falls short the conflict is reported to the caller as before — the same choice
+    allauth makes in ``assess_unique_email``.
 
     Returns:
         bool: ``True`` when the registration endpoint must answer a conflicting
         address exactly as it answers a fresh sign-up.
     """
-    if not bool(getattr(settings, 'EMAIL_VERIFICATION', False)):
-        return False
-    if allauth_settings.EMAIL_VERIFICATION != allauth_settings.EmailVerificationMethod.MANDATORY:
+    if not verification_is_mandatory():
         return False
     return bool(allauth_settings.PREVENT_ENUMERATION)
 
@@ -299,6 +323,10 @@ def allauth_authenticate(**kwargs):
     """
     Authenticate user using allauth's adapter with enhanced verification.
 
+    An unconfirmed address only bars the login while verification is mandatory. Under
+    ``ACCOUNT_EMAIL_VERIFICATION = 'optional'`` the account is usable from sign-up and
+    the verification state travels in the ``email_verified`` claim instead.
+
     Args:
         **kwargs: Authentication credentials (typically username/email + password)
 
@@ -307,12 +335,13 @@ def allauth_authenticate(**kwargs):
 
     Raises:
         IncorrectCredentials: If authentication fails
-        NotVerifiedEmail: If email is not verified
+        NotVerifiedEmail: If email is not verified and verification is mandatory
     """
     user = get_adapter().authenticate(**kwargs)
     if user is None:
         raise IncorrectCredentials()
-    is_email_verified(user, raise_exception=True)
+    if verification_is_mandatory():
+        is_email_verified(user, raise_exception=True)
     return user
 
 

@@ -120,6 +120,11 @@ class PasswordChangeTests(TestsMixin):
         self.assertIn("This password is too short.", str(resp))
 
     def test_refresh_jwt_tokens_invalidated_after_password_change(self):
+        """
+        A password change is a handover of the account: every session that existed
+        before it dies, the one that asked for the change included. The caller is not
+        left stranded -- the response carries a session minted after the change.
+        """
         old_token = str(self.TOKEN)
 
         login_response = self.client.post(
@@ -137,7 +142,15 @@ class PasswordChangeTests(TestsMixin):
             "new_password1": "new_pass00",
             "new_password2": "new_pass00"
         }
-        self.post(self.password_change_url, data=new_password_payload, status_code=200)
+        change_response = self.client.post(
+            self.password_change_url,
+            data=new_password_payload,
+            content_type='application/json',
+            HTTP_AUTHORIZATION='Bearer %s' % self.token,
+        )
+        self.assertEqual(change_response.status_code, 200)
+        self.assertIn('access', change_response.json())
+        replacement_token = change_response.cookies[REFRESH_TOKEN_COOKIE].value
 
         # check other sessions - use override setting to test with payload
         with override_settings(JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False):
@@ -145,8 +158,12 @@ class PasswordChangeTests(TestsMixin):
             resp = self.post(self.refresh_url, data=payload, status_code=401)
             self.assertEqual(resp['code'], u'token_not_valid')
 
-        # check current session is alive - set cookie manually
-        self.client.cookies[REFRESH_TOKEN_COOKIE] = current_token
+            # ... and the session that asked for the change is gone as well.
+            resp = self.post(self.refresh_url, data={'refresh': current_token}, status_code=401)
+            self.assertEqual(resp['code'], u'token_not_valid')
+
+        # the session handed out by the change endpoint is the one that works
+        self.client.cookies[REFRESH_TOKEN_COOKIE] = replacement_token
         self.post(self.refresh_url, data={}, status_code=200)
 
     @override_settings(LOGOUT_ON_PASSWORD_CHANGE=False)
