@@ -3,8 +3,7 @@ from django.contrib.auth.forms import SetPasswordForm
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
-from jwt_allauth.utils import user_sessions_lock
+from jwt_allauth.revocation import revoke_on_credential_change
 
 
 class PasswordChangeSerializer(serializers.Serializer):
@@ -53,10 +52,11 @@ class PasswordChangeSerializer(serializers.Serializer):
     def save(self):
         self.set_password_form.save()
         if self.logout_on_password_change:
-            with user_sessions_lock(self.request.user.id):
-                RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).exclude(
-                    session=self.request.auth['session']
-                ).delete()
+            # The session that asks for the change goes down with the rest: a password
+            # change is a handover of the account, and sparing the caller's session
+            # would spare it for whoever is holding it. The view answers with a session
+            # minted after the change, so the caller is not left stranded.
+            revoke_on_credential_change(self.request.user.id)
         else:
             from django.contrib.auth import update_session_auth_hash
             update_session_auth_hash(self.request, self.user)

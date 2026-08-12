@@ -6,6 +6,7 @@ from jwt_allauth.constants import EMAIL_VERIFIED_REDIRECT, PASSWORD_SET_REDIRECT
 from jwt_allauth.registration.email_verification.views import VerifyEmailView
 from jwt_allauth.registration.views import RegisterView, UserRegisterView
 from jwt_allauth.password_reset.views import SetPasswordView, DefaultSetPasswordView
+from jwt_allauth.utils import verification_enabled
 
 urlpatterns = []
 
@@ -38,7 +39,7 @@ if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
 else:
     urlpatterns.append(path('', RegisterView.as_view(), name='rest_register'))
 
-    if getattr(settings, 'EMAIL_VERIFICATION', False):
+    if verification_enabled():
         urlpatterns.extend([
             path('verification/<str:key>/', VerifyEmailView.as_view(), name='account_confirm_email'),
 

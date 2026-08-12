@@ -1,6 +1,27 @@
 Release Notes
 =============
 
+Version 1.3.0
+-------------
+
+Released: August 12, 2026
+
+Security
+~~~~~~~~
+
+- **Setting a password revokes everything, the caller's session included**: the password change spared the session that asked for it, and neither it nor the reset touched the capabilities still outstanding — an unopened second reset link, an MFA setup challenge — or an unconfirmed secondary address queued up behind the primary one. Setting a password is the moment an account changes hands, and anything left alive is a way back in for whoever held it before. Reset, change and set-password now drop every session, every stored token bar the failed-MFA counter, and every unconfirmed non-primary address. ``/password/change/`` answers with a replacement session minted after the change (``access`` in the body, refresh token as a cookie), so the caller is not left stranded by the revocation of its own session; clients that ignored the response body have to pick the new tokens up. ``LOGOUT_ON_PASSWORD_CHANGE = False`` still opts out of all of it.
+
+- **The 'account already exists' notice says how to take the account back**: it told the recipient that they could safely ignore it, which is only true when the sign-up attempt was an honest mistake. It now states that if it was not them and the address is theirs, resetting the password takes control of the account and signs out everybody currently using it — and links to the reset form when ``PASSWORD_RESET_REQUEST_URL`` is configured. It is the only warning the owner of an address gets when somebody registers with it, and under ``ACCOUNT_EMAIL_VERIFICATION = 'optional'`` it is what the recovery path hangs on.
+
+New Features
+~~~~~~~~~~~~
+
+- **Optional email verification**: ``EMAIL_VERIFICATION`` now names the method — ``'mandatory'``, ``'optional'`` or ``'none'``, with ``True`` and ``False`` still accepted as the first and the last — and ``'optional'`` means what it means in allauth: *send the confirmation mail, but do not block*. It was reachable before only through allauth's ``ACCOUNT_EMAIL_VERIFICATION``, and only ``enumeration_prevented()`` consulted that, so it behaved as a ``'mandatory'`` with a different enumeration story: allauth did not block, but the login still refused the account and registration still issued a disabled token. Every session decision asks the same question now, so with ``'optional'`` the sign-up answers with usable ``access`` and ``refresh`` tokens, the login of an unconfirmed account works, and rotation works. That gives projects the usual shape of the web — account usable from sign-up, verification as a gate over features — without the design ``'mandatory'`` forces, where following the link adopts an account somebody else created with a password somebody else chose. Deployments on ``True``, ``False`` or an explicit ``'mandatory'`` / ``'none'`` are unaffected.
+
+- **The two verification settings are reconciled at startup**: ``EMAIL_VERIFICATION`` governed the routing of the confirmation URL and whether an address is confirmed at sign-up, while allauth's ``ACCOUNT_EMAIL_VERIFICATION`` governed whether the mail is sent, and nothing kept them in step — so a pair that disagreed produced a state nobody designed. ``EMAIL_VERIFICATION = True`` with ``ACCOUNT_EMAIL_VERIFICATION = 'none'`` was the sharpest: the URL was routed, addresses were left unconfirmed and no link was ever sent to confirm them with, so no account could ever be verified. ``AppConfig.ready`` now settles on one method and makes both settings say it. ``EMAIL_VERIFICATION`` is this library's setting and wins where the two are spelled out; a project that declares only allauth's still has it honoured, and a contradictory pair is reported with a warning naming what it produces and what to set instead. A value that is not a verification method at all raises ``ImproperlyConfigured``. Nothing changes for a coherent configuration — including ``EMAIL_VERIFICATION = True`` next to an explicit ``'mandatory'`` or ``'optional'``.
+
+- **``email_verified`` claim and ``IsEmailVerified`` permission**: every token carries whether the account has a confirmed address, written when the session starts and re-read from the database on every refresh token rotation — the frontend calls ``/refresh/`` after the user follows the link and the claim flips, with no endpoint to add for it. :class:`~jwt_allauth.permissions.IsEmailVerified` gates a view on it without touching the database, and composes with the role permissions through DRF's operators (``RegularUserPermission & IsEmailVerified``), so *regular and verified* needs no class of its own. Which endpoints it guards is the project's decision. The claim only ever turns on, so a token that has not been rotated since the confirmation denies rather than grants; tokens minted before the claim existed are denied and get it back on the next refresh.
+
 Version 1.2.6
 -------------
 

@@ -5,13 +5,23 @@ Configure these variables in the ``settings.py`` file of your project.
 
 - Modules configuration
 
-    - ``EMAIL_VERIFICATION`` - whether to enable email verification (default: ``False``).
+    - ``EMAIL_VERIFICATION`` - the email verification method (default: ``'none'``). One of:
+
+        - ``'mandatory'`` (or ``True``) - no session at all until the address is confirmed: the login refuses the account and the token registration hands out is born disabled until the confirmation link is followed.
+        - ``'optional'`` - the confirmation mail is sent but nothing is blocked. The account is usable from sign-up and verification governs individual features through the ``email_verified`` claim, gated with :class:`~jwt_allauth.permissions.IsEmailVerified`.
+        - ``'none'`` (or ``False``) - no verification: addresses are confirmed as the account is created and no link is ever sent.
+
+      See :doc:`email_verification`.
+
+    - ``ACCOUNT_EMAIL_VERIFICATION`` - allauth's own setting, derived from ``EMAIL_VERIFICATION`` and normally left alone. A project that declares it instead of naming the method above still has it honoured, but the two must agree: ``EMAIL_VERIFICATION`` is this library's setting and wins, and a contradictory pair is reported with a warning at startup rather than left to produce a half-applied state.
+
+    - ``PASSWORD_RESET_REQUEST_URL`` - address of the page on which a user asks for a password reset (default: ``None``). This library serves the endpoint that consumes a reset link, not the form that requests one, so the address has to come from the project. Used by the *account already exists* notice, which is the only warning the owner of an address gets when somebody signs up with it, and which tells them that resetting the password takes control of the account. Without it the notice still says so, but cannot link to the form.
 
     - ``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS`` - Determines the expiration date of email confirmation mails (# of days) (default: ``3``).
 
     - ``OLD_PASSWORD_FIELD_ENABLED`` - whether to have ``old_password`` field on password change endpoint (default: ``True``).
 
-    - ``LOGOUT_ON_PASSWORD_CHANGE`` - whether to logout from the other user sessions on password change (default: ``True``).
+    - ``LOGOUT_ON_PASSWORD_CHANGE`` - whether a credential change revokes the account's sessions (default: ``True``). Applies to the password change, the password reset and the set-password step, and takes down **every** session -- the one asking for the change included, which is answered with a replacement session minted after the change -- along with every capability still outstanding and every unconfirmed secondary address. Setting it to ``False`` revokes nothing.
 
     - ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` - whether to enable admin-only registration endpoint and set-password flow (default: ``False``). The user will receive a verification email and will need to set their password before they can login.
 
@@ -153,7 +163,7 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``PASSWORD_RESET_COOKIE_MAX_AGE`` - maximum age of the cookie in seconds (default: ``3600``).
 
-    - ``LOGOUT_ON_PASSWORD_CHANGE`` - whether to logout from the other user sessions on password change (default: ``True``).
+    - ``LOGOUT_ON_PASSWORD_CHANGE`` - whether a credential change revokes the account's sessions (default: ``True``). Applies to the password change, the password reset and the set-password step, and takes down **every** session -- the one asking for the change included, which is answered with a replacement session minted after the change -- along with every capability still outstanding and every unconfirmed secondary address. Setting it to ``False`` revokes nothing.
 
 - Admin-managed registration
 

@@ -4,6 +4,12 @@ TEMPLATE_PATHS = 'JWT_ALLAUTH_TEMPLATES'
 
 EMAIL_VERIFIED_REDIRECT = 'EMAIL_VERIFIED_REDIRECT'
 PASSWORD_RESET_REDIRECT = 'PASSWORD_RESET_REDIRECT'
+# Page on which a user asks for a password reset. The library only serves the endpoint
+# that consumes the reset link, so the address of the form that starts the flow has to
+# come from the project. Used by the 'account already exists' notice, which is the only
+# warning the owner of an address gets when somebody signs up with it, and which has to
+# tell them how to take the account back.
+PASSWORD_RESET_REQUEST_URL = 'PASSWORD_RESET_REQUEST_URL'
 
 PASS_RESET_COOKIE = 'password_reset_access_token'
 
@@ -11,6 +17,11 @@ FOR_USER = 'for_user'
 ONE_TIME_PERMISSION = 'one_time_permission'
 
 REFRESH_TOKEN_COOKIE = 'refresh_token'
+
+# Claim holding whether the account has a confirmed e-mail address. Re-read from the
+# database on every refresh token rotation, so a frontend that calls ``/refresh/`` after
+# the user follows the confirmation link sees it flip without any dedicated endpoint.
+EMAIL_VERIFIED_CLAIM = 'email_verified'
 
 # Session
 # Claim holding the timestamp at which the session started. Unlike ``iat``, it is preserved

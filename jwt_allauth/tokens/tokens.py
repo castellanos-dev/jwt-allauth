@@ -11,14 +11,16 @@ from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken as DefaultRefreshToken
 from rest_framework_simplejwt.utils import aware_utcnow, datetime_from_epoch, datetime_to_epoch
 
-from jwt_allauth.constants import SESSION_IAT_CLAIM
+from jwt_allauth.constants import EMAIL_VERIFIED_CLAIM, SESSION_IAT_CLAIM
 from jwt_allauth.tokens.models import GenericTokenModel
 from jwt_allauth.tokens.serializers import RefreshTokenWhitelistSerializer, GenericTokenModelSerializer
-from jwt_allauth.utils import get_session_lifetime, user_agent_dict
+from jwt_allauth.utils import get_session_lifetime, is_email_verified, user_agent_dict
 
 # Claims managed by the token itself. They are never regenerated from the
 # user attribute configuration.
-RESERVED_CLAIMS = ('token_type', 'exp', 'iat', 'jti', 'user_id', 'session', SESSION_IAT_CLAIM, 'role')
+RESERVED_CLAIMS = (
+    'token_type', 'exp', 'iat', 'jti', 'user_id', 'session', SESSION_IAT_CLAIM, 'role', EMAIL_VERIFIED_CLAIM,
+)
 
 
 class RefreshToken(DefaultRefreshToken):
@@ -148,17 +150,32 @@ class RefreshToken(DefaultRefreshToken):
     def set_user_role(self, user):
         self.payload['role'] = user.role
 
+    def set_email_verified(self, user):
+        """
+        Record whether the account has a confirmed e-mail address.
+
+        The claim only ever goes from ``False`` to ``True`` for a given address, so a
+        token that has not been rotated since the confirmation denies access it should
+        by now be granting -- never the other way round. The exception is an address
+        changed after the fact, and that one is bounded by the life of the access token.
+        """
+        self.payload[EMAIL_VERIFIED_CLAIM] = is_email_verified(user)
+
     def sync_user_claims(self, user):
         """
-        Re-read the role and the configured user attributes from the database.
+        Re-read the role, the verification state and the configured user attributes
+        from the database.
 
         Called on refresh token rotation so that privilege changes take effect on
-        the next refresh instead of surviving until the refresh token expires.
+        the next refresh instead of surviving until the refresh token expires. It is
+        also what turns ``email_verified`` on: the frontend calls ``/refresh/`` once the
+        user has followed the confirmation link and the next access token carries it.
         """
         for output_name in self._attribute_map():
             if output_name not in RESERVED_CLAIMS:
                 self.payload.pop(output_name, None)
         self.set_user_role(user)
+        self.set_email_verified(user)
         self.set_user_attributes(user)
 
     @classmethod
@@ -174,6 +191,7 @@ class RefreshToken(DefaultRefreshToken):
         token.set_session_iat()  # type: ignore
         token.cap_exp_to_session()  # type: ignore
         token.set_user_role(user)  # type: ignore
+        token.set_email_verified(user)  # type: ignore
         token.set_user_attributes(user)  # type: ignore
         # Store the token in the database
         refresh_serializer = RefreshTokenWhitelistSerializer(data={
