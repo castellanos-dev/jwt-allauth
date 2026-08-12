@@ -11,11 +11,6 @@ Bug Fixes
 
 - **Endpoint throttles are added to the project defaults instead of replacing them**: every view that declared ``throttle_classes`` — registration, login, refresh, password change, password reset, set password and the MFA endpoints — shadowed ``DEFAULT_THROTTLE_CLASSES`` rather than adding to it, which is how DRF resolves that attribute. A project capping registration with a ``ScopedRateThrottle`` at ``5/min`` had it silently displaced by the ``60/min`` ``anon`` rate the view asked for, so the endpoints most likely to have been tightened were the ones that lost their limit. Those views declare their throttles in ``extra_throttle_classes`` now and compose them with whatever ``throttle_classes`` resolves to; a class already listed in the defaults is not instantiated twice, since two instances of one throttle consume its bucket twice. Nothing changes for a project without defaults configured, DRF's semantics are preserved for subclasses that override ``throttle_classes``, and ``extra_throttle_classes = ()`` drops the additions of the library. See :doc:`configuration.settings_py`.
 
-Upgrade Notes
-~~~~~~~~~~~~~
-
-- **Unverified accounts that already have a password can no longer use their confirmation link (admin-managed registration)**: 1.2.5 refuses to exchange a confirmation link for a password-set permission when the account behind it already has a usable password, which is what closed the takeover through replayed confirmation emails. The check runs before the address is confirmed, so an account left pending by a flow that created it *with* a password has no way forward: the link always renders the failure page, the address is never verified, and the password reset flow does not rescue it either because it only accepts verified addresses. Installations that ran self-service registration (``POST /registration/``, which sets a password) before switching to ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True`` are the ones that carry such rows; invitations created by ``POST /registration/user-register/`` never have a usable password. They are leftovers of sign-ups nobody completed, so clearing them is a data migration, not a code change — see :doc:`admin_managed_registration` for the query that lists them and for the two ways out.
-
 Version 1.2.5
 -------------
 
