@@ -37,6 +37,20 @@ from jwt_allauth.utils import (
 )
 
 
+def _verified_redirect_url():
+    """
+    Where the browser lands once the address is confirmed and nothing else is due.
+
+    Resolved on demand: the built-in page is only routed when ``EMAIL_VERIFIED_REDIRECT``
+    is not configured, so reversing it eagerly breaks every installation that configured
+    its own.
+
+    Returns:
+        str: URL configured through ``EMAIL_VERIFIED_REDIRECT``, or the built-in page.
+    """
+    return getattr(settings, EMAIL_VERIFIED_REDIRECT, None) or reverse('jwt_allauth_email_verified')
+
+
 class VerifyEmailView(APIView, ConfirmEmailView):
     permission_classes = (AllowAny,)
     allowed_methods = ('GET',)
@@ -130,13 +144,6 @@ class VerifyEmailView(APIView, ConfirmEmailView):
             if not user.is_active:
                 return self._verification_failed(request)
 
-            # The password-set capability only makes sense for an invited account that has
-            # not chosen a password yet. Issuing it for an account that already has one
-            # would turn any confirmation link into a password reset link, bypassing the
-            # reset flow and its throttling.
-            if user.has_usable_password():
-                return self._verification_failed(request)
-
             try:
                 confirmation = self.get_object()
                 confirmation.confirm(self.request)
@@ -147,6 +154,19 @@ class VerifyEmailView(APIView, ConfirmEmailView):
                 # Note: We use the user from our GenericTokenModel which we know is valid.
                 if not EmailAddress.objects.filter(user=user, verified=True).exists():
                     return self._verification_failed(request)
+
+            # The password-set capability only makes sense for an invited account that has
+            # not chosen a password yet. Issuing it for an account that already has one
+            # would turn any confirmation link into a password reset link, bypassing the
+            # reset flow and its throttling.
+            #
+            # Only the capability is withheld: the address is confirmed above either way,
+            # which is what the link was sent for. Refusing that as well would leave the
+            # account with no way forward -- login and the password reset flow both require
+            # a verified address, so the link is the only thing that can hand it one -- and
+            # it is not what closes the takeover. What was replayed is the capability.
+            if user.has_usable_password():
+                return HttpResponseRedirect(_verified_redirect_url())
 
             # Create one-time access token to allow setting the password
             refresh_token = RefreshToken()
@@ -200,9 +220,7 @@ class VerifyEmailView(APIView, ConfirmEmailView):
 
         confirmation.confirm(self.request)
 
-        response = HttpResponseRedirect(
-            getattr(settings, EMAIL_VERIFIED_REDIRECT, reverse('jwt_allauth_email_verified'))
-        )
+        response = HttpResponseRedirect(_verified_redirect_url())
         if completes_signup:
             self._start_session(response, request, user)
         return response

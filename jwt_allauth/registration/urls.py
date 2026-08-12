@@ -18,6 +18,14 @@ if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
         path('verification/<str:key>/', VerifyEmailView.as_view(), name='account_confirm_email'),
     ])
 
+    # An account that already has a password is only confirmed, never handed a
+    # password-set capability, and lands on the same page as any other verification.
+    if getattr(settings, EMAIL_VERIFIED_REDIRECT, None) is None:
+        urlpatterns.append(
+            path('verified/', TemplateView.as_view(
+                template_name='email/verified.html'), name='jwt_allauth_email_verified'),
+        )
+
     # Only register the built-in HTML UI if no custom PASSWORD_SET_REDIRECT is configured
     if getattr(settings, PASSWORD_SET_REDIRECT, None) is None:
         urlpatterns.append(

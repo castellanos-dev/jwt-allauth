@@ -178,3 +178,34 @@ Configure these variables in the ``settings.py`` file of your project.
     - ``PASSWORD_SET_COOKIE_SAME_SITE`` - same-site cookie policy for the set-password flow (default: ``'Lax'``).
 
     - ``PASSWORD_SET_COOKIE_MAX_AGE`` - maximum age of the set-password cookie in seconds (default: ``3600 * 24``).
+
+- Rate limiting
+
+    The endpoints of the library declare a throttle of their own — ``AnonRateThrottle`` on the anonymous ones
+    (registration, login, password reset, MFA verification) and ``UserRateThrottle`` on the authenticated ones
+    (refresh, password change, set password) — and it is **added to** the ``DEFAULT_THROTTLE_CLASSES`` of the
+    project, not substituted for them. Configure ``DEFAULT_THROTTLE_CLASSES`` and ``DEFAULT_THROTTLE_RATES``
+    through DRF's ``REST_FRAMEWORK`` setting as usual; a class listed there is never instantiated twice, even when
+    a view asks for it as well.
+
+    .. code-block:: python
+
+        REST_FRAMEWORK = {
+            'DEFAULT_THROTTLE_CLASSES': ['rest_framework.throttling.ScopedRateThrottle'],
+            'DEFAULT_THROTTLE_RATES': {'anon': '60/min', 'user': '1000/day', 'registration': '5/min'},
+        }
+
+    Requesting a password reset is limited per target address on top of that, through
+    allauth's ``ACCOUNT_RATE_LIMITS['reset_password']`` (``20/m/ip,5/m/key`` by default). The throttles above
+    count per origin, which does not protect the mailbox on the receiving end. See :doc:`password_reset`.
+
+    To take over completely, subclass the view: ``throttle_classes`` keeps DRF's meaning and replaces the
+    defaults, and ``extra_throttle_classes = ()`` drops what the library adds.
+
+    .. code-block:: python
+
+        from jwt_allauth.registration.views import RegisterView
+
+        class MyRegisterView(RegisterView):
+            throttle_scope = 'registration'
+            extra_throttle_classes = ()  # only the throttles of the project apply

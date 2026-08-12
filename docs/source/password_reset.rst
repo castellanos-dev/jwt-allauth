@@ -25,6 +25,24 @@ granted by the previous one: only the most recent link can set a password.
 The account is re-read when the cookie is used: a link issued before the account was deactivated or deleted is
 rejected with ``401``, and a deactivated account is never handed a cookie in the first place.
 
+None of the three endpoints of the flow authenticates the caller: authorization is the cookie, so an
+``Authorization`` header travelling with the request is ignored rather than rejected. Clients that attach a
+bearer token to everything they send can complete a reset, and a stale one does not turn the link into a
+``401``.
+
+Rate limiting
+-------------
+
+Requesting a reset is limited twice: by DRF's ``anon`` throttle, which counts per address of origin, and by
+allauth's ``reset_password`` limit keyed by the target address (``5/m/key`` next to its own ``20/m/ip``). The
+second is what protects the mailbox: without it, rotating the origin is enough to bury somebody's inbox in
+reset links. It is consumed before the account is looked up, so an unregistered address answers exactly like a
+registered one — ``429`` in both cases. Tune it, or lift it, through allauth's ``ACCOUNT_RATE_LIMITS``:
+
+.. code-block:: python
+
+    ACCOUNT_RATE_LIMITS = {'reset_password': '3/m/key,20/m/ip'}   # or None to lift it
+
 CSRF
 ----
 

@@ -3,6 +3,7 @@ import json
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TransactionTestCase
 from django.test.client import Client, MULTIPART_CONTENT
 from django.urls import reverse, NoReverseMatch
@@ -102,6 +103,9 @@ class TestsMixin(TransactionTestCase):
 
     def init(self):
         settings.DEBUG = True
+        # allauth's rate limits live in the cache, which outlives a test: a stale count
+        # would make an unrelated test answer 429.
+        cache.clear()
         self.client = APIClient()
 
         self.login_url = reverse('rest_login')

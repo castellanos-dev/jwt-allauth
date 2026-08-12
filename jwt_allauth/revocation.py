@@ -20,6 +20,7 @@ from django.conf import settings
 
 from jwt_allauth.constants import MFA_PURPOSE_LOGIN_ATTEMPT
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
+from jwt_allauth.utils import user_sessions_lock
 
 
 def revoke_on_credential_change(user_id) -> None:
@@ -46,12 +47,18 @@ def revoke_on_credential_change(user_id) -> None:
     Honours ``LOGOUT_ON_PASSWORD_CHANGE``: an installation that sets it to ``False`` has
     opted out of revoking on credential changes, and nothing is dropped.
 
+    Runs under :func:`~jwt_allauth.utils.user_sessions_lock`, like every other writer of
+    the session set of a user: without it a refresh committing after the deletion began
+    would leave the session it renews open past the credential change, which is the one
+    outcome this whole function exists to prevent.
+
     Args:
         user_id (int|str): Account whose credentials just changed.
     """
     if not getattr(settings, 'LOGOUT_ON_PASSWORD_CHANGE', True):
         return
 
-    RefreshTokenWhitelistModel.objects.filter(user=user_id).delete()
-    GenericTokenModel.objects.filter(user=user_id).exclude(purpose=MFA_PURPOSE_LOGIN_ATTEMPT).delete()
-    EmailAddress.objects.filter(user=user_id, verified=False, primary=False).delete()
+    with user_sessions_lock(user_id):
+        RefreshTokenWhitelistModel.objects.filter(user=user_id).delete()
+        GenericTokenModel.objects.filter(user=user_id).exclude(purpose=MFA_PURPOSE_LOGIN_ATTEMPT).delete()
+        EmailAddress.objects.filter(user=user_id, verified=False, primary=False).delete()
