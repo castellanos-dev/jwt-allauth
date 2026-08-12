@@ -38,6 +38,7 @@ from jwt_allauth.utils import (
     get_user_agent,
     load_capability_user,
     sensitive_post_parameters_m,
+    user_sessions_lock,
 )
 from jwt_allauth.csrf import ensure_csrf_cookie
 from jwt_allauth.mfa.storage import create_setup_challenge
@@ -217,7 +218,10 @@ class ResetPasswordView(ExtraThrottlesMixin, GenericAPIView):
 
         # Revoke old sessions
         if getattr(settings, 'LOGOUT_ON_PASSWORD_CHANGE', True):
-            RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
+            # Ordered against the rotations in flight: a refresh committing after this
+            # deletion started would leave the session it renews open past the reset.
+            with user_sessions_lock(self.request.user.id):
+                RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
 
         refresh_token = RefreshToken.for_user(request.user)
         return build_token_response(
@@ -257,7 +261,10 @@ class SetPasswordView(ExtraThrottlesMixin, GenericAPIView):
 
         # Revoke old sessions
         if getattr(settings, 'LOGOUT_ON_PASSWORD_CHANGE', True):
-            RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
+            # Ordered against the rotations in flight: a refresh committing after this
+            # deletion started would leave the session it renews open past the reset.
+            with user_sessions_lock(self.request.user.id):
+                RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).delete()
 
         # Invalidate the email confirmation token now that the password has been set
         GenericTokenModel.objects.filter(user=request.user, purpose=EMAIL_CONFIRMATION).delete()

@@ -24,6 +24,7 @@ from jwt_allauth.constants import (
     MFA_USER_MAX_ATTEMPTS,
 )
 from jwt_allauth.tokens.models import GenericTokenModel
+from jwt_allauth.utils import lock_user
 
 logger = logging.getLogger(__name__)
 
@@ -290,7 +291,7 @@ def record_failed_login_attempt(challenge_id: str, user) -> FailedAttemptResult:
     thresholds together.
     """
     with transaction.atomic():
-        _lock_user(user.pk)
+        lock_user(user.pk)
         _purge_expired_attempts(user.pk)
         GenericTokenModel.objects.create(
             user=user,
@@ -315,11 +316,3 @@ def record_failed_login_attempt(challenge_id: str, user) -> FailedAttemptResult:
         return FailedAttemptResult(challenge_invalidated=False, locked_out=False, retry_after=0)
 
 
-def _lock_user(user_id: int) -> None:
-    """
-    Take a row lock on the user for the duration of the current transaction.
-
-    On backends without ``SELECT ... FOR UPDATE`` support (e.g. SQLite, which serializes
-    writers anyway) Django ignores the clause and this is a plain read.
-    """
-    list(get_user_model().objects.select_for_update().filter(pk=user_id).values_list("pk", flat=True))

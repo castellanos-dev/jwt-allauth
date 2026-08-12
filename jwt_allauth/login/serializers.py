@@ -107,7 +107,14 @@ class LoginSerializer(TokenObtainPairSerializer):
                 challenge_id = create_login_challenge(self.user.id)
                 return {"mfa_required": True, "challenge_id": challenge_id}
 
-        validated_data = super().validate(attrs)
+        # The parent implementation is deliberately not called: it authenticates a second
+        # time -- with Django's `authenticate()` rather than allauth's, repeating the
+        # password hashing -- and mints a refresh token of its own on the way. That token
+        # is whitelisted and then dropped in favour of the one below, leaving behind a
+        # session nobody ever received a credential for: `/logout/` cannot close it, since
+        # closing it means presenting its refresh token, and it stays alive until it
+        # expires. Every check the parent performs has already been performed above.
+        validated_data: Dict[str, Any] = {}
 
         # Set the refresh token
         refresh = self.get_token(self.user)

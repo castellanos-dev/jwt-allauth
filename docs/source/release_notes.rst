@@ -6,8 +6,15 @@ Version 1.2.6
 
 Released: August 12, 2026
 
+Security
+~~~~~~~~
+
+- **A logout can no longer be overtaken by a refresh in flight**: rotation locks the whitelist row it consumes, deletes it and inserts the successor, while ``/logout/``, ``/logout-all/``, the reuse detection and the password flows deleted rows without any lock of their own. Under ``READ COMMITTED`` a deletion does not see a row inserted by a transaction that commits after it started, so a refresh landing at the same moment as a revocation left its successor behind: the endpoint answered *"Successfully logged out"* and the session stayed open until it expired, with no way left to close it. Every writer of the session set of a user now takes a row lock on the user first (``jwt_allauth.utils.user_sessions_lock``), which orders the two: the revocation either removes the successor or the rotation finds its token already gone. Concurrent rotations of different sessions of the same user are serialised as a consequence; they are short-lived. Backends without ``SELECT ... FOR UPDATE`` (SQLite serializes writers anyway) are unaffected.
+
 Bug Fixes
 ~~~~~~~~~
+
+- **A login whitelists one session, not two**: ``LoginSerializer`` delegated to simplejwt's implementation and then minted its own token, and since every refresh token is whitelisted as it is created, each login left two rows behind while handing out a single credential. The extra session was live until it expired and could not be closed: ``/logout/`` closes a session against its refresh token, and nobody ever received that one. Only ``/logout-all/`` cleared it. The pair is minted once now, which also stops the password from being hashed a second time on every login — the parent implementation re-authenticated with Django's ``authenticate()`` after allauth had already done it.
 
 - **Endpoint throttles are added to the project defaults instead of replacing them**: every view that declared ``throttle_classes`` — registration, login, refresh, password change, password reset, set password and the MFA endpoints — shadowed ``DEFAULT_THROTTLE_CLASSES`` rather than adding to it, which is how DRF resolves that attribute. A project capping registration with a ``ScopedRateThrottle`` at ``5/min`` had it silently displaced by the ``60/min`` ``anon`` rate the view asked for, so the endpoints most likely to have been tightened were the ones that lost their limit. Those views declare their throttles in ``extra_throttle_classes`` now and compose them with whatever ``throttle_classes`` resolves to; a class already listed in the defaults is not instantiated twice, since two instances of one throttle consume its bucket twice. Nothing changes for a project without defaults configured, DRF's semantics are preserved for subclasses that override ``throttle_classes``, and ``extra_throttle_classes = ()`` drops the additions of the library. See :doc:`configuration.settings_py`.
 

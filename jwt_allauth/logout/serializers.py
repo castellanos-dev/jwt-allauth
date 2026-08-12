@@ -7,6 +7,7 @@ from rest_framework_simplejwt.exceptions import InvalidToken
 
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
+from jwt_allauth.utils import user_sessions_lock
 
 
 class RemoveRefreshTokenSerializer(serializers.Serializer):
@@ -20,10 +21,14 @@ class RemoveRefreshTokenSerializer(serializers.Serializer):
             raise InvalidToken()
         if not constant_time_compare(str(user_id), str(refresh.payload['user_id'])):
             raise InvalidToken()
-        query = RefreshTokenWhitelistModel.objects.filter(
-            Q(jti=refresh.payload["jti"]) | Q(session=refresh.payload["session"])
-        )
-        if not query.count() > 0:
-            raise InvalidToken()
-        query.delete()
+        # The successor a concurrent rotation mints carries the same session, so the
+        # deletion has to be ordered against it: without the lock the rotation inserts a
+        # row this query cannot see and the session stays open past the logout.
+        with user_sessions_lock(user_id):
+            query = RefreshTokenWhitelistModel.objects.filter(
+                Q(jti=refresh.payload["jti"]) | Q(session=refresh.payload["session"])
+            )
+            if not query.count() > 0:
+                raise InvalidToken()
+            query.delete()
         return {}

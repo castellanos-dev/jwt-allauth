@@ -1,5 +1,6 @@
 import hashlib
 import warnings
+from contextlib import contextmanager
 from datetime import timedelta
 from importlib import import_module
 from typing import Any, Dict, Optional
@@ -9,6 +10,7 @@ from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress
 from django.core.exceptions import ImproperlyConfigured
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
 from django.conf import settings
@@ -293,6 +295,45 @@ def is_email_verified(user, raise_exception=False):
             raise NotVerifiedEmail()
         return False
     return True
+
+
+def lock_user(user_id):
+    """
+    Take a row lock on a user for the remainder of the current transaction.
+
+    Backends without ``SELECT ... FOR UPDATE`` (SQLite, which serializes writers anyway)
+    drop the clause, leaving a plain read.
+
+    Args:
+        user_id: Primary key of the user to lock. ``None`` locks nothing.
+    """
+    list(get_user_model().objects.select_for_update().filter(pk=user_id).values_list('pk', flat=True))
+
+
+@contextmanager
+def user_sessions_lock(user_id):
+    """
+    Serialise the changes made to the set of sessions of a user.
+
+    Locking the whitelist rows is not enough to order a rotation against a revocation:
+    rotation deletes the row it holds and inserts the successor, and under ``READ
+    COMMITTED`` a ``DELETE`` covering the sessions of a user does not see a row inserted
+    by a transaction that commits after the delete began. The revocation reports success
+    and the rotated session outlives it -- a logout that leaves a session open.
+
+    Every writer of the set takes this lock first, so the second one runs against the
+    committed outcome of the first: either the rotation happens before the revocation and
+    its successor is deleted, or after it and the token it consumes is already gone.
+
+    Concurrent rotations of different sessions of one user are serialised as a result.
+    They are short, and the alternative is a session that survives its own revocation.
+
+    Args:
+        user_id: Primary key of the user whose sessions are about to change.
+    """
+    with transaction.atomic():
+        lock_user(user_id)
+        yield
 
 
 def allauth_authenticate(**kwargs):
