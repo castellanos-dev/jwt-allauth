@@ -36,11 +36,14 @@ Mandatory or optional
 
 ``'optional'``
     The confirmation mail is sent, but nothing is blocked. Sign-up answers with usable ``access``
-    and ``refresh`` tokens, the login works, and verification governs individual features through
-    the ``email_verified`` claim rather than the session itself. This is the usual shape of the web,
-    and it avoids making the confirmation link a transfer of ownership — under ``'mandatory'``,
-    whoever opens the mail adopts an account somebody else created, with the password that somebody
-    else chose.
+    and ``refresh`` tokens, the login works, and verification governs individual features rather
+    than the session itself — through the ``email_verified`` claim, which
+    :class:`~jwt_allauth.permissions.IsEmailVerified` reads to gate a view (see
+    `Gating features on the claim`_ below). Nothing is gated until you say so, so this method is
+    only worth choosing together with that permission class or a check of your own. This is the
+    usual shape of the web, and it avoids making the confirmation link a transfer of ownership —
+    under ``'mandatory'``, whoever opens the mail adopts an account somebody else created, with
+    the password that somebody else chose.
 
 ``'none'`` (or ``False``)
     No verification. Addresses are confirmed as the account is created and no link is ever sent.
