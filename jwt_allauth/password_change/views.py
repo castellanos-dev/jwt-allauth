@@ -6,10 +6,11 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
 from jwt_allauth.app_settings import PasswordChangeSerializer
+from jwt_allauth.throttling import ExtraThrottlesMixin
 from jwt_allauth.utils import sensitive_post_parameters_m
 
 
-class PasswordChangeView(GenericAPIView):
+class PasswordChangeView(ExtraThrottlesMixin, GenericAPIView):
     """
     Calls Django Auth SetPasswordForm save method.
 
@@ -18,7 +19,7 @@ class PasswordChangeView(GenericAPIView):
     """
     serializer_class = PasswordChangeSerializer
     permission_classes = (IsAuthenticated,)
-    throttle_classes = [UserRateThrottle]
+    extra_throttle_classes = (UserRateThrottle,)
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):

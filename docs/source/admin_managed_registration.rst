@@ -16,7 +16,7 @@ Endpoints
 
 - ``POST /registration/user-register/`` (name: ``rest_user_register``) — Allowed to roles defined by ``JWT_ALLAUTH_REGISTRATION_ALLOWED_ROLES`` (defaults to ``[STAFF_CODE, SUPER_USER_CODE]``).
 - ``GET /registration/verification/<key>/`` (name: ``account_confirm_email``) — Confirms the email and drops a ``set_password_access_token`` cookie when admin-managed is enabled.
-- ``POST /registration/set-password/`` (name: ``rest_set_password``) — Reads the one-time token from cookie, sets password, returns tokens. Throttled with ``UserRateThrottle``.
+- ``POST /registration/set-password/`` (name: ``rest_set_password``) — Reads the one-time token from cookie, sets password, returns tokens. Throttled with ``UserRateThrottle``, in addition to the throttles configured by the project.
 
 Payloads
 --------
@@ -78,6 +78,42 @@ Email verification behavior
 - A deactivated account is never handed a one-time token, and a token issued before the deactivation is rejected with ``401`` when the password is set.
 - The set-password request has to carry a CSRF token, since the one-time token authenticating it travels in a cookie. The verification ``GET`` sets the CSRF cookie along with it, and the UI is expected to send its value back in the ``X-CSRFToken`` header; the built-in form already does. Set ``JWT_ALLAUTH_CAPABILITY_COOKIE_CSRF = False`` to skip the check.
 - The set-password endpoint does not alter email verification status.
+
+Accounts pending verification that already have a password
+----------------------------------------------------------
+
+The rule above — no one-time token while the account has a password — is checked *before* the address is
+confirmed, so an account that is still pending verification **and** already holds a usable password cannot move
+forward at all: the link renders the failure page every time, the address stays unverified, and the password reset
+flow does not help either, since it only sends links to verified addresses.
+
+Invitations sent by ``POST /registration/user-register/`` never hit this: they leave the account without a usable
+password until the password is set. The rows that do are the ones a self-service registration left behind —
+``POST /registration/`` sets a password at sign-up — in an installation that later switched to
+``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. They are sign-ups nobody completed, and they have to be cleared
+from the database:
+
+.. code-block:: python
+
+    from allauth.account.models import EmailAddress
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.hashers import UNUSABLE_PASSWORD_PREFIX
+
+    stuck = (
+        get_user_model().objects
+        .filter(id__in=EmailAddress.objects.filter(verified=False).values('user_id'))
+        .exclude(id__in=EmailAddress.objects.filter(verified=True).values('user_id'))
+        .exclude(password__startswith=UNUSABLE_PASSWORD_PREFIX)
+        .exclude(password='')
+    )
+
+Review the list before touching it, then pick one of:
+
+- ``stuck.delete()`` — drops the abandoned sign-ups and frees their addresses to be invited again. This is the
+  usual answer, and the one to run as a data migration so every deployment of the project gets it.
+- ``EmailAddress.objects.filter(user__in=stuck).update(verified=True)`` — confirms the address by hand for the
+  accounts that should keep the password they already chose. Only for addresses whose owner is known: verifying an
+  address nobody proved control over is exactly what the confirmation link exists to prevent.
 
 Email templates
 ---------------

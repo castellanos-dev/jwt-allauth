@@ -31,6 +31,7 @@ from jwt_allauth.password_reset.serializers import SetPasswordSerializer
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
+from jwt_allauth.throttling import ExtraThrottlesMixin
 from jwt_allauth.tokens.tokens import GenericToken
 from jwt_allauth.utils import (
     build_token_response,
@@ -53,7 +54,7 @@ def get_mfa_totp_mode() -> str:
     return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
 
 
-class PasswordResetView(GenericAPIView):
+class PasswordResetView(ExtraThrottlesMixin, GenericAPIView):
     """
     Calls Django Auth PasswordResetForm save method.
 
@@ -62,7 +63,7 @@ class PasswordResetView(GenericAPIView):
     """
     serializer_class = PasswordResetSerializer
     permission_classes = (AllowAny,)
-    throttle_classes = [AnonRateThrottle]
+    extra_throttle_classes = (AnonRateThrottle,)
 
     @get_user_agent
     def post(self, request):
@@ -186,7 +187,7 @@ class PasswordResetConfirmView(GenericAPIView):
         return user
 
 
-class ResetPasswordView(GenericAPIView):
+class ResetPasswordView(ExtraThrottlesMixin, GenericAPIView):
     """
     Calls Django Auth SetPasswordForm save method.
 
@@ -195,7 +196,7 @@ class ResetPasswordView(GenericAPIView):
     """
     serializer_class = SetPasswordSerializer
     permission_classes = (ResetPasswordPermission,)
-    throttle_classes = [UserRateThrottle]
+    extra_throttle_classes = (UserRateThrottle,)
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
@@ -225,7 +226,7 @@ class ResetPasswordView(GenericAPIView):
         )
 
 
-class SetPasswordView(GenericAPIView):
+class SetPasswordView(ExtraThrottlesMixin, GenericAPIView):
     """
     Set password for admin-managed registration.
     Accepts: new_password1, new_password2
@@ -233,7 +234,7 @@ class SetPasswordView(GenericAPIView):
     """
     serializer_class = SetPasswordSerializer
     permission_classes = (SetPasswordPermission,)
-    throttle_classes = [UserRateThrottle]
+    extra_throttle_classes = (UserRateThrottle,)
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
