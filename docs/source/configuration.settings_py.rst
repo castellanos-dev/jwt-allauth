@@ -5,9 +5,15 @@ Configure these variables in the ``settings.py`` file of your project.
 
 - Modules configuration
 
-    - ``EMAIL_VERIFICATION`` - whether to enable email verification (default: ``False``).
+    - ``EMAIL_VERIFICATION`` - the email verification method (default: ``'none'``). One of:
 
-    - ``ACCOUNT_EMAIL_VERIFICATION`` - allauth's setting, honoured here as well: ``'mandatory'`` withholds the session until the address is confirmed, ``'optional'`` sends the confirmation mail but lets the account be used from sign-up, ``'none'`` disables verification (default: derived from ``EMAIL_VERIFICATION`` — ``'mandatory'`` when it is on, ``'none'`` when it is off). With ``'optional'``, gate the features that need a confirmed address on the ``email_verified`` claim through :class:`~jwt_allauth.permissions.IsEmailVerified`. See :doc:`email_verification`.
+        - ``'mandatory'`` (or ``True``) - no session at all until the address is confirmed: the login refuses the account and the token registration hands out is born disabled until the confirmation link is followed.
+        - ``'optional'`` - the confirmation mail is sent but nothing is blocked. The account is usable from sign-up and verification governs individual features through the ``email_verified`` claim, gated with :class:`~jwt_allauth.permissions.IsEmailVerified`.
+        - ``'none'`` (or ``False``) - no verification: addresses are confirmed as the account is created and no link is ever sent.
+
+      See :doc:`email_verification`.
+
+    - ``ACCOUNT_EMAIL_VERIFICATION`` - allauth's own setting, derived from ``EMAIL_VERIFICATION`` and normally left alone. A project that declares it instead of naming the method above still has it honoured, but the two must agree: ``EMAIL_VERIFICATION`` is this library's setting and wins, and a contradictory pair is reported with a warning at startup rather than left to produce a half-applied state.
 
     - ``PASSWORD_RESET_REQUEST_URL`` - address of the page on which a user asks for a password reset (default: ``None``). This library serves the endpoint that consumes a reset link, not the form that requests one, so the address has to come from the project. Used by the *account already exists* notice, which is the only warning the owner of an address gets when somebody signs up with it, and which tells them that resetting the password takes control of the account. Without it the notice still says so, but cannot link to the form.
 

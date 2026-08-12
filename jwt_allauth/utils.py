@@ -76,27 +76,58 @@ def get_session_lifetime():
     return lifetime
 
 
+def _configured_verification_method():
+    """The method named by ``EMAIL_VERIFICATION``, or ``None`` when it is a boolean.
+
+    :meth:`jwt_allauth.apps.JWTAllauthAppConfig.ready` normalises the setting to a
+    boolean at startup and puts the method in allauth's ``ACCOUNT_EMAIL_VERIFICATION``,
+    so a string only reaches here when it is set afterwards — ``override_settings`` in a
+    test, most of the time. Reading it at call time keeps that honest rather than having
+    ``bool('none')`` quietly answer ``True``.
+    """
+    configured = getattr(settings, 'EMAIL_VERIFICATION', False)
+    if isinstance(configured, str):
+        return configured.lower()
+    return None
+
+
+def verification_enabled() -> bool:
+    """Whether addresses are confirmed at all, by either method.
+
+    ``False`` means an address is confirmed as the account is created and no link is
+    ever sent, which is what the confirmation URL and the sign-up auto-confirmation ask
+    about — neither cares whether the method is ``'mandatory'`` or ``'optional'``.
+    """
+    method = _configured_verification_method()
+    if method is not None:
+        return method != 'none'
+    return bool(getattr(settings, 'EMAIL_VERIFICATION', False))
+
+
 def verification_is_mandatory() -> bool:
     """Whether an unverified account is barred from having a session at all.
 
-    Two settings govern e-mail verification and both have to agree before a session is
-    withheld: ``EMAIL_VERIFICATION``, which turns the feature on for this library, and
-    allauth's ``ACCOUNT_EMAIL_VERIFICATION``, which decides whether the confirmation
-    mail is sent and — in allauth's own vocabulary — how hard the door is shut.
-    ``ACCOUNT_EMAIL_VERIFICATION`` is derived from ``EMAIL_VERIFICATION`` in
-    :meth:`jwt_allauth.apps.JWTAllauthAppConfig.ready` unless the project sets it
-    itself, so the two only part ways on purpose.
+    ``EMAIL_VERIFICATION`` is this library's setting and names the method:
+    ``'mandatory'``, ``'optional'`` or ``'none'``, with ``True`` and ``False`` still
+    accepted as the first and the last. allauth's ``ACCOUNT_EMAIL_VERIFICATION`` is
+    derived from it at startup, and a project that declares that one instead has it
+    honoured; the two are reconciled in
+    :meth:`jwt_allauth.apps.JWTAllauthAppConfig.ready`, so by the time anything asks
+    they agree.
 
-    ``'optional'`` is that purpose: allauth sends the confirmation mail but does not
-    block, which is the usual shape of the web — the account is usable from sign-up and
-    verification gates individual features rather than the session itself. Gate those
-    features on the ``email_verified`` claim, through
+    ``'optional'`` is why the distinction matters: allauth sends the confirmation mail
+    but does not block, which is the usual shape of the web — the account is usable from
+    sign-up and verification gates individual features rather than the session itself.
+    Gate those features on the ``email_verified`` claim, through
     :class:`jwt_allauth.permissions.IsEmailVerified` or your own check.
 
     Returns:
         bool: ``True`` when an account whose address is not confirmed must not be able
         to log in, and the token registration hands out must be born disabled.
     """
+    method = _configured_verification_method()
+    if method is not None:
+        return method == 'mandatory'
     if not bool(getattr(settings, 'EMAIL_VERIFICATION', False)):
         return False
     return (

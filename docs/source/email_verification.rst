@@ -28,11 +28,9 @@ To enable the email verification, configure the email provider in your ``setting
 Mandatory or optional
 """""""""""""""""""""
 
-``EMAIL_VERIFICATION`` turns the feature on; allauth's ``ACCOUNT_EMAIL_VERIFICATION`` decides how
-hard the door is shut. It is derived from ``EMAIL_VERIFICATION`` — ``'mandatory'`` when it is on,
-``'none'`` when it is off — unless the project sets it itself, so the two only part ways on purpose.
+``EMAIL_VERIFICATION`` names the method:
 
-``'mandatory'`` (the default)
+``'mandatory'`` (or ``True``)
     No session at all until the address is confirmed. The login refuses the account, the token
     registration hands out is born disabled, and the confirmation link is what turns it on.
 
@@ -44,10 +42,22 @@ hard the door is shut. It is derived from ``EMAIL_VERIFICATION`` — ``'mandator
     whoever opens the mail adopts an account somebody else created, with the password that somebody
     else chose.
 
+``'none'`` (or ``False``)
+    No verification. Addresses are confirmed as the account is created and no link is ever sent.
+
 .. code-block:: python
 
-    EMAIL_VERIFICATION = True
-    ACCOUNT_EMAIL_VERIFICATION = 'optional'
+    EMAIL_VERIFICATION = 'optional'
+
+.. note::
+
+    allauth's ``ACCOUNT_EMAIL_VERIFICATION`` is derived from this and is normally left alone. A
+    project that declares it instead still has it honoured — that is how ``'optional'`` was reachable
+    before ``EMAIL_VERIFICATION`` could name it — but the two must agree. They govern different
+    halves of the feature, so a contradictory pair used to produce a state nobody designed:
+    ``EMAIL_VERIFICATION = True`` with ``ACCOUNT_EMAIL_VERIFICATION = 'none'``, for instance, left
+    every address unconfirmed and never sent a link to confirm it with. Such a pair is now reconciled
+    at startup and reported with a warning.
 
 Gating features on the claim
 """"""""""""""""""""""""""""
