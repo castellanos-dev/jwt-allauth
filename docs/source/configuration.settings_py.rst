@@ -185,6 +185,10 @@ Configure these variables in the ``settings.py`` file of your project.
             'DEFAULT_THROTTLE_RATES': {'anon': '60/min', 'user': '1000/day', 'registration': '5/min'},
         }
 
+    Requesting a password reset is limited per target address on top of that, through
+    allauth's ``ACCOUNT_RATE_LIMITS['reset_password']`` (``20/m/ip,5/m/key`` by default). The throttles above
+    count per origin, which does not protect the mailbox on the receiving end. See :doc:`password_reset`.
+
     To take over completely, subclass the view: ``throttle_classes`` keeps DRF's meaning and replaces the
     defaults, and ``extra_throttle_classes = ()`` drops what the library adds.
 

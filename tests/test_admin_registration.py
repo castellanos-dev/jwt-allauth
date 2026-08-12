@@ -453,6 +453,36 @@ class AdminManagedRegistrationTests(TestsMixin):
         invited.refresh_from_db()
         self.assertFalse(invited.has_usable_password())
 
+    def test_set_password_completes_with_an_authorization_header_attached(self):
+        """
+        Authorization here is the one-time cookie, and the permission behind it turns down
+        a request that arrives already authenticated. A native client attaching its bearer
+        token to every request must still be able to finish the invitation.
+        """
+        invited, key = self._invite('invited_with_bearer')
+        staff = get_user_model().objects.create_user(
+            'bearer_staff', email='bearer_staff@demo.com', password='A-1_strong', is_staff=True
+        )
+        EmailAddress.objects.create(user=staff, email=staff.email, verified=True, primary=True)
+        bearer = 'Bearer %s' % RefreshToken.for_user(staff).access_token
+
+        verify_resp = self.client.get(
+            reverse('account_confirm_email', args=[key]), HTTP_AUTHORIZATION=bearer
+        )
+        self.assertEqual(verify_resp.status_code, 302)
+        self.assertIn(SET_PASSWORD_COOKIE, self.client.cookies)
+
+        resp = self.client.post(
+            self.set_password_url,
+            data={"new_password1": "A-1_newpass", "new_password2": "A-1_newpass"},
+            content_type='application/json',
+            HTTP_AUTHORIZATION=bearer,
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        invited.refresh_from_db()
+        self.assertTrue(invited.has_usable_password())
+
     def test_set_password_requires_a_csrf_token(self):
         """
         The capability travels in a cookie, so the endpoint that consumes it has to

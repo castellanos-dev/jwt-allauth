@@ -1,4 +1,5 @@
 import hashlib
+import json
 import re
 import time
 from datetime import timedelta
@@ -608,3 +609,107 @@ class PasswordResetCSRFTests(TestsMixin):
         resp = self._set_new_password()
 
         self.assertEqual(resp.status_code, 200)
+
+
+class PasswordResetAddressRateLimitTests(TestsMixin):
+    """
+    The reset endpoint is limited per target address, not only per origin.
+    """
+
+    STRANGER = 'stranger@demo.com'
+
+    def setUp(self):
+        self.init()
+
+    def _request_reset(self, email=None, ip='10.0.0.1'):
+        return self.client.post(
+            self.password_reset_url,
+            data=json.dumps({'email': email or self.EMAIL}),
+            content_type='application/json',
+            REMOTE_ADDR=ip,
+        )
+
+    def test_address_is_protected_from_a_rotating_origin(self):
+        """
+        The DRF throttle counts per origin, so rotating it is enough to keep sending
+        links to somebody else's inbox. The limit that matters here is the one keyed by
+        the address being targeted (allauth's ``reset_password``, ``5/m/key``).
+        """
+        for attempt in range(5):
+            self.assertEqual(self._request_reset(ip='10.0.0.%d' % attempt).status_code, 200)
+
+        self.assertEqual(self._request_reset(ip='10.0.0.99').status_code, 429)
+        self.assertEqual(len(mail.outbox), 5)
+
+    def test_limit_does_not_disclose_whether_the_address_is_registered(self):
+        """It is consumed before the account is looked up, so both answer alike."""
+        for attempt in range(5):
+            self.assertEqual(
+                self._request_reset(email=self.STRANGER, ip='10.1.0.%d' % attempt).status_code, 200
+            )
+
+        self.assertEqual(self._request_reset(email=self.STRANGER, ip='10.1.0.99').status_code, 429)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_the_budget_is_per_address(self):
+        """Exhausting one address leaves the rest of the mailboxes reachable."""
+        for attempt in range(5):
+            self._request_reset(email=self.STRANGER, ip='10.2.0.%d' % attempt)
+        self.assertEqual(self._request_reset(email=self.STRANGER, ip='10.2.0.99').status_code, 429)
+
+        self.assertEqual(self._request_reset(ip='10.2.0.99').status_code, 200)
+
+    def test_the_address_is_normalised_before_it_is_counted(self):
+        """Otherwise changing the capitalisation buys a fresh budget."""
+        for attempt in range(5):
+            self._request_reset(ip='10.3.0.%d' % attempt)
+
+        self.assertEqual(
+            self._request_reset(email=self.EMAIL.upper(), ip='10.3.0.99').status_code, 429
+        )
+
+    @override_settings(ACCOUNT_RATE_LIMITS={'reset_password': None})
+    def test_the_limit_can_be_lifted(self):
+        for attempt in range(7):
+            self.assertEqual(self._request_reset(ip='10.4.0.%d' % attempt).status_code, 200)
+
+
+class CapabilityFlowWithBearerTokenTests(TestsMixin):
+    """
+    The capability endpoints are authorized by their one-time cookie, and the permission
+    behind them refuses a request that arrives already authenticated. A native client
+    attaching its bearer token to every request must still be able to reset a password.
+    """
+
+    def setUp(self):
+        self.init()
+
+    def _reset_link(self):
+        self.post(self.password_reset_url, data={'email': self.EMAIL}, status_code=200)
+        url = re.findall(r'(https?:\/\/.+)\s+', mail.outbox[-1].body)[0].replace('http://', '')
+        return '/' + '/'.join(url.split('/')[1:])
+
+    def test_reset_completes_with_an_authorization_header_attached(self):
+        bearer = 'Bearer %s' % self.ACCESS
+
+        resp = self.client.get(self._reset_link(), HTTP_AUTHORIZATION=bearer)
+        self.assertEqual(resp.status_code, 302)
+        self.client.cookies.load({PASS_RESET_COOKIE: resp.cookies[PASS_RESET_COOKIE].value})
+
+        new_password = 'NewPassw0rdWithBearer'
+        resp = self.client.post(
+            reverse('rest_password_reset_set_new'),
+            data={'new_password1': new_password, 'new_password2': new_password},
+            content_type='application/json',
+            HTTP_AUTHORIZATION=bearer,
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.post(self.login_url, data={'email': self.EMAIL, 'password': new_password}, status_code=200)
+
+    def test_confirm_link_ignores_a_stale_authorization_header(self):
+        """An expired bearer must not answer 401 to a link that carries its own credential."""
+        resp = self.client.get(self._reset_link(), HTTP_AUTHORIZATION='Bearer not-a-token')
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(PASS_RESET_COOKIE, resp.cookies)
