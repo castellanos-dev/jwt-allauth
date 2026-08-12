@@ -30,6 +30,7 @@ from jwt_allauth.constants import (
 )
 from jwt_allauth.password_reset.permissions import ResetPasswordPermission, SetPasswordPermission
 from jwt_allauth.password_reset.serializers import SetPasswordSerializer
+from jwt_allauth.schema import reset_password_schema, set_password_schema
 from jwt_allauth.revocation import revoke_on_credential_change
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import GenericTokenModel
@@ -235,6 +236,7 @@ class PasswordResetConfirmView(GenericAPIView):
         return user
 
 
+@reset_password_schema
 class ResetPasswordView(CapabilityCookieViewMixin, ExtraThrottlesMixin, GenericAPIView):
     """
     Calls Django Auth SetPasswordForm save method.
@@ -274,6 +276,7 @@ class ResetPasswordView(CapabilityCookieViewMixin, ExtraThrottlesMixin, GenericA
         )
 
 
+@set_password_schema
 class SetPasswordView(CapabilityCookieViewMixin, ExtraThrottlesMixin, GenericAPIView):
     """
     Set password for admin-managed registration.

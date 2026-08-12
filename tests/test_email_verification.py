@@ -112,6 +112,23 @@ class EmailVerificationTests(TestsMixin):
         finally:
             self._reload_urls()
 
+    @override_settings(ROOT_URLCONF='handwired_urls')
+    def test_email_verification_without_the_landing_page_routed(self):
+        """
+        The built-in page is routed by the URLconf of ``jwt_allauth.registration``, and a
+        project may wire its endpoints by hand without it. Reversing it then raised
+        ``NoReverseMatch`` on a link an end user opens; the page is rendered in place now.
+        """
+        email_object = self._unverify()
+        key = EmailConfirmationHMAC(email_object).key
+
+        with self.assertRaises(NoReverseMatch):
+            reverse('jwt_allauth_email_verified')
+
+        resp = self.client.get(f'/registration/verification/{key}/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(EmailAddress.objects.get(user=self.USER, email=self.EMAIL).verified)
+
     @staticmethod
     def _reload_urls():
         """Rebuild the URLconf so that it is routed under the settings in force."""
