@@ -9,6 +9,7 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from jwt_allauth.logout.serializers import RemoveRefreshTokenSerializer
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
+from jwt_allauth.utils import user_sessions_lock
 
 
 class LogoutView(APIView):
@@ -72,7 +73,11 @@ class LogoutAllView(APIView):
 
     @staticmethod
     def logout(request):
-        RefreshTokenWhitelistModel.objects.filter(user=request.user.id).delete()
+        # Under the lock: a refresh rotating one of these sessions concurrently would
+        # otherwise insert its successor where this deletion cannot see it, and the
+        # session would survive the logout.
+        with user_sessions_lock(request.user.id):
+            RefreshTokenWhitelistModel.objects.filter(user=request.user.id).delete()
         return Response(
             {"detail": _("Successfully logged out from all devices.")},
             status=status.HTTP_200_OK

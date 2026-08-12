@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import InvalidToken
 
@@ -9,7 +9,7 @@ from jwt_allauth.exceptions import SessionExpired
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from jwt_allauth.tokens.serializers import RefreshTokenWhitelistSerializer
-from jwt_allauth.utils import is_email_verified
+from jwt_allauth.utils import is_email_verified, user_sessions_lock
 
 # Reasons for which a rotation is turned down.
 REPLAYED = 'replayed'
@@ -48,7 +48,9 @@ class TokenRefreshSerializer(serializers.Serializer):
             raise InvalidToken()
 
         try:
-            with transaction.atomic():
+            # The lock is taken on the user, not only on the whitelist row: a rotation
+            # inserts a row, and a revocation running concurrently would not see it.
+            with user_sessions_lock(refresh.payload.get('user_id')):
                 data = self.rotate(refresh)
         except RotationRejected as rejection:
             self.reject(refresh, rejection)
@@ -132,18 +134,22 @@ class TokenRefreshSerializer(serializers.Serializer):
         Apply the revocation the rejection calls for and raise the client-facing error.
 
         Runs outside of the rotation transaction so that the revocation is committed
-        even though the request itself fails.
+        even though the request itself fails. It still takes the session lock: a rotation
+        of another token of the same user must not slip a successor past the deletion.
         """
         if rejection.reason == REPLAYED:
             # Suspicious operation: the credential is not whitelisted, so it was either
             # already rotated or forged. The whole session goes down.
-            RefreshTokenWhitelistModel.objects.filter(session=refresh.payload["session"]).delete()
+            with user_sessions_lock(refresh.payload.get('user_id')):
+                RefreshTokenWhitelistModel.objects.filter(session=refresh.payload["session"]).delete()
             raise InvalidToken()
         if rejection.reason == DISABLED:
             is_email_verified(rejection.user, raise_exception=True)
             raise InvalidToken()
         if rejection.reason == SESSION_EXPIRED:
-            RefreshTokenWhitelistModel.objects.filter(session=refresh.payload["session"]).delete()
+            with user_sessions_lock(refresh.payload.get('user_id')):
+                RefreshTokenWhitelistModel.objects.filter(session=refresh.payload["session"]).delete()
             raise SessionExpired()
-        RefreshTokenWhitelistModel.objects.filter(user=rejection.user).delete()
+        with user_sessions_lock(rejection.user.pk):
+            RefreshTokenWhitelistModel.objects.filter(user=rejection.user).delete()
         raise InvalidToken()

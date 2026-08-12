@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
+from jwt_allauth.utils import user_sessions_lock
 
 
 class PasswordChangeSerializer(serializers.Serializer):
@@ -52,9 +53,10 @@ class PasswordChangeSerializer(serializers.Serializer):
     def save(self):
         self.set_password_form.save()
         if self.logout_on_password_change:
-            RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).exclude(
-                session=self.request.auth['session']
-            ).delete()
+            with user_sessions_lock(self.request.user.id):
+                RefreshTokenWhitelistModel.objects.filter(user=self.request.user.id).exclude(
+                    session=self.request.auth['session']
+                ).delete()
         else:
             from django.contrib.auth import update_session_auth_hash
             update_session_auth_hash(self.request, self.user)

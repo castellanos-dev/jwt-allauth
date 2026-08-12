@@ -16,7 +16,7 @@ Endpoints
 
 - ``POST /registration/user-register/`` (name: ``rest_user_register``) — Allowed to roles defined by ``JWT_ALLAUTH_REGISTRATION_ALLOWED_ROLES`` (defaults to ``[STAFF_CODE, SUPER_USER_CODE]``).
 - ``GET /registration/verification/<key>/`` (name: ``account_confirm_email``) — Confirms the email and drops a ``set_password_access_token`` cookie when admin-managed is enabled.
-- ``POST /registration/set-password/`` (name: ``rest_set_password``) — Reads the one-time token from cookie, sets password, returns tokens. Throttled with ``UserRateThrottle``.
+- ``POST /registration/set-password/`` (name: ``rest_set_password``) — Reads the one-time token from cookie, sets password, returns tokens. Throttled with ``UserRateThrottle``, in addition to the throttles configured by the project.
 
 Payloads
 --------
@@ -72,7 +72,7 @@ Email verification behavior
 - The verification GET confirms the email in admin-managed mode and issues a one-time token, then redirects to the password set UI.
 - The verification link allows multiple accesses (e.g. by email scanners) until the password is successfully set, but never past its expiration date. Each access supersedes the one-time token issued by the previous one.
 - The verification link validity is determined by ``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS`` (default: 3 days).
-- The link only grants access to the password set UI while the account has no password. Once a password exists, the account must use the password reset flow.
+- The link only grants access to the password set UI while the account has no password. Once a password exists the address is still confirmed, but no one-time token is issued: the account signs in with the password it already has, or recovers it through the password reset flow.
 - Only the SHA-256 digest of the confirmation key is stored, so the key itself cannot be recovered from the database.
 - The one-time token is claimed atomically, so two simultaneous set-password requests carrying the same cookie cannot both succeed.
 - A deactivated account is never handed a one-time token, and a token issued before the deactivation is rejected with ``401`` when the password is set.
