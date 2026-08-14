@@ -4,7 +4,7 @@ Release Notes
 Version 1.5.0
 -------------
 
-Released: unreleased
+Released: August 15, 2026
 
 New Features
 ~~~~~~~~~~~~
