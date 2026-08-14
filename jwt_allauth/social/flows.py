@@ -155,8 +155,12 @@ def sociallogin_from_token(request, provider, data: Dict[str, Any]):
 
     try:
         return provider.verify_token(request, token)
-    except ValidationError as e:
-        raise SocialTokenInvalid(e.messages[0] if e.messages else None)
+    except ValidationError:
+        # Same reasoning as the code flow below: whatever the provider put in the
+        # exception is not ours to relay. allauth's own `validation_error()` carries a
+        # message from its catalogue, but a third-party provider is free to raise with
+        # anything at all, and the caller learns nothing useful from it either way.
+        raise SocialTokenInvalid()
 
 
 def sociallogin_from_code(request, provider, data: Dict[str, Any]):
@@ -213,10 +217,12 @@ def sociallogin_from_code(request, provider, data: Dict[str, Any]):
         token.app = app
         sociallogin = adapter.complete_login(request, app, token, response=token_data)
     except (OAuth2Error, ValidationError, requests.RequestException):
-        raise SocialTokenInvalid(
-            _("Unable to authenticate with the social provider."),
-            code='social_token_invalid',
-        )
+        # The provider's own message is deliberately dropped rather than passed on: an
+        # OAuth2Error or a requests failure carries the upstream URL, the response body
+        # and occasionally the request parameters, none of which the caller is entitled
+        # to. The code stays the class default, so both credential flows answer a
+        # rejected credential with the same `invalid_social_token`.
+        raise SocialTokenInvalid(_("The provider rejected the credential."))
 
     sociallogin.token = token
     return sociallogin
@@ -439,6 +445,10 @@ def disconnect_social_account(request, account, accounts) -> None:
     try:
         get_social_adapter().validate_disconnect(account, accounts)
     except ValidationError as e:
+        # This message *is* relayed, unlike the ones in the credential flows: it comes
+        # from the socialaccount adapter -- ours by default -- and it is the answer to
+        # the caller's question, which is why the connection cannot be removed. Nothing
+        # upstream reaches here.
         raise SocialDisconnectNotAllowed(e.messages[0] if e.messages else None)
 
     account.delete()
