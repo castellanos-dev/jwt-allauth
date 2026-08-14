@@ -57,6 +57,7 @@ REST API:
 | Login, sign-up, e-mail verification, password reset  |       ✓        |       ✓        |             ✓                  | ✓                     |
 | Second factor                                        | TOTP, passkeys |    WebAuthn    | TOTP, recovery codes, WebAuthn | TOTP, recovery codes  |
 | Social authentication                                |       ✓        |       ✓        |             ✓                  | ✓&nbsp;⁴              |
+| **User invitations** (admin creates, invitee sets password) | **✗** |    **✗**    |          **✗**&nbsp;⁵           | **✓**                 |
 
 ¹ dj-rest-auth authenticates with DRF's own tokens by default. JWT means installing Simple
 JWT yourself and setting `USE_JWT = True`; it is not a dependency of the package.
@@ -72,6 +73,14 @@ server-initiated redirect flow is not covered. A provider that vouches for an ad
 established account already holds signs that account in and leaves its password usable,
 rather than wiping it as allauth's e-mail authentication does. See
 [Social login](https://jwt-allauth.readthedocs.io/en/latest/social_login.html).
+
+⁵ allauth states that invitation handling is out of its scope and points at a separate
+app. [django-invitations](https://github.com/jazzband/django-invitations) is that app, and
+it models a different thing: it stores an invitation, and the invitee then signs up
+themselves — with any address they like, not necessarily the one invited. Here the admin
+creates the account and fixes the identity; the invitee only proves the mailbox and
+chooses a password. Available alongside a public sign-up, or instead of one. See
+[User invitations](https://jwt-allauth.readthedocs.io/en/latest/invitations.html).
 
 
 Requirements
@@ -151,12 +160,14 @@ Features
   outstanding capability (unused reset links, MFA challenges) and every unconfirmed
   secondary address.
 - **Role-based permissions**: authorization from a JWT claim, with no user table lookup.
+- **User invitations**: an admin creates the account, the invitee proves the mailbox and
+  chooses their own password. Alongside a public sign-up, or instead of one.
 - **Social login**: sign in through any provider `django-allauth` registers, by provider
   token or by authorization code with PKCE, with one generic endpoint per flow. An address
   a provider vouches for signs in the account that already holds it, without wiping the
   password that account still uses.
 - **The rest of the flows**: e-mail verification, password reset and change, MFA over
-  TOTP with recovery codes, admin-managed registration, session logout.
+  TOTP with recovery codes, session logout.
 - **Effortless setup**: get a project running with a single command.
 
 

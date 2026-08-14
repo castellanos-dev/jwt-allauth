@@ -22,7 +22,7 @@
 .. toctree::
    :maxdepth: 1
 
-   admin_managed_registration
+   invitations
 
 .. toctree::
    :maxdepth: 1

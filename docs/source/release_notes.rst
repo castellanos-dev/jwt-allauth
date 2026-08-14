@@ -15,6 +15,8 @@ New Features
 
 - **A social login does not skip the second factor.** An account with an authenticator gets the same ``mfa_required`` challenge ``/login/`` returns, completed at the same ``/mfa/verify/``, and ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` bootstraps enrolment for a social sign-up as it does for any other.
 
+- **Invitations without closing the public sign-up**: ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` has always meant two things at once — an admin can create accounts, *and* nobody can create their own — which ruled out the ordinary arrangement of customers signing themselves up while staff are invited. ``JWT_ALLAUTH_INVITATIONS = True`` asks for the first half only: ``/registration/user-register/`` and ``/registration/set-password/`` are served and ``/registration/`` keeps answering, as does social sign-up. Both ways in share the confirmation link, and the password tells them apart — an invited account has none until it claims one — so only accounts without a password are handed the capability to set a first one. See :doc:`invitations`.
+
 - **Two new startup checks**: ``jwt_allauth.W004`` when the social endpoints cannot serve a request — ``allauth.socialaccount`` installed without its dependencies, or no provider declared in ``SOCIALACCOUNT_PROVIDERS`` — and ``jwt_allauth.W005`` when ``SOCIALACCOUNT_EMAIL_AUTHENTICATION`` is declared and has no effect.
 
 Compatibility
@@ -24,12 +26,16 @@ Compatibility
 
 - **A default** ``SOCIALACCOUNT_ADAPTER`` **is installed** when ``allauth.socialaccount`` is present and the project declares none. It closes social sign-up under ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION``, and refuses to disconnect the last provider of an account with no usable password — allauth's default allows it, which locks the owner out for good. A project with an adapter of its own is left alone.
 
-- **New settings**: ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING``, ``JWT_ALLAUTH_SOCIAL_REQUIRE_VERIFIED_EMAIL`` and ``JWT_ALLAUTH_SOCIAL_CALLBACK_URLS``. See :doc:`configuration.settings_py`.
+- **``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` is unchanged** and now implies ``JWT_ALLAUTH_INVITATIONS``. A project already using it needs to do nothing: closed registration still refuses ``/registration/``, still shuts social sign-up, and still turns down a confirmation key with no invitation behind it.
+
+- **New settings**: ``JWT_ALLAUTH_INVITATIONS``, ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING``, ``JWT_ALLAUTH_SOCIAL_REQUIRE_VERIFIED_EMAIL`` and ``JWT_ALLAUTH_SOCIAL_CALLBACK_URLS``. See :doc:`configuration.settings_py`.
 
 - **No new model and no migration.** Both flows are driven by the client, so there is no OAuth ``state`` for the server to store.
 
 Documentation
 ~~~~~~~~~~~~~
+
+- **New page** — :doc:`invitations`, replacing *Admin-managed registration*: the flow under the name people look for, what the confirmation link is worth, and how an invitation is told apart from a sign-up. The old page is kept as a pointer.
 
 - **New page** — :doc:`social_login`: the two flows, the linking decision and the trust it places in the provider, and what the feature deliberately does not cover.
 

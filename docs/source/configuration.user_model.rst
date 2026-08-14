@@ -89,7 +89,7 @@ anything else                      :data:`~jwt_allauth.roles.USER_CODE` (0)
 =================================  ===================================================
 
 That is enough for :class:`~jwt_allauth.permissions.BasePermission`, which grants staff
-and superusers access on top of the roles a class accepts, and for the admin-managed
+and superusers access on top of the roles a class accepts, and for the invitation
 registration endpoint, which is gated on those same two codes. What it cannot express is
 roles of the project's own -- ``accepted_roles = [700]`` will never match anything -- and
 adding ``RoleMixin`` is what unlocks those.
@@ -101,7 +101,7 @@ accounts that already existed where they were.
 
     A ``role`` exposed as a property rather than a field is read like a stored one, which
     is the way to derive the claim from something the project already has (a group, a
-    column on a profile) without a new field. It is read-only: the admin-managed
+    column on a profile) without a new field. It is read-only: the invitation
     registration endpoint drops its ``role`` input when there is no field to write to.
 
 .. note::

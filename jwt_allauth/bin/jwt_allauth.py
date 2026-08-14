@@ -294,6 +294,13 @@ CACHES = {
 # signs that account in, keeping its password. Set to False to refuse instead, or to a
 # list of provider ids to allow it only for the providers you trust.
 # JWT_ALLAUTH_SOCIAL_EMAIL_LINKING = True
+
+# User invitations
+# An admin creates the account and the invitee sets their own password. This adds the
+# endpoints and leaves the public sign-up alone; use
+# JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION instead to have invitations *replace* it.
+# JWT_ALLAUTH_INVITATIONS = True
+# PASSWORD_SET_REDIRECT = '/set-password/'  # your UI; omit to use the built-in form
 """
     settings_content += social_settings
 

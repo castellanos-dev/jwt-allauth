@@ -435,7 +435,7 @@ Registration
 
 **URL Name:** ``rest_register``
 
-.. note:: Disabled when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True`` (the open registration endpoint is removed in admin-managed mode).
+.. note:: Removed when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``, which serves invitations *instead of* self-service registration. ``JWT_ALLAUTH_INVITATIONS`` adds invitations without removing this endpoint. See :doc:`invitations`.
 
 .. note::
 
@@ -494,7 +494,7 @@ Registration
 
 **URL Name:** ``rest_user_register``
 
-.. note:: Enabled when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. Keeps the default ``/registration/`` endpoint unchanged unless you enable this setting.
+.. note:: Served when ``JWT_ALLAUTH_INVITATIONS = True`` or ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. Only the second one also removes ``/registration/``. See :doc:`invitations`.
 
 **/registration/verification/<str:key>/** (GET)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -568,7 +568,7 @@ Registration
 
 **URL Name:** ``rest_set_password``
 
-.. note:: Only available when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. This endpoint is reached after the invited user clicks the verification link. The GET verification drops a one-time access token in the ``set_password_access_token`` cookie and redirects to the UI configured by ``PASSWORD_SET_REDIRECT``. Throttled with ``UserRateThrottle`` by default, in addition to the throttles configured by the project.
+.. note:: Served when ``JWT_ALLAUTH_INVITATIONS = True`` or ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. This endpoint is reached after the invited user clicks the verification link. The GET verification drops a one-time access token in the ``set_password_access_token`` cookie and redirects to the UI configured by ``PASSWORD_SET_REDIRECT``. Throttled with ``UserRateThrottle`` by default, in addition to the throttles configured by the project.
 
 **/registration/account_email_verification_sent/** (GET)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

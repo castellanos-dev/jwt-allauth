@@ -23,7 +23,9 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``LOGOUT_ON_PASSWORD_CHANGE`` - whether a credential change revokes the account's sessions (default: ``True``). Applies to the password change, the password reset and the set-password step, and takes down **every** session -- the one asking for the change included, which is answered with a replacement session minted after the change -- along with every capability still outstanding and every unconfirmed secondary address. Setting it to ``False`` revokes nothing.
 
-    - ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` - whether to enable admin-only registration endpoint and set-password flow (default: ``False``). The user will receive a verification email and will need to set their password before they can login.
+    - ``JWT_ALLAUTH_INVITATIONS`` - serve the invitation endpoints, so an admin can create an account for somebody else to claim (default: ``False``). Self-service registration is untouched: both ways in work at once. See :doc:`invitations`.
+
+    - ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` - invitations **instead of** self-service registration (default: ``False``). Implies the setting above and additionally closes ``/registration/`` and social sign-up, so no account exists that an admin did not create.
 
     - ``JWT_ALLAUTH_ACCESS_TOKEN_LIFETIME`` - access token lifetime (default: ``timedelta(minutes=30)``).
 
@@ -126,7 +128,7 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``PASSWORD_RESET_REDIRECT`` - the relative url with the form to set the new password on password reset.
 
-    - ``PASSWORD_SET_REDIRECT`` - the relative url to the UI form to set the password for admin-managed registration (used after email verification).
+    - ``PASSWORD_SET_REDIRECT`` - the relative url to the UI form where an invitee sets their password (used after email verification). See :doc:`invitations`.
 
 - Templates
 
@@ -136,8 +138,8 @@ Configure these variables in the ``settings.py`` file of your project.
         - ``PASS_RESET_EMAIL`` - template of the password reset email (default: ``email/password/reset_email_message.html``).
         - ``EMAIL_VERIFICATION_SUBJECT`` - subject of the signup email verification sent for self-registration (default: ``email/signup/email_subject.txt``).
         - ``EMAIL_VERIFICATION`` - template of the signup email verification sent for self-registration (default: ``email/signup/email_message.html``).
-        - ``ADMIN_EMAIL_VERIFICATION_SUBJECT`` - subject of the email verification sent for admin-managed invitations (default: ``email/admin_invite/email_subject.txt``).
-        - ``ADMIN_EMAIL_VERIFICATION`` - template of the email verification sent for admin-managed invitations (default: ``email/admin_invite/email_message.html``).
+        - ``ADMIN_EMAIL_VERIFICATION_SUBJECT`` - subject of the email verification sent with an invitation (default: ``email/admin_invite/email_subject.txt``).
+        - ``ADMIN_EMAIL_VERIFICATION`` - template of the email verification sent with an invitation (default: ``email/admin_invite/email_message.html``).
         - ``EMAIL_VERIFICATION_FAILED_TEMPLATE`` - template rendered when an invalid or expired verification link is accessed (default: ``registration/verification_failed.html``).
         - ``ACCOUNT_EXISTS_SUBJECT`` - subject of the notice sent when somebody signs up with an address that is already in use (default: ``email/account_exists/email_subject.txt``).
         - ``ACCOUNT_EXISTS`` - template of that notice (default: ``email/account_exists/email_message.html``).
@@ -177,11 +179,15 @@ Configure these variables in the ``settings.py`` file of your project.
 
     allauth's own settings still govern what they always governed: ``SOCIALACCOUNT_PROVIDERS`` (where the client id and secret live), ``SOCIALACCOUNT_ADAPTER`` (jwt-allauth installs its own when the project declares none), ``SOCIALACCOUNT_AUTO_SIGNUP``, ``SOCIALACCOUNT_STORE_TOKENS`` and ``SOCIALACCOUNT_REQUESTS_TIMEOUT``. ``SOCIALACCOUNT_EMAIL_AUTHENTICATION`` is the exception: it does **not** apply to these endpoints, and ``jwt_allauth.W005`` says so at startup.
 
-- Admin-managed registration
+- User invitations
 
-    - ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` - enable admin-only registration endpoint and set-password flow (default: ``False``). When enabled with ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, the ``/mfa/activate/`` endpoint issues tokens immediately after successful MFA setup.
+    See :doc:`invitations`.
 
-    - ``JWT_ALLAUTH_REGISTRATION_ALLOWED_ROLES`` - list of role codes that can register users when admin-managed registration is enabled. Defaults to ``[STAFF_CODE, SUPER_USER_CODE]``.
+    - ``JWT_ALLAUTH_INVITATIONS`` - serve ``/registration/user-register/`` and ``/registration/set-password/`` (default: ``False``), leaving self-service registration exactly as it was.
+
+    - ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` - invitations instead of self-service registration (default: ``False``). Implies the setting above. With ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, ``/mfa/activate/`` issues tokens immediately after enrolment rather than sending the invitee back to the login form.
+
+    - ``JWT_ALLAUTH_REGISTRATION_ALLOWED_ROLES`` - list of role codes allowed to invite. Defaults to ``[STAFF_CODE, SUPER_USER_CODE]``.
 
     - ``PASSWORD_SET_COOKIE_HTTP_ONLY`` - whether to set a http-only cookie for the set-password flow (default: ``True``).
 

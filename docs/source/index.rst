@@ -59,7 +59,8 @@ Features
 - **Role-based permissions**: authorization from a JWT claim, with no user table lookup, on any user model.
 - **Refresh tokens as HttpOnly cookies** by default, keeping the longest-lived credential out of reach of JavaScript.
 - **Social login**: sign in through any provider ``django-allauth`` registers, by provider token or by authorization code with PKCE, with one generic endpoint per flow. An address a provider vouches for signs in the account that already holds it, without wiping the password that account still uses.
-- **The rest of the flows**: e-mail verification, password reset and change, MFA over TOTP with recovery codes, admin-managed registration, session logout.
+- **User invitations**: an admin creates the account, the invitee proves the mailbox and chooses their own password. Alongside a public sign-up, or instead of one.
+- **The rest of the flows**: e-mail verification, password reset and change, MFA over TOTP with recovery codes, session logout.
 - **Effortless setup**: get a project running with a single command.
 
 
