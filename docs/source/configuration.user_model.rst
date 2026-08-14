@@ -104,6 +104,15 @@ accounts that already existed where they were.
     column on a profile) without a new field. It is read-only: the admin-managed
     registration endpoint drops its ``role`` input when there is no field to write to.
 
+.. note::
+
+    A **nullable** ``role`` field left empty falls back to the staff flags as well, row by
+    row. ``JAUser`` and ``RoleMixin`` both declare the field ``null=False`` with a default,
+    so this only concerns a project that declared its own; there, an account with the
+    column empty carries the role its flags imply rather than a ``null`` claim, which is
+    what such an account had been carrying before |release| and which matched no
+    permission class at all -- staff included.
+
 User profile details extension
 ------------------------------
 
