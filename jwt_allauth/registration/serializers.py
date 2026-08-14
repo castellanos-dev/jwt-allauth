@@ -13,6 +13,7 @@ from django.utils.crypto import constant_time_compare
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from jwt_allauth.accounts import account_is_claimed, superseded_accounts
 from jwt_allauth.roles import has_role_field, user_model_has_role_field
 from jwt_allauth.utils import enumeration_prevented, verification_enabled
 
@@ -70,48 +71,11 @@ class RegisterSerializer(serializers.Serializer):
         """
         return self.prevent_enumeration and enumeration_prevented()
 
-    @staticmethod
-    def _account_is_claimed(user):
-        """
-        Whether somebody has already established ownership of ``user``.
-
-        Args:
-            user (AbstractBaseUser): Owner of the address under evaluation.
-
-        Returns:
-            bool: ``True`` unless the account is a sign-up that was never confirmed.
-        """
-        if user is None:
-            return True
-        if user.is_staff or user.is_superuser:
-            return True
-        if user.last_login is not None:
-            return True
-        return EmailAddress.objects.filter(user=user, verified=True).exists()
-
-    @classmethod
-    def _superseded_accounts(cls, email):
-        """
-        Accounts a registration for ``email`` is allowed to take over.
-
-        An address is only up for grabs while nobody has proven control over it: it
-        must be unverified and belong to an account that was never used. Anything
-        else -- a verified address, a secondary address of an established account --
-        is off limits, no matter that it is still pending confirmation.
-
-        Args:
-            email (str): Normalized address requested by the caller.
-
-        Returns:
-            list|None: Pending accounts to supersede, empty when the address is
-            free, or ``None`` when the address is taken.
-        """
-        accounts = []
-        for address in EmailAddress.objects.filter(email__iexact=email).select_related('user'):
-            if address.verified or cls._account_is_claimed(address.user):
-                return None
-            accounts.append(address.user)
-        return accounts
+    # Both live in `jwt_allauth.accounts` now, because social login has to reach the
+    # same verdict about the same address. Kept as methods so that a subclass which
+    # overrides either one still governs this serializer.
+    _account_is_claimed = staticmethod(account_is_claimed)
+    _superseded_accounts = staticmethod(superseded_accounts)
 
     def _claim_email(self):
         """
