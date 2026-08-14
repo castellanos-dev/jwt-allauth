@@ -20,9 +20,9 @@ none of them do is handle the case rotation exists for.
 
 When a refresh token is stolen, both the attacker and the legitimate user hold a
 credential from the same session. Whoever refreshes second presents a token that has
-already been rotated. Simple JWT's blacklist rejects that second request and stops there
-— so if the attacker refreshes first, the *user* gets locked out while the *attacker*
-keeps a valid, indefinitely renewable session. The theft never surfaces.
+already been rotated. A blacklist rejects that second request and stops there — so if the
+attacker refreshes first, the *user* gets locked out while the *attacker* keeps a valid,
+indefinitely renewable session. The theft never surfaces.
 
 A replay is evidence that a session is compromised, and it is treated as such here: the
 whole session is revoked and both parties have to log in again. This is the behaviour
@@ -30,26 +30,58 @@ described in [OAuth 2.0 Security Best Current Practice §4.14.2](https://datatra
 and it is the reason this library exists.
 
 
+Relationship to Simple JWT
+-------------------------
+
+Simple JWT is not an alternative to this package — it is the layer underneath it, and a
+hard dependency. Tokens are its `RefreshToken` subclassed, requests are authenticated by
+its `JWTAuthentication` subclassed, and signing, claims and verification are its code,
+untouched.
+
+What JWT Allauth replaces is the part of Simple JWT that decides when a session ends.
+
+Simple JWT rotates refresh tokens and, through its optional `token_blacklist` app,
+rejects one that has already been rotated. JWT Allauth refuses that arrangement outright
+— `BLACKLIST_AFTER_ROTATION = True` raises at startup, and rotation is compulsory — and
+keeps a **whitelist keyed by session** in its place. A refresh token that is not on the
+whitelist is not merely rejected: the session it names is revoked, because a rotated
+token turning up again means two parties are holding it.
+
+That inversion, deny-list to allow-list, is what the rest of this package hangs off. The
+device records, the absolute session lifetime and the claims re-read on rotation are all
+things you can do once a session is a row you own rather than the absence of one.
+
+So the question is never "Simple JWT or this?" — it is "Simple JWT on its own, or Simple
+JWT with a session model over it?" A project that only needs signed tokens should use
+Simple JWT directly and stop there.
+
+
 How it compares
 ---------------
 
-|                                                       | Simple JWT | dj-rest-auth | allauth headless | **JWT Allauth** |
-|-------------------------------------------------------|:----------:|:------------:|:----------------:|:---------------:|
-| JWT access/refresh tokens out of the box               |     ✓      |      ✓       |      ✗ &nbsp;¹    |        ✓        |
-| Refresh token rotation                                 |     ✓      |      ✓       |        —         |        ✓        |
-| **Replay revokes the whole session**                   |     ✗      |      ✗       |        —         |      **✓**      |
-| **Session records per device** (IP, OS, browser)       |     ✗      |      ✗       |     ✗ &nbsp;²     |      **✓**      |
-| **Absolute session lifetime across rotations**         |     ✗      |      ✗       |        —         |      **✓**      |
-| **Role and claims re-read from the DB on rotation**    |     ✗      |      ✗       |        —         |      **✓**      |
-| Login, sign-up, e-mail verification, password reset    |     ✗      |      ✓       |        ✓         |        ✓        |
-| MFA (TOTP + recovery codes)                            |     ✗      |      ✗       |        ✓         |        ✓        |
-| **Social authentication**                              |     —      |    **✓**     |      **✓**       |    **not yet**  |
+Against the packages in the same slot — batteries-included authentication for a Django
+REST API:
 
-¹ `allauth.headless` exposes `AbstractTokenStrategy`: *"We make no assumptions in this regard.
+|                                                     |  dj-rest-auth  |     djoser     |        allauth headless        | **JWT Allauth**       |
+|-----------------------------------------------------|:--------------:|:--------------:|:------------------------------:|:---------------------:|
+| JWT access/refresh tokens                            |  opt-in&nbsp;¹ |   Simple JWT   |          ✗&nbsp;²              | Simple JWT            |
+| Refresh token rotation                               |  Simple JWT's  |  Simple JWT's  |             —                  | own, compulsory       |
+| **Replay revokes the whole session**                 |       ✗        |       ✗        |             —                  | **✓**                 |
+| **Session records per device** (IP, OS, browser)     |       ✗        |       ✗        |          ✗&nbsp;³              | **✓**                 |
+| **Absolute session lifetime across rotations**       |       ✗        |       ✗        |             —                  | **✓**                 |
+| **Role and claims re-read from the DB on rotation**  |       ✗        |       ✗        |             —                  | **✓**                 |
+| Login, sign-up, e-mail verification, password reset  |       ✓        |       ✓        |             ✓                  | ✓                     |
+| Second factor                                        | TOTP, passkeys |    WebAuthn    | TOTP, recovery codes, WebAuthn | TOTP, recovery codes  |
+| **Social authentication**                            |     **✓**      |     **✓**      |           **✓**                | **not yet**           |
+
+¹ dj-rest-auth authenticates with DRF's own tokens by default. JWT means installing Simple
+JWT yourself and setting `USE_JWT = True`; it is not a dependency of the package.
+
+² `allauth.headless` exposes `AbstractTokenStrategy`: *"We make no assumptions in this regard.
 If you need access tokens, you will have to implement a token strategy that returns an access
 token here."* The rows marked — follow from that: there is no token implementation to compare.
 
-² `allauth.usersessions` lists Django sessions, not JWT sessions.
+³ `allauth.usersessions` lists Django sessions, not JWT sessions.
 
 **If you need social authentication today, use dj-rest-auth or allauth headless.** It is
 the one thing this library does not do, and no amount of session handling makes up for it.
@@ -116,9 +148,9 @@ New projects can skip all of it with `AUTH_USER_MODEL = 'jwt_allauth.JAUser'`.
 Features
 --------
 
-- **Refresh token whitelist**: every login gets a session row carrying the device it was
-  issued to — IP, browser, OS, device model — so sessions can be listed and revoked
-  individually, or all at once.
+- **Refresh token whitelist**: in place of Simple JWT's blacklist, every login gets a
+  session row carrying the device it was issued to — IP, browser, OS, device model — so
+  sessions can be listed and revoked individually, or all at once.
 - **Replay detection**: a rotated refresh token presented twice revokes the session it
   belongs to, on the assumption that two parties are holding it.
 - **Absolute session lifetime**: rotation cannot extend a session past
