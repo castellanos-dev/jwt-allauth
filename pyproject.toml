@@ -14,10 +14,6 @@ authors = [
 description = "Device-level session management for Django REST Framework: rotating JWT refresh tokens on a whitelist, where a replayed token revokes the whole session."
 readme = "README.md"
 requires-python = ">=3.10"
-# Declared, not merely shipped: a LICENSE file in the repository does not reach the
-# package metadata, so PyPI has been reporting no license at all for a project that has
-# always been MIT. Anyone vetting dependencies automatically sees the absence, not the
-# file.
 license = { text = "MIT" }
 classifiers = [
     "License :: OSI Approved :: MIT License",
@@ -56,12 +52,10 @@ keywords = [
     "mfa",
     "totp"
 ]
-# Upper bounds are deliberately absent. A cap in a library propagates to every project
-# that depends on it, blocks the security releases of the capped package, and guards
-# against a break that may never happen; `Django<6.0` alone kept this package off two
-# Django majors for eight months over one renamed keyword argument. The majors this
-# release was actually tested against are declared in the classifiers above and checked
-# at startup — see jwt_allauth.checks.check_upstream_versions.
+# No upper bounds, by policy: a cap in a library propagates a conflict to every project
+# downstream and blocks the capped package's security releases. The majors each release
+# is tested against are the classifiers above, and jwt_allauth.checks.check_upstream_versions
+# warns at startup when an installed one is newer.
 dependencies = [
     "Django>=4.2",
     "djangorestframework>=3.15",
@@ -71,14 +65,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# MFA needs a higher allauth floor than the rest of the library, and this is the one
-# constraint here that is not precautionary. Up to 65.8 allauth asked for `fido2>=1.1.2`
-# with no upper bound; fido2 2.0 then dropped the `features.webauthn_json_mapping` flag
-# that allauth sets when its WebAuthn module is imported, so a fresh resolve of that pair
-# raises AttributeError on any request that touches allauth.mfa. Capping fido2 here was
-# the wrong end of it -- it froze installations out of the library where WebAuthn
-# security fixes land. 65.9 is the first allauth that bounds fido2 itself, and it works
-# with 2.x.
+# MFA needs a higher allauth floor than the rest of the library. Up to 65.8 allauth asked
+# for `fido2>=1.1.2` with no upper bound, and fido2 2.0 dropped the
+# `features.webauthn_json_mapping` flag it sets when its WebAuthn module is imported, so
+# that pair raises AttributeError on any request touching allauth.mfa. 65.9 is the first
+# allauth that bounds fido2 itself. Do not lower this floor.
 mfa = ["django-allauth[mfa]>=65.9"]
 schema = ["drf-spectacular>=0.27,<1.0"]
 test = ["responses>=0.5.0"]

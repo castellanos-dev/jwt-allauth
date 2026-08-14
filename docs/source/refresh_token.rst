@@ -23,6 +23,10 @@ replaces one whitelist row with another, and a revocation running at the same ti
 — a session would survive the logout that reported it closed. The lock orders them, at the cost of serializing
 the concurrent rotations belonging to one user.
 
+Rotation is compulsory and Simple JWT's blacklist is not supported: ``ROTATE_REFRESH_TOKENS = False``
+or ``BLACKLIST_AFTER_ROTATION = True`` raises at startup. The whitelist answers the same question the
+blacklist does, and running both means one of them is wrong.
+
 The following constants should be included in the settings.py file:
 
     - ``JWT_ALLAUTH_REFRESH_TOKEN`` - refresh token class (default: ``jwt_allauth.tokens.tokens.RefreshToken``).

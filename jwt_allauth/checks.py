@@ -177,17 +177,11 @@ def check_upstream_versions(app_configs, **kwargs):
     """
     Report an upstream newer than any this release was tested against.
 
-    This library used to cap the majors of allauth and simplejwt in its own metadata.
-    A cap is the wrong tool: it blocks the install outright, including for the security
-    releases of an upstream, and it propagates a conflict to every project that also
-    depends on the capped package -- all to guard against a break that may never happen.
-    A project is now free to install what it likes and is told, once, at startup.
-
-    What the warning is about is real, though, and specific: the coupling to these two
-    runs through their internals rather than their documented surface -- simplejwt's
-    token and authentication classes are subclassed and its settings rewritten at
-    startup, and allauth's TOTP and recovery-code helpers live under ``internal``. A
-    major of either can move that ground without saying so.
+    The coupling to allauth and simplejwt runs through their internals rather than their
+    documented surface: simplejwt's token and authentication classes are subclassed and
+    its settings rewritten at startup, and allauth's TOTP and recovery-code helpers live
+    under ``internal``. A new major of either can move that ground without anything
+    failing at import, which is why a version number alone is worth reporting.
 
     Nothing here means the installation is broken. It means this combination is one
     nobody has run the suite against, and that its authentication is worth exercising

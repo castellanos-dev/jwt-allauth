@@ -40,32 +40,6 @@ works through the whole argument — including the four ways an implementation o
 silently, whether you use this library or write it yourself.
 
 
-Relationship to Simple JWT
--------------------------
-
-Simple JWT is not an alternative to this package — it is the layer underneath it, and a
-hard dependency. Tokens are its `RefreshToken` subclassed, requests are authenticated by
-its `JWTAuthentication` subclassed, and signing, claims and verification are its code,
-untouched.
-
-What JWT Allauth replaces is the part of Simple JWT that decides when a session ends.
-
-Simple JWT rotates refresh tokens and, through its optional `token_blacklist` app,
-rejects one that has already been rotated. JWT Allauth refuses that arrangement outright
-— `BLACKLIST_AFTER_ROTATION = True` raises at startup, and rotation is compulsory — and
-keeps a **whitelist keyed by session** in its place. A refresh token that is not on the
-whitelist is not merely rejected: the session it names is revoked, because a rotated
-token turning up again means two parties are holding it.
-
-That inversion, deny-list to allow-list, is what the rest of this package hangs off. The
-device records, the absolute session lifetime and the claims re-read on rotation are all
-things you can do once a session is a row you own rather than the absence of one.
-
-So the question is never "Simple JWT or this?" — it is "Simple JWT on its own, or Simple
-JWT with a session model over it?" A project that only needs signed tokens should use
-Simple JWT directly and stop there.
-
-
 How it compares
 ---------------
 
@@ -102,10 +76,9 @@ Requirements
 
 Python 3.10+ and Django 4.2 through 6.1, on Django REST Framework 3.15+.
 
-The dependencies carry no upper bounds — a cap in a library propagates a conflict to
-every project downstream and blocks the capped package's security releases. A startup
-check reports an allauth or Simple JWT major newer than the release was tested against
-(`jwt_allauth.W003`), rather than the install refusing to resolve.
+The dependencies carry no upper bounds. A startup check reports an allauth or Simple JWT
+major newer than the release was tested against (`jwt_allauth.W003`), rather than the
+install refusing to resolve.
 
 
 Quick Start

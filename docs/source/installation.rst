@@ -5,16 +5,13 @@ Supported versions
 ==================
 
 Python 3.10+ and Django 4.2+, on any Django REST Framework 3.15+. The combinations the
-suite runs against are the floor (Django 4.2, allauth 65.5, Simple JWT 5.3.1), the
+suite runs against are the floor (Django 4.2, allauth 65.9, Simple JWT 5.3.1), the
 current Django LTS, and whatever is newest on the day CI runs.
 
-The dependencies carry **no upper bounds**. An upper bound in a library propagates a
-conflict to every project that depends on it and blocks the security releases of the
-capped package, to guard against a break that may never arrive -- ``Django<6.0`` alone
-kept this package off two Django majors for eight months over a single renamed keyword
-argument.
+The dependencies carry **no upper bounds**: a cap in a library propagates a conflict to
+every project that depends on it and blocks the capped package's security releases.
 
-What replaces them is a startup check. jwt-allauth builds on internals of allauth and
+What takes their place is a startup check. jwt-allauth builds on internals of allauth and
 Simple JWT -- Simple JWT's token and authentication classes are subclassed and its
 settings rewritten at startup, and allauth's TOTP and recovery-code helpers live under a
 package named ``internal`` -- so a new major of either can move ground this library

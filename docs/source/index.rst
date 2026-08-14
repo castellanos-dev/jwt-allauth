@@ -53,33 +53,6 @@ implementation of it fails silently.
     `allauth.headless <https://docs.allauth.org/en/latest/headless/index.html>`_ cover it.
 
 
-Relationship to Simple JWT
---------------------------
-
-Simple JWT is not an alternative to this package -- it is the layer underneath it, and a
-hard dependency. Tokens are its ``RefreshToken`` subclassed, requests are authenticated by
-its ``JWTAuthentication`` subclassed, and signing, claims and verification are its code,
-untouched.
-
-What JWT Allauth replaces is the part of Simple JWT that decides when a session ends.
-
-Simple JWT rotates refresh tokens and, through its optional ``token_blacklist`` app,
-rejects one that has already been rotated. JWT Allauth refuses that arrangement outright
--- ``BLACKLIST_AFTER_ROTATION = True`` raises at startup, and rotation is compulsory --
-and keeps a **whitelist keyed by session** in its place. A refresh token that is not on
-the whitelist is not merely rejected: the session it names is revoked, because a rotated
-token turning up again means two parties are holding it.
-
-That inversion, deny-list to allow-list, is what the rest of this package hangs off. The
-device records, the absolute session lifetime and the claims re-read on rotation are all
-things that become possible once a session is a row you own rather than the absence of
-one.
-
-So the question is never *Simple JWT or this?* -- it is *Simple JWT on its own, or Simple
-JWT with a session model over it?* A project that only needs signed tokens should use
-Simple JWT directly and stop there.
-
-
 Features
 --------
 

@@ -11,10 +11,8 @@ def user_field(user, field, value):
     """
     Set a field on a user, truncated to its length, skipping one the model does not have.
 
-    allauth ships this as ``allauth.account.internal.userkit.user_field``, under a package
-    named ``internal`` and therefore outside anything it promises to keep: importing it
-    made a rearrangement of allauth's internals break the test helpers of this library,
-    which is a poor reason to hold back the version of allauth a project may install.
+    A local equivalent of allauth's ``user_field``, which lives under
+    ``allauth.account.internal`` and is therefore outside what allauth promises to keep.
 
     The missing-field case is not defensive padding. The user model of a project need not
     have ``first_name`` at all, and this helper runs against whatever model the project
