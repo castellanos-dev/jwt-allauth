@@ -1,10 +1,30 @@
-from allauth.account.internal.userkit import user_field
 from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
+from django.core.exceptions import FieldDoesNotExist
 from django.test import TestCase
 from django.test.client import Client
 
 from jwt_allauth.tokens.app_settings import RefreshToken
+
+
+def user_field(user, field, value):
+    """
+    Set a field on a user, truncated to its length, skipping one the model does not have.
+
+    A local equivalent of allauth's ``user_field``, which lives under
+    ``allauth.account.internal`` and is therefore outside what allauth promises to keep.
+
+    The missing-field case is not defensive padding. The user model of a project need not
+    have ``first_name`` at all, and this helper runs against whatever model the project
+    brought.
+    """
+    try:
+        max_length = type(user)._meta.get_field(field).max_length
+    except FieldDoesNotExist:
+        if not hasattr(user, field):
+            return
+        max_length = None
+    setattr(user, field, value[:max_length] if max_length else value)
 
 
 class JAClient(Client):

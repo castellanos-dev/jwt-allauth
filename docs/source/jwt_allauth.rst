@@ -99,6 +99,22 @@ jwt\_allauth.permissions module
    :show-inheritance:
    :undoc-members:
 
+jwt\_allauth.roles module
+-------------------------
+
+.. automodule:: jwt_allauth.roles
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+jwt\_allauth.models module
+--------------------------
+
+.. automodule:: jwt_allauth.models
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 jwt\_allauth.apps module
 ------------------------
 

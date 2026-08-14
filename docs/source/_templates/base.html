@@ -1,0 +1,16 @@
+{# The <title> of the root page, from html_context['root_page_title'].
+
+   Every other page is titled "<page> - <html_title>", so html_title stays short; the
+   root page takes no suffix and can name its subject instead.
+
+   Override `base.html` and not `layout.html`: furo's page.html extends base.html
+   directly, and its layout.html exists only to render an error telling you so.
+#}
+{% extends "!base.html" %}
+{%- block htmltitle -%}
+{%- if pagename == master_doc and root_page_title -%}
+<title>{{ root_page_title|e }}</title>
+{%- else -%}
+{{ super() }}
+{%- endif -%}
+{%- endblock -%}

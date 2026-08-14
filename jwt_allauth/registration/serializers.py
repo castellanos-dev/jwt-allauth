@@ -18,6 +18,7 @@ from django.utils.translation import gettext_lazy as _
 # from requests.exceptions import HTTPError
 from rest_framework import serializers
 
+from jwt_allauth.roles import has_role_field, user_model_has_role_field
 from jwt_allauth.utils import enumeration_prevented, verification_enabled
 
 logger = logging.getLogger(__name__)
@@ -240,7 +241,7 @@ class RegisterSerializer(serializers.Serializer):
 class UserRegisterSerializer(RegisterSerializer):
     """
     Registration serializer for admin-managed user creation.
-    - Requires email and role.
+    - Requires email, and a role when the user model stores one.
     - Does not accept passwords; user sets password after email verification.
     - first_name/last_name optional.
     """
@@ -252,23 +253,35 @@ class UserRegisterSerializer(RegisterSerializer):
     first_name = serializers.CharField(required=False, write_only=True, max_length=100)
     last_name = serializers.CharField(required=False, write_only=True, max_length=100)
 
-    # Require explicit role
+    # Require explicit role. Dropped in `__init__` on a user model with nowhere to store
+    # one: a required field that cannot be honoured would make the endpoint unusable,
+    # and an optional one accepted and discarded would be worse. The endpoint itself
+    # still works -- it grants no role, because there are none to grant.
     role = serializers.IntegerField(required=True, write_only=True)
 
     # The endpoint is restricted to administrators, who are entitled to know that an
     # address is already in use: there is nobody to hide it from.
     prevent_enumeration = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not user_model_has_role_field():
+            self.fields.pop('role', None)
+
+    def _accepts_role(self) -> bool:
+        return 'role' in self.fields
+
     def validate(self, data):
-        if 'role' not in data:
+        if self._accepts_role() and 'role' not in data:
             raise serializers.ValidationError({"role": _("Role is required")})
         return super().validate(data)
 
     def get_cleaned_data(self):
         base = super().get_cleaned_data()
-        base.update({
-            'role': self.validated_data.get('role'),
-        })
+        if self._accepts_role():
+            base.update({
+                'role': self.validated_data.get('role'),
+            })
         return base
 
     def custom_signup(self, request, user):
@@ -277,7 +290,7 @@ class UserRegisterSerializer(RegisterSerializer):
         """
         cleaned = getattr(self, 'cleaned_data', {}) or {}
         role = cleaned.get('role')
-        if role is not None:
+        if role is not None and has_role_field(type(user)):
             try:
                 user.role = int(role)
             except (TypeError, ValueError):

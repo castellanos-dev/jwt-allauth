@@ -1,47 +1,98 @@
-Welcome to JWT Allauth
-======================
+JWT Allauth
+===========
 
-JWT Allauth delivers **SIMPLE** authentication for the Django REST module, based on robust frameworks configured in an **efficient** and stateless way through **JWT** access/refresh token architecture. The token whitelisting system ensures granular control over user sessions while maintaining minimal database overhead.
+[![PyPI](https://img.shields.io/pypi/v/django-jwt-allauth.svg)](https://pypi.org/project/django-jwt-allauth/)
+[![Python](https://img.shields.io/pypi/pyversions/django-jwt-allauth.svg)](https://pypi.org/project/django-jwt-allauth/)
+[![Tests](https://github.com/castellanos-dev/jwt-allauth/actions/workflows/python-app.yml/badge.svg)](https://github.com/castellanos-dev/jwt-allauth/actions/workflows/python-app.yml)
+[![Docs](https://readthedocs.org/projects/jwt-allauth/badge/?version=latest)](https://jwt-allauth.readthedocs.io/en/latest/)
+[![License](https://img.shields.io/pypi/l/django-jwt-allauth.svg)](https://github.com/castellanos-dev/jwt-allauth/blob/main/LICENSE)
 
-With **JWT Allauth**, gain peace of mind through enterprise-grade security while dedicating your energy to building your app's unique value proposition.
+**Device-level session management for Django REST Framework, with refresh token theft detection.**
+
+JWT Allauth gives every login its own tracked session, rotates the refresh token on each
+use, and — when a rotated token is presented a second time — revokes the entire session
+rather than just rejecting the replayed credential. Around that it ships the endpoints an
+API needs to be usable on day one: login, sign-up, e-mail verification, password reset,
+MFA and role-based permissions.
+
+Built on Django REST Framework, django-allauth and Simple JWT.
 
 
-Features
---------
+The problem it solves
+---------------------
 
-- **Low database load**: Designed to minimize database queries through stateless JWT token authentication.
-- Token whitelisting system: Implements a refresh token whitelist tied to specific device sessions.
-- **Enhanced security**: Enables revoking access to specific devices or all devices simultaneously.
-- Automatic token renewal: Active sessions for extended periods without reauthentication, ideal for **mobile apps**.
-- Email verification: Includes a full **REST email verification** system during user registration.
-- Comprehensive user management: Features password recovery, email-based authentication, and session logout.
-- **Effortless setup**: Get your project up and running with a single command.
+Rotating refresh tokens is standard advice, and every Django stack does it. What almost
+none of them do is handle the case rotation exists for.
+
+When a refresh token is stolen, both the attacker and the legitimate user hold a
+credential from the same session. Whoever refreshes second presents a token that has
+already been rotated. A blacklist rejects that second request and stops there — so if the
+attacker refreshes first, the *user* gets locked out while the *attacker* keeps a valid,
+indefinitely renewable session. The theft never surfaces.
+
+A replay is evidence that a session is compromised, and it is treated as such here: the
+whole session is revoked and both parties have to log in again. This is the behaviour
+described in [OAuth 2.0 Security Best Current Practice §4.14.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics#section-4.14.2),
+and it is the reason this library exists.
+
+[**Refresh token rotation is not enough**](https://jwt-allauth.readthedocs.io/en/latest/refresh_token_theft.html)
+works through the whole argument — including the four ways an implementation of it fails
+silently, whether you use this library or write it yourself.
 
 
-Why whitelisting?
------------------
+How it compares
+---------------
 
-The refresh token whitelist tracks devices **authorized by the user**, stored in the database to verify refresh tokens during access token renewal requests.
+Against the packages in the same slot — batteries-included authentication for a Django
+REST API:
 
-This system empowers users to **revoke access** to stolen/lost devices or log out of all sessions simultaneously. Refresh tokens are regenerated upon each use, ensuring active session tracking. If a refresh token is reused, the system invalidates both tokens and terminates the session tied to the compromised device.
+|                                                     |  dj-rest-auth  |     djoser     |        allauth headless        | **JWT Allauth**       |
+|-----------------------------------------------------|:--------------:|:--------------:|:------------------------------:|:---------------------:|
+| JWT access/refresh tokens                            |  opt-in&nbsp;¹ |   Simple JWT   |          ✗&nbsp;²              | Simple JWT            |
+| Refresh token rotation                               |  Simple JWT's  |  Simple JWT's  |             —                  | own, compulsory       |
+| **Replay revokes the whole session**                 |       ✗        |       ✗        |             —                  | **✓**                 |
+| **Session records per device** (IP, OS, browser)     |       ✗        |       ✗        |          ✗&nbsp;³              | **✓**                 |
+| **Absolute session lifetime across rotations**       |       ✗        |       ✗        |             —                  | **✓**                 |
+| **Role and claims re-read from the DB on rotation**  |       ✗        |       ✗        |             —                  | **✓**                 |
+| Login, sign-up, e-mail verification, password reset  |       ✓        |       ✓        |             ✓                  | ✓                     |
+| Second factor                                        | TOTP, passkeys |    WebAuthn    | TOTP, recovery codes, WebAuthn | TOTP, recovery codes  |
+| **Social authentication**                            |     **✓**      |     **✓**      |           **✓**                | **not yet**           |
 
-Refresh token auto-renewal enables extended active sessions without repeated logins—ideal for **mobile apps**, where users shouldn’t need to reauthenticate every time they open the app.
+¹ dj-rest-auth authenticates with DRF's own tokens by default. JWT means installing Simple
+JWT yourself and setting `USE_JWT = True`; it is not a dependency of the package.
 
-Access tokens provide short-lived authentication credentials (via JWT), enabling stateless API access. This approach **minimizes database load** by eliminating per-request database queries.
+² `allauth.headless` exposes `AbstractTokenStrategy`: *"We make no assumptions in this regard.
+If you need access tokens, you will have to implement a token strategy that returns an access
+token here."* The rows marked — follow from that: there is no token implementation to compare.
+
+³ `allauth.usersessions` lists Django sessions, not JWT sessions.
+
+**Social authentication is not implemented.** If a project needs it today, dj-rest-auth
+and allauth headless cover it.
+
+
+Requirements
+------------
+
+Python 3.10+ and Django 4.2 through 6.1, on Django REST Framework 3.15+.
+
+The dependencies carry no upper bounds. A startup check reports an allauth or Simple JWT
+major newer than the release was tested against (`jwt_allauth.W003`), rather than the
+install refusing to resolve.
 
 
 Quick Start
 -----------
 
-Install using ``pip``...
+Install using `pip`:
 
     pip install django-jwt-allauth
 
-You can quickly start a new Django project with JWT Allauth pre-configured using the `startproject` command:
+You can start a new Django project with JWT Allauth pre-configured:
 
     jwt-allauth startproject myproject
 
-This will create a new Django project called `myproject` with JWT Allauth pre-configured. Then:
+Then:
 
     cd myproject
     python manage.py makemigrations
@@ -49,14 +100,82 @@ This will create a new Django project called `myproject` with JWT Allauth pre-co
     python manage.py runserver
 
 Available options:
-- `--email=True` - Enables email configuration in the project
-- `--template=PATH` - Uses a custom template directory for project creation
+- `--email=True` — enables email configuration in the project
+- `--template=PATH` — uses a custom template directory for project creation
+
+
+Adding it to an existing project
+--------------------------------
+
+No particular user model is required. Roles are read from a `role` field when the user
+model has one, and derived from `is_staff` / `is_superuser` when it does not — so a
+project that cannot swap `AUTH_USER_MODEL` (which is most of them past the first
+migration) still gets staff and superusers told apart from regular users, with nothing to
+migrate.
+
+To define roles of your own, add the field to the user model you already have:
+
+```python
+from django.contrib.auth.models import AbstractUser
+from jwt_allauth.models import RoleMixin
+
+class MyUser(RoleMixin, AbstractUser):
+    pass
+```
+
+Existing staff rows need backfilling in that migration, or they drop to a regular user on
+their next login — see the [user model documentation](https://jwt-allauth.readthedocs.io/en/latest/configuration.user_model.html).
+New projects can skip all of it with `AUTH_USER_MODEL = 'jwt_allauth.JAUser'`.
+
+
+Features
+--------
+
+- **Refresh token whitelist**: in place of Simple JWT's blacklist, every login gets a
+  session row carrying the device it was issued to — IP, browser, OS, device model — so
+  sessions can be listed and revoked individually, or all at once.
+- **Replay detection**: a rotated refresh token presented twice revokes the session it
+  belongs to, on the assumption that two parties are holding it.
+- **Absolute session lifetime**: rotation cannot extend a session past
+  `JWT_ALLAUTH_SESSION_LIFETIME`; the `exp` of both tokens is capped to it.
+- **Claims that stay current**: role, e-mail verification state and custom claims are
+  re-read from the database on every rotation, so a privilege change applies within the
+  lifetime of one access token instead of surviving until the refresh token expires.
+- **Stateless by default**: access tokens are verified without a database query.
+  `JWT_ALLAUTH_ACCESS_TOKEN_SESSION_CHECK` trades one indexed query per request for
+  immediate revocation of access tokens too.
+- **Revocation on credential change**: setting a password drops every session, every
+  outstanding capability (unused reset links, MFA challenges) and every unconfirmed
+  secondary address.
+- **Role-based permissions**: authorization from a JWT claim, with no user table lookup.
+- **The rest of the flows**: e-mail verification, password reset and change, MFA over
+  TOTP with recovery codes, admin-managed registration, session logout.
+- **Effortless setup**: get a project running with a single command.
+
+
+Why whitelisting?
+-----------------
+
+The refresh token whitelist tracks the devices **authorized by the user**, stored in the
+database and checked when a refresh token is exchanged for a new access token.
+
+This is what lets users **revoke access** to a stolen or lost device, or sign out of every
+session at once. Refresh tokens are regenerated on each use, so the whitelist is an
+accurate picture of which sessions are live — and it is what makes replay detection
+possible at all: a token that is not in the whitelist has either been rotated already or
+was forged, and both answers mean the session goes down.
+
+Auto-renewal keeps sessions alive without repeated logins — ideal for **mobile apps**,
+where users should not have to reauthenticate every time they open the app.
+
+Access tokens stay short-lived and self-contained, so ordinary API requests are
+authenticated **without touching the database**.
 
 
 Email verification
 ------------------
 
-To enable the email verification, configure the email provider in your ``settings.py`` file.
+To enable email verification, configure the email provider in your `settings.py`:
 
     EMAIL_VERIFICATION = True
     EMAIL_HOST = ...
@@ -66,11 +185,13 @@ To enable the email verification, configure the email provider in your ``setting
     EMAIL_USE_TLS = ...
     DEFAULT_FROM_EMAIL = ...
 
+`EMAIL_VERIFICATION` also accepts `'mandatory'`, `'optional'` and `'none'` by name.
+
 
 Redirection URLs
 ----------------
 
-The relative url to be redirected once the email verified can be configured through:
+The relative url to be redirected once the email is verified:
 
     EMAIL_VERIFIED_REDIRECT = ...
 
@@ -78,18 +199,20 @@ The relative url with the form to set the new password on password reset:
 
     PASSWORD_RESET_REDIRECT = ...
 
-If not configured, users will be redirected to the default password reset form at ``/jwt-allauth/password/reset/default/``. This form provides a modern, responsive interface for password reset with proper form validation and error handling.
+If not configured, users will be redirected to the default password reset form at
+`/jwt-allauth/password/reset/default/`. This form provides a modern, responsive interface
+for password reset with proper form validation and error handling.
 
 
 Templates
 ---------
 
-The templates can be configured in a JWT_ALLAUTH_TEMPLATES dictionary:
+The templates can be configured in a `JWT_ALLAUTH_TEMPLATES` dictionary:
 
-    - ``PASS_RESET_SUBJECT`` - subject of the password reset email (default: ``email/password/reset_email_subject.txt``).
-    - ``PASS_RESET_EMAIL`` - template of the password reset email (default: ``email/password/reset_email_message.html``).
-    - ``EMAIL_VERIFICATION_SUBJECT`` - subject of the signup email verification sent (default: ``email/signup/email_subject.txt``).
-    - ``EMAIL_VERIFICATION`` - template of the signup email verification sent (default: ``email/signup/email_message.html``).
+- `PASS_RESET_SUBJECT` — subject of the password reset email (default: `email/password/reset_email_subject.txt`).
+- `PASS_RESET_EMAIL` — template of the password reset email (default: `email/password/reset_email_message.html`).
+- `EMAIL_VERIFICATION_SUBJECT` — subject of the signup email verification sent (default: `email/signup/email_subject.txt`).
+- `EMAIL_VERIFICATION` — template of the signup email verification sent (default: `email/signup/email_message.html`).
 
 Example:
 
@@ -97,6 +220,12 @@ Example:
         'PASS_RESET_SUBJECT': 'mysite/templates/password_reset_subject.txt',
         ...
     }
+
+
+Documentation
+-------------
+
+Full documentation at [jwt-allauth.readthedocs.io](https://jwt-allauth.readthedocs.io/).
 
 
 Acknowledgements

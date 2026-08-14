@@ -12,6 +12,7 @@ from rest_framework_simplejwt.tokens import AccessToken, RefreshToken as Default
 from rest_framework_simplejwt.utils import aware_utcnow, datetime_from_epoch, datetime_to_epoch
 
 from jwt_allauth.constants import EMAIL_VERIFIED_CLAIM, SESSION_IAT_CLAIM
+from jwt_allauth.roles import get_user_role
 from jwt_allauth.tokens.models import GenericTokenModel
 from jwt_allauth.tokens.serializers import RefreshTokenWhitelistSerializer, GenericTokenModelSerializer
 from jwt_allauth.utils import get_session_lifetime, is_email_verified, user_agent_dict
@@ -148,7 +149,14 @@ class RefreshToken(DefaultRefreshToken):
                 self.payload[output_name] = current_value
 
     def set_user_role(self, user):
-        self.payload['role'] = user.role
+        """
+        Record the role of the account.
+
+        Where the number comes from is the user model's business, not this token's: a
+        model carrying a ``role`` is authoritative, and one without it falls back to the
+        staff flags. See :mod:`jwt_allauth.roles`.
+        """
+        self.payload['role'] = get_user_role(user)
 
     def set_email_verified(self, user):
         """
