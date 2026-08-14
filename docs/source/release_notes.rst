@@ -1,6 +1,27 @@
 Release Notes
 =============
 
+Version 1.4.0
+-------------
+
+Released: August 14, 2026
+
+New Features
+~~~~~~~~~~~~
+
+- **Any user model**: the role claim was read as ``user.role``, with no fallback, which made ``jwt_allauth.JAUser`` a precondition rather than a convenience. ``AUTH_USER_MODEL`` cannot realistically be swapped once a project has migrations, so a library that required its own user model was one that no existing project could adopt — whatever it thought of the session handling. The role is now resolved through :mod:`jwt_allauth.roles`: a user model carrying a ``role`` field is authoritative and nothing changes for it, and a model without one derives the claim from ``is_staff`` and ``is_superuser``. The mapping is the one ``JAUser`` enforces with its check constraints — staff to ``STAFF_CODE``, a superuser that is not staff to ``SUPER_USER_CODE``, everybody else to ``USER_CODE`` — so :class:`~jwt_allauth.permissions.BasePermission` keeps granting staff and superusers the access it always did, and the admin-managed registration endpoint stays reachable by the accounts that were already reaching it. A ``role`` exposed as a property is read like a stored one. What a model without the field cannot express is roles of the project's own, and ``accepted_roles = [700]`` will not match anything until it has one.
+
+- **RoleMixin**: the role field on its own, for adding to a user model that already exists — one field and one migration, instead of a swap that is not available. ``JAUser`` is that mixin applied to ``AbstractUser`` and is unchanged, down to the names of its check constraints, so no migration comes out of this release for projects already on it. The constraints are deliberately not part of the mixin: adding a check constraint to a populated table fails while a single staff row still holds the default role, which would leave the migration unrunnable on exactly the projects the mixin exists for. Existing staff rows do need backfilling in the migration that adds the field — they read as ``STAFF_CODE`` through the fallback and would otherwise drop to a regular user on their next login — and :doc:`configuration.user_model` carries the migration to do it.
+
+- **The admin-managed registration endpoint degrades instead of breaking**: ``role`` was a required input written straight onto the new account. On a user model with nowhere to store one, requiring it would have made the endpoint unusable and accepting it would have discarded it silently, so the field is dropped from the serializer — and from the generated schema — when there is no field behind it. The endpoint still works and still grants no role, because there are none to grant.
+
+- **Two startup checks for a role field that means something else**: a project may already have a ``role`` on its user model standing for something entirely different, and the library will read it regardless. A relational one is reported as an error (``jwt_allauth.E001``): it puts a model instance in the payload and the token fails to encode, so every login raises. A non-integer one is reported as a warning (``jwt_allauth.W002``): it encodes fine and then matches nothing, so staff quietly lose the access ``BasePermission`` grants them by default — harmless in a project whose permission classes all declare ``accepted_roles`` of that same type, which is why it is not an error.
+
+Documentation
+~~~~~~~~~~~~~
+
+- **The README leads with what the library does that others do not**: it opened on "SIMPLE authentication for the Django REST module", which is the ground dj-rest-auth already holds with a thousand times the adoption, and buried the one behaviour that is genuinely hard to find elsewhere — a replayed refresh token revoking the whole session rather than being rejected on its own, per `OAuth 2.0 Security BCP §4.14.2 <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics#section-4.14.2>`_. It now names device-level session management as the subject, explains the theft scenario rotation exists for, and carries a comparison against Simple JWT, dj-rest-auth and ``allauth.headless`` — including the row this library loses, social authentication, with a pointer to the two packages that cover it.
+
 Version 1.3.1
 -------------
 
