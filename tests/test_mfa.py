@@ -767,6 +767,130 @@ class MFAVerifyRecoveryTests(TestsMixin):
 
 
 @override_settings(
+    JWT_ALLAUTH_COLLECT_USER_AGENT=True,
+    JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE=False,
+)
+class MFASessionFingerprintTests(TestsMixin):
+    """
+    A session opened through MFA is whitelisted with the device it was opened from.
+
+    The endpoints that finish an MFA flow mint the session themselves instead of going
+    through the login view, so the fingerprint has to be collected here too: an
+    installation that lists sessions by device would otherwise show every
+    MFA-completed login as an anonymous row, and nothing would flag the login that
+    came from an unrecognised device.
+    """
+
+    HEADERS = {
+        'HTTP_USER_AGENT': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Mobile/15E148 Safari/604.1',  # noqa: E501
+        'HTTP_X_FORWARDED_FOR': '10.0.0.50',
+    }
+
+    def setUp(self):
+        self.init()
+        self.login_url = reverse('rest_login')
+        self.setup_url = reverse('jwt_allauth_mfa_setup')
+        self.activate_url = reverse('jwt_allauth_mfa_activate')
+        self.verify_url = reverse('jwt_allauth_mfa_verify')
+        self.verify_recovery_url = reverse('jwt_allauth_mfa_verify_recovery')
+
+    def tearDown(self):
+        cache.clear()
+
+    def assert_fingerprinted(self, refresh):
+        """The whitelist row of `refresh` carries the device the request came from."""
+        session = RefreshTokenWhitelistModel.objects.get(jti=RefreshToken(refresh).payload['jti'])
+
+        self.assertEqual(session.ip, '10.0.0.50')
+        self.assertEqual(session.browser, 'Mobile Safari')
+        self.assertEqual(session.browser_version, '14.1.1')
+        self.assertEqual(session.os, 'iOS')
+        self.assertEqual(session.os_version, '14.6')
+        self.assertEqual(session.device, 'iPhone')
+        self.assertEqual(session.device_brand, 'Apple')
+        self.assertTrue(session.is_mobile)
+        self.assertFalse(session.is_pc)
+
+    @patch('jwt_allauth.mfa.views.TOTP')
+    def test_verify_fingerprints_the_session(self, mock_totp_class):
+        """A login completed with a TOTP code."""
+        Authenticator.objects.create(
+            user=self.USER,
+            type=Authenticator.Type.TOTP.value,
+            data={'secret': 'test_secret'}
+        )
+        challenge_id = create_login_challenge(self.USER.id)
+
+        mock_totp_instance = MagicMock()
+        mock_totp_instance.validate_code.return_value = True
+        mock_totp_class.return_value = mock_totp_instance
+
+        resp = self.post(
+            self.verify_url,
+            data={'challenge_id': challenge_id, 'code': '123456'},
+            status_code=200,
+            **self.HEADERS
+        )
+
+        self.assert_fingerprinted(resp['refresh'])
+
+    @patch('jwt_allauth.mfa.views.RecoveryCodes')
+    def test_verify_recovery_fingerprints_the_session(self, mock_recovery_class):
+        """A login completed with a recovery code, the authenticator being out of reach."""
+        Authenticator.objects.create(
+            user=self.USER,
+            type=Authenticator.Type.RECOVERY_CODES,
+            data={'codes': ['CODE1', 'CODE2']}
+        )
+        challenge_id = create_login_challenge(self.USER.id)
+
+        mock_rc_instance = MagicMock()
+        mock_rc_instance.validate_code.return_value = True
+        mock_recovery_class.return_value = mock_rc_instance
+
+        resp = self.post(
+            self.verify_recovery_url,
+            data={'challenge_id': challenge_id, 'recovery_code': 'CODE1'},
+            status_code=200,
+            **self.HEADERS
+        )
+
+        self.assert_fingerprinted(resp['refresh'])
+
+    @override_settings(JWT_ALLAUTH_MFA_TOTP_MODE=MFA_TOTP_REQUIRED)
+    @patch('jwt_allauth.mfa.views.TOTP')
+    @patch('jwt_allauth.mfa.views.RecoveryCodes')
+    def test_required_mode_bootstrap_fingerprints_the_session(self, mock_recovery_class, mock_totp_class):
+        """
+        The enrolment that opens the session in REQUIRED mode.
+
+        This one hands out a session as well, so it needs the fingerprint for the same
+        reason the two verification endpoints do.
+        """
+        resp = self.post(self.login_url, data=self.LOGIN_PAYLOAD, status_code=200)
+        setup_challenge_id = resp['setup_challenge_id']
+        self.post(self.setup_url, data={'setup_challenge_id': setup_challenge_id}, status_code=200)
+
+        mock_totp_instance = MagicMock()
+        mock_totp_instance.validate_code.return_value = True
+        mock_totp_instance.instance = MagicMock()
+        mock_totp_class.activate.return_value = mock_totp_instance
+
+        mock_recovery_instance = MagicMock()
+        mock_recovery_instance.get_unused_codes.return_value = ['CODE1', 'CODE2']
+        mock_recovery_class.activate.return_value = mock_recovery_instance
+
+        resp = self.post(
+            self.activate_url,
+            data={'code': '123456', 'setup_challenge_id': setup_challenge_id},
+            status_code=200,
+            **self.HEADERS
+        )
+
+        self.assert_fingerprinted(resp['refresh'])
+
+
+@override_settings(
     JWT_ALLAUTH_MFA_CHALLENGE_MAX_ATTEMPTS=2,
     JWT_ALLAUTH_MFA_MAX_ATTEMPTS=3,
     JWT_ALLAUTH_MFA_LOCKOUT_SECONDS=600,
