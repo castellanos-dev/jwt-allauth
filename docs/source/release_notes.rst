@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 1.4.1
+-------------
+
+Released: August 14, 2026
+
+Bug Fixes
+~~~~~~~~~
+
+- **A session opened through MFA records the device it came from**: the three endpoints that finish an MFA flow mint the session themselves instead of going through the login view, and none of them collected the user agent. Every MFA-completed login landed in the whitelist as a row with no browser, no operating system and no IP, so an installation listing a user's sessions had nothing to show for them and nothing to tell a familiar device from a new one. ``/mfa/verify/``, ``/mfa/verify-recovery/`` and the enrolment that opens the session under ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` now record it the way login, refresh and password change already did. Only installations on ``JWT_ALLAUTH_COLLECT_USER_AGENT = True`` are affected; nothing is backfilled for sessions already open.
+
 Version 1.4.0
 -------------
 
