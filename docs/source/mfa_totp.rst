@@ -12,7 +12,8 @@ To use MFA TOTP, install ``django-jwt-allauth`` with the ``mfa`` extra:
 
     pip install "django-jwt-allauth[mfa]"
 
-This will automatically install ``django-allauth[mfa]`` and all required dependencies.
+That is the only command needed: the extra brings every dependency the TOTP and recovery
+code flows require. See :ref:`optional-features` for the extras this package ships.
 
 Add to your ``INSTALLED_APPS``:
 

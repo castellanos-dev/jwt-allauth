@@ -167,7 +167,7 @@ Configure these variables in the ``settings.py`` file of your project.
 
 - Social login
 
-    See :doc:`social_login`. The endpoints are routed only when ``allauth.socialaccount`` is installed together with the ``social`` extra.
+    See :doc:`social_login`. The endpoints are routed once this package is installed with its ``social`` extra (``pip install "django-jwt-allauth[social]"``) and ``allauth.socialaccount`` is in ``INSTALLED_APPS``.
 
     - ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING`` - whether an address a provider vouches for may resolve to an account that already holds it (default: ``True``). ``True`` links for every provider, ``False`` for none, and a list of provider ids links only for those. Linking signs the existing account in and leaves its password usable; the trust rests on the provider's claim that it verified the address, which is why it can be narrowed per provider. An account whose address was never confirmed and which was never used is superseded instead, exactly as a duplicate registration supersedes it. With linking off, a taken address answers ``409`` ``email_already_registered``.
 

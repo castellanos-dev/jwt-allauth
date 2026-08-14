@@ -13,17 +13,18 @@ to subclass and no adapter to name.
 Prerequisites
 -------------
 
-Install the ``social`` extra:
+Install this package's ``social`` extra, which is the only command needed -- it brings the
+whole dependency chain with it:
 
 .. code-block:: bash
 
     pip install "django-jwt-allauth[social]"
 
-It pulls in ``django-allauth[socialaccount]``, which is where the HTTP stack lives:
-``requests``, the OAuth2 client, and ``pyjwt[crypto]``. That last one is not a second JWT
-library -- Simple JWT already depends on PyJWT. What the extra adds is ``cryptography``,
-which PyJWT needs for the RS256/ES256 signature an ``id_token`` carries; Simple JWT signs
-this library's own tokens with HS256 and never needed it.
+What arrives with it is the HTTP stack the flows need: ``requests``, the OAuth2 client and
+``pyjwt[crypto]``. That last one is not a second JWT library -- Simple JWT already depends
+on PyJWT. What it adds is ``cryptography``, which PyJWT needs for the RS256/ES256 signature
+an ``id_token`` carries; Simple JWT signs this library's own tokens with HS256 and never
+needed it.
 
 Add ``allauth.socialaccount`` to ``INSTALLED_APPS``, along with the provider's app:
 
@@ -44,9 +45,9 @@ Then run migrations -- the provider connections are allauth's models:
 
     python manage.py migrate
 
-The endpoints are routed only when ``allauth.socialaccount`` is installed. If the app is
-there but the extra is not, they are silently absent and
-:ref:`jwt_allauth.W004 <social-checks>` says so at startup.
+The endpoints are routed only when ``allauth.socialaccount`` is installed. If the app is in
+``INSTALLED_APPS`` but ``django-jwt-allauth[social]`` was never installed, they are
+silently absent and :ref:`jwt_allauth.W004 <social-checks>` says so at startup.
 
 Configuration
 -------------

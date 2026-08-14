@@ -839,9 +839,10 @@ Recovery code failures share the same budgets as ``/mfa/verify/`` and answer ``4
 Social login
 ------------
 
-Routed under ``/social/`` only when ``allauth.socialaccount`` is installed together with the
-``social`` extra. The provider id travels in the path, e.g. ``/social/google/token/``. See
-:doc:`social_login`.
+Routed under ``/social/`` once this package is installed with its ``social`` extra
+(``pip install "django-jwt-allauth[social]"``) and ``allauth.socialaccount`` is in
+``INSTALLED_APPS``. The provider id travels in the path, e.g. ``/social/google/token/``.
+See :doc:`social_login`.
 
 **/social/<provider>/token/** (POST)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
