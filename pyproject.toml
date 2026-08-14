@@ -14,7 +14,13 @@ authors = [
 description = "Device-level session management for Django REST Framework: rotating JWT refresh tokens on a whitelist, where a replayed token revokes the whole session."
 readme = "README.md"
 requires-python = ">=3.10"
+# Declared, not merely shipped: a LICENSE file in the repository does not reach the
+# package metadata, so PyPI has been reporting no license at all for a project that has
+# always been MIT. Anyone vetting dependencies automatically sees the absence, not the
+# file.
+license = { text = "MIT" }
 classifiers = [
+    "License :: OSI Approved :: MIT License",
     "Framework :: Django",
     "Framework :: Django :: 4.2",
     "Framework :: Django :: 5.0",

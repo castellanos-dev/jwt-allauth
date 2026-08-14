@@ -28,8 +28,17 @@ Compatibility
 
 - **One less internal import**: ``jwt_allauth.test`` pulled ``user_field`` from ``allauth.account.internal.userkit``, which put the test helpers this library ships — and therefore the suites of the projects using them — at the mercy of allauth rearranging a private module. It is a five-line function and it is now local, keeping the same behaviour of skipping a field the user model does not have.
 
+Packaging
+~~~~~~~~~
+
+- **The package declares its licence**: the repository has carried an MIT ``LICENSE`` file since it began, but ``pyproject.toml`` never declared one, so the published metadata said nothing — PyPI reported no licence and the shields.io badge read *license: missing*. A LICENSE file in a repository does not reach the package metadata, and anyone vetting dependencies automatically sees the absence rather than the file. ``license`` and the OSI classifier are declared now, and the sdist carries ``License-File: LICENSE``.
+
 Documentation
 ~~~~~~~~~~~~~
+
+- **A page on the problem, not just on the settings that solve it**: :doc:`refresh_token_theft` explains why rotating refresh tokens does not detect theft on its own, what a blacklist catches and what it lets through, and what reuse detection has to do instead. It is written for anyone implementing this, not only for users of this package — including the four ways an implementation fails silently: a rotation that is not atomic and turns one credential into two sessions, a revocation rolled back with the transaction that detected the replay, a revocation racing a rotation and leaving the successor behind, and the absence of an absolute session lifetime for the token nobody ever contests. The existing :doc:`refresh_token` page stays what it is, a reference for the settings.
+
+- **The documentation can be found**: the ``<title>`` of every page carried the version number, because that is Sphinx's default — search engines had indexed *"JWT Allauth 1.2.3 documentation"* and kept serving it, and nobody searches for that. Pages now read ``<page> - JWT Allauth``, the root page states its subject, and both are stable across releases. Added with them: a canonical URL, so the versions Read the Docs publishes stop competing with each other for the same queries; a meta description, so search results stop being written from whatever text was nearest; and Open Graph tags, so a link pasted into Slack or a social timeline renders as something other than a bare URL.
 
 - **The README leads with what the library does that others do not**: it opened on "SIMPLE authentication for the Django REST module", which is the ground dj-rest-auth already holds with a thousand times the adoption, and buried the one behaviour that is genuinely hard to find elsewhere — a replayed refresh token revoking the whole session rather than being rejected on its own, per `OAuth 2.0 Security BCP §4.14.2 <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics#section-4.14.2>`_. It now names device-level session management as the subject, explains the theft scenario rotation exists for, and carries a comparison against dj-rest-auth, djoser and ``allauth.headless`` — including the row this library loses, social authentication, with a pointer to the packages that cover it.
 

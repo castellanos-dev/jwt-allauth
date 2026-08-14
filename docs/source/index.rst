@@ -3,6 +3,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. title:: JWT Allauth: JWT session management for Django REST Framework
+
+.. meta::
+   :description: Device-level session management for Django REST Framework. JWT refresh
+       tokens rotate on a whitelist, and a replayed token revokes the whole session
+       instead of being rejected on its own.
+
 JWT Allauth
 ===========
 
@@ -35,6 +42,9 @@ whole session is revoked and both parties have to log in again. This is the beha
 described in `OAuth 2.0 Security Best Current Practice §4.14.2
 <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics#section-4.14.2>`_,
 and it is the reason this library exists.
+
+:doc:`refresh_token_theft` works through the whole argument, including the four ways an
+implementation of it fails silently.
 
 .. note::
 

@@ -1,0 +1,20 @@
+{# The <title> of the root page.
+
+   Sphinx builds every other page's title as "<page> - <html_title>", which is why
+   html_title has to stay short: a descriptive one there would trail a sentence behind
+   the name of every section. The root page takes no suffix, so it is free to say what
+   the project is -- and it is the page with the most inbound links and the only one
+   whose title has a search query to match rather than a reader already inside the docs.
+
+   Overriding `base.html` rather than `layout.html` is not a stylistic choice: furo's
+   page.html extends base.html directly, and its layout.html exists only to render an
+   error telling you so.
+#}
+{% extends "!base.html" %}
+{%- block htmltitle -%}
+{%- if pagename == master_doc and root_page_title -%}
+<title>{{ root_page_title|e }}</title>
+{%- else -%}
+{{ super() }}
+{%- endif -%}
+{%- endblock -%}

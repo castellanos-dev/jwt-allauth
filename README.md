@@ -1,6 +1,12 @@
 JWT Allauth
 ===========
 
+[![PyPI](https://img.shields.io/pypi/v/django-jwt-allauth.svg)](https://pypi.org/project/django-jwt-allauth/)
+[![Python](https://img.shields.io/pypi/pyversions/django-jwt-allauth.svg)](https://pypi.org/project/django-jwt-allauth/)
+[![Tests](https://github.com/castellanos-dev/jwt-allauth/actions/workflows/python-app.yml/badge.svg)](https://github.com/castellanos-dev/jwt-allauth/actions/workflows/python-app.yml)
+[![Docs](https://readthedocs.org/projects/jwt-allauth/badge/?version=latest)](https://jwt-allauth.readthedocs.io/en/latest/)
+[![License](https://img.shields.io/pypi/l/django-jwt-allauth.svg)](https://github.com/castellanos-dev/jwt-allauth/blob/main/LICENSE)
+
 **Device-level session management for Django REST Framework, with refresh token theft detection.**
 
 JWT Allauth gives every login its own tracked session, rotates the refresh token on each
@@ -28,6 +34,10 @@ A replay is evidence that a session is compromised, and it is treated as such he
 whole session is revoked and both parties have to log in again. This is the behaviour
 described in [OAuth 2.0 Security Best Current Practice §4.14.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics#section-4.14.2),
 and it is the reason this library exists.
+
+[**Refresh token rotation is not enough**](https://jwt-allauth.readthedocs.io/en/latest/refresh_token_theft.html)
+works through the whole argument — including the four ways an implementation of it fails
+silently, whether you use this library or write it yourself.
 
 
 Relationship to Simple JWT
