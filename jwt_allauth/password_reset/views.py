@@ -40,6 +40,7 @@ from jwt_allauth.tokens.tokens import GenericToken
 from jwt_allauth.utils import (
     build_token_response,
     get_user_agent,
+    invitations_enabled,
     load_capability_user,
     sensitive_post_parameters_m,
 )
@@ -289,7 +290,7 @@ class SetPasswordView(CapabilityCookieViewMixin, ExtraThrottlesMixin, GenericAPI
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
-        if not getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        if not invitations_enabled():
             return HttpResponseNotFound()
         return super(SetPasswordView, self).dispatch(*args, **kwargs)
 

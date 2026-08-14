@@ -11,9 +11,10 @@ reads whatever that field holds -- the same path an admin-created account takes.
 """
 
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+
+from jwt_allauth.utils import self_registration_enabled
 
 
 class JWTAllAuthSocialAccountAdapter(DefaultSocialAccountAdapter):
@@ -29,9 +30,10 @@ class JWTAllAuthSocialAccountAdapter(DefaultSocialAccountAdapter):
         :class:`~jwt_allauth.registration.views.RegisterView` answers ``404`` under it --
         and a provider account nobody has seen before is a registration like any other.
         Leaving this to the default would open a way in that the registration endpoint
-        was explicitly shut.
+        was explicitly shut. Merely adding invitations does not close anything, so it
+        does not reach here.
         """
-        if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        if not self_registration_enabled():
             return False
         return super().is_open_for_signup(request, sociallogin)
 

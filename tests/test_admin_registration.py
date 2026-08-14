@@ -15,7 +15,7 @@ from jwt_allauth.constants import (
     EMAIL_CONFIRMATION,
 )
 from jwt_allauth.tokens.app_settings import RefreshToken
-from jwt_allauth.tokens.models import GenericTokenModel
+from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.utils import hash_token
 from .mixins import APIClient, TestsMixin
 
@@ -654,3 +654,150 @@ class AdminManagedEmailVerificationOffTests(TestsMixin):
         )
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
         self.assertIn('access', login_response.json())
+
+
+@override_settings(
+    JWT_ALLAUTH_INVITATIONS=True,
+    EMAIL_VERIFICATION=True,
+    PASSWORD_SET_REDIRECT='/set-password-ui/',
+    ROOT_URLCONF='tests.django_urls')
+class InvitationsAlongsideOpenRegistrationTests(TestsMixin):
+    """
+    Invitations added to a project that keeps its public sign-up.
+
+    ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` has always meant invitations *instead of*
+    open registration, which rules out the ordinary shape of a product: customers sign
+    themselves up and staff are invited. ``JWT_ALLAUTH_INVITATIONS`` adds the second way
+    in without taking the first one away.
+    """
+
+    INVITED_EMAIL = 'invited@demo.com'
+    SELF_EMAIL = 'self.signup@demo.com'
+
+    def setUp(self):
+        clear_url_caches()
+        from importlib import reload
+        import jwt_allauth.registration.urls
+        import jwt_allauth.urls
+        import tests.django_urls
+        reload(jwt_allauth.registration.urls)
+        reload(jwt_allauth.urls)
+        reload(tests.django_urls)
+
+        self.init()
+        self.user_register_url = reverse('rest_user_register')
+        self.set_password_url = reverse('rest_set_password')
+
+    def tearDown(self):
+        clear_url_caches()
+        from importlib import reload
+        import jwt_allauth.registration.urls
+        import jwt_allauth.urls
+        import tests.django_urls
+        reload(jwt_allauth.registration.urls)
+        reload(jwt_allauth.urls)
+        reload(tests.django_urls)
+
+    def test_both_ways_in_are_routed(self):
+        self.assertTrue(reverse('rest_register'))
+        self.assertTrue(reverse('rest_user_register'))
+
+    def test_public_sign_up_still_works(self):
+        """The regression that matters: adding invitations must not close the door."""
+        resp = self.client.post(
+            reverse('rest_register'),
+            data={
+                'email': self.SELF_EMAIL,
+                'password1': 'A-1_newpass',
+                'password2': 'A-1_newpass',
+                'first_name': self.FIRST_NAME,
+                'last_name': self.LAST_NAME,
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(get_user_model().objects.filter(email=self.SELF_EMAIL).exists())
+
+    def _invite(self):
+        self.token = str(RefreshToken.for_user(self.USER).access_token)
+        self.USER.is_staff = True
+        self.USER.save()
+        return self.client.post(
+            self.user_register_url,
+            data={'email': self.INVITED_EMAIL, 'first_name': 'In', 'last_name': 'Vited'},
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {self.token}',
+        )
+
+    def test_invitation_flow_completes(self):
+        invited = get_user_model().objects.create_user('invited', email=self.INVITED_EMAIL)
+        address = EmailAddress.objects.create(
+            user=invited, email=self.INVITED_EMAIL, verified=False, primary=True)
+        key = EmailConfirmationHMAC(address).key
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+
+        verify = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(verify.status_code, 302)
+        self.assertIn(SET_PASSWORD_COOKIE, self.client.cookies)
+
+        resp = self.client.post(
+            self.set_password_url,
+            data={'new_password1': 'A-1_newpass', 'new_password2': 'A-1_newpass'},
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('access', resp.json())
+
+    @override_settings(JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION=True)
+    def test_a_self_registered_confirmation_is_not_treated_as_an_invitation(self):
+        """
+        Both flows arrive through the same link, and the password is what tells them
+        apart. A sign-up that chose a password has to go through the ordinary
+        confirmation -- which enables the session registration left disabled and, under
+        ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION``, hands one out. The invitation path
+        does neither, so mistaking one for the other silently breaks sign-up.
+        """
+        signed_up = get_user_model().objects.create_user(
+            'selfsignup', email=self.SELF_EMAIL, password='A-1_newpass')
+        address = EmailAddress.objects.create(
+            user=signed_up, email=self.SELF_EMAIL, verified=False, primary=True)
+        pending = RefreshToken.for_user(signed_up, enabled=False)
+        key = EmailConfirmationHMAC(address).key
+        GenericTokenModel.objects.create(user=signed_up, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+
+        verify = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(verify.status_code, 302)
+        self.assertNotIn(SET_PASSWORD_COOKIE, self.client.cookies)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(user=signed_up, purpose=PASS_SET_ACCESS).exists())
+        address.refresh_from_db()
+        self.assertTrue(address.verified)
+
+        # The two assertions that only the ordinary confirmation satisfies.
+        self.assertTrue(
+            RefreshTokenWhitelistModel.objects.get(jti=pending.payload['jti']).enabled)
+        self.assertIn(REFRESH_TOKEN_COOKIE, verify.cookies)
+
+    def test_a_confirmation_with_no_invitation_behind_it_still_confirms(self):
+        """
+        With registration closed a key with no row behind it is refused. With sign-up
+        open it is an ordinary confirmation, and refusing it would break registration.
+        """
+        signed_up = get_user_model().objects.create_user(
+            'nolinkrow', email=self.SELF_EMAIL, password='A-1_newpass')
+        address = EmailAddress.objects.create(
+            user=signed_up, email=self.SELF_EMAIL, verified=False, primary=True)
+        key = EmailConfirmationHMAC(address).key
+
+        verify = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(verify.status_code, 302)
+        address.refresh_from_db()
+        self.assertTrue(address.verified)
+
+    def test_social_signup_stays_open(self):
+        """Only closed registration shuts social sign-up; invitations do not."""
+        from jwt_allauth.social.adapter import JWTAllAuthSocialAccountAdapter
+        self.assertTrue(JWTAllAuthSocialAccountAdapter().is_open_for_signup(None, None))

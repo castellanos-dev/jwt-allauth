@@ -138,6 +138,39 @@ def verification_is_mandatory() -> bool:
     )
 
 
+def invitations_enabled() -> bool:
+    """Whether an admin may create an account for somebody else to claim.
+
+    Two settings switch it on, and they are not the same question.
+    ``JWT_ALLAUTH_INVITATIONS`` adds the invitation endpoints and leaves self-service
+    sign-up exactly as it was, which is what most installations want: a public sign-up
+    for customers and invitations for staff.
+    ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` is the older setting and means something
+    stronger -- invitations *instead of* open registration -- so it implies this one. It
+    is unchanged and stays supported; see :func:`self_registration_enabled`.
+
+    Returns:
+        bool: ``True`` when ``/registration/user-register/`` and
+        ``/registration/set-password/`` are served.
+    """
+    if getattr(settings, 'JWT_ALLAUTH_INVITATIONS', False):
+        return True
+    return bool(getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False))
+
+
+def self_registration_enabled() -> bool:
+    """Whether anybody may open an account for themselves.
+
+    Only ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` closes it. Turning invitations on
+    through ``JWT_ALLAUTH_INVITATIONS`` adds a way in rather than replacing one, so
+    ``/registration/`` keeps answering and social sign-up keeps working.
+
+    Returns:
+        bool: ``True`` unless registration is closed to everyone but invited accounts.
+    """
+    return not bool(getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False))
+
+
 def enumeration_prevented():
     """Whether sign-up must hide that an e-mail address is already in use.
 

@@ -22,7 +22,9 @@ from jwt_allauth.schema import registration_schema
 from jwt_allauth.utils import (
     enumeration_prevented,
     get_user_agent,
+    invitations_enabled,
     refresh_token_as_cookie,
+    self_registration_enabled,
     sensitive_post_parameters_m,
     set_refresh_token_cookie,
     verification_is_mandatory,
@@ -95,8 +97,9 @@ class RegisterView(ExtraThrottlesMixin, CreateAPIView):
 
     @get_user_agent
     def create(self, request, *args, **kwargs):
-        # If admin-managed registration is enabled, disable open registration endpoint
-        if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        # Closed registration removes this endpoint. Adding invitations does not: they
+        # are a second way in, not a replacement for this one.
+        if not self_registration_enabled():
             return HttpResponseNotFound()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -174,7 +177,7 @@ class UserRegisterView(CreateAPIView):
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
-        if not getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        if not invitations_enabled():
             return HttpResponseNotFound()
         return super(UserRegisterView, self).dispatch(*args, **kwargs)
 

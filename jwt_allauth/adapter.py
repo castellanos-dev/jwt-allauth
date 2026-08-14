@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 
 from jwt_allauth.constants import EMAIL_CONFIRMATION, PASSWORD_RESET_REQUEST_URL
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
-from jwt_allauth.utils import get_template_path, hash_token
+from jwt_allauth.utils import get_template_path, hash_token, invitations_enabled
 
 
 class JWTAllAuthAdapter(DefaultAccountAdapter):
@@ -133,16 +133,12 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
                 }
             )
         if signup:
-            # Decide which templates to use based on whether the user was invited
-            # via admin-managed registration (no usable password yet) or signed
-            # up directly (regular self-registration flow).
-            is_admin_managed = (
-                getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False)
-                and not user.has_usable_password()
-            )
+            # Decide which templates to use based on whether the account was created
+            # by an admin (no usable password yet) or signed up directly.
+            is_invitation = invitations_enabled() and not user.has_usable_password()
 
-            if is_admin_managed:
-                # Admin-managed invitation email: focuses on confirming email and
+            if is_invitation:
+                # Invitation email: focuses on confirming email and
                 # guiding the user to set their password after verification.
                 email_template = "email/admin_invite/email_admin_invite"
                 template_path = get_template_path(
@@ -179,7 +175,12 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
         # Persist the digest of the confirmation key as a generic token so that the
         # verify view can enforce single-use semantics without storing a usable
         # credential in the database.
-        if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        #
+        # Written for every confirmation while invitations are on, not only for the
+        # invited ones: with registration closed, the verify view turns down a key it
+        # finds no row for, and an account that has already set its password still
+        # confirms address changes through the same link.
+        if invitations_enabled():
             token_serializer = GenericTokenModelSerializer(
                 data={
                     "token": hash_token(confirmation_key),
