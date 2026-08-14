@@ -27,24 +27,11 @@ from jwt_allauth.utils import (
     set_refresh_token_cookie,
     verification_is_mandatory,
 )
-from jwt_allauth.constants import (
-    MFA_TOTP_DISABLED,
-    MFA_TOTP_REQUIRED,
-)
+from jwt_allauth.constants import MFA_TOTP_REQUIRED
+from jwt_allauth.mfa.gate import get_mfa_totp_mode
 from jwt_allauth.mfa.storage import create_setup_challenge
 
 logger = logging.getLogger(__name__)
-
-
-def get_mfa_totp_mode() -> str:
-    """
-    Return the current MFA TOTP mode from settings.
-
-    This must be evaluated at call time (not import time) so that
-    Django's `override_settings` used in tests – and any runtime changes
-    – are respected.
-    """
-    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
 
 
 @registration_schema

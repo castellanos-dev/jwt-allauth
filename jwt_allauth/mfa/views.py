@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status
@@ -25,6 +24,7 @@ from .serializers import (
     MFADeactivateSerializer,
     AuthenticatorSerializer,
 )
+from jwt_allauth.mfa.gate import get_mfa_totp_mode
 from jwt_allauth.mfa.permissions import IsAuthenticatedOrHasMFASetupChallenge
 from jwt_allauth.mfa.storage import (
     clear_failed_login_attempts,
@@ -38,16 +38,6 @@ from jwt_allauth.mfa.storage import (
     store_setup_secret,
 )
 
-
-def get_mfa_totp_mode() -> str:
-    """
-    Return the current MFA TOTP mode from settings.
-
-    This must be evaluated at call time (not import time) so that
-    Django's `override_settings` used in tests – and any runtime changes
-    – are respected.
-    """
-    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
 
 try:
     from allauth.mfa.models import Authenticator
