@@ -1,6 +1,30 @@
 Installation
 ------------
 
+Supported versions
+==================
+
+Python 3.10+ and Django 4.2+, on any Django REST Framework 3.15+. The combinations the
+suite runs against are the floor (Django 4.2, allauth 65.9, Simple JWT 5.3.1), the
+current Django LTS, and whatever is newest on the day CI runs.
+
+The dependencies carry **no upper bounds**: a cap in a library propagates a conflict to
+every project that depends on it and blocks the capped package's security releases.
+
+What takes their place is a startup check. jwt-allauth builds on internals of allauth and
+Simple JWT -- Simple JWT's token and authentication classes are subclassed and its
+settings rewritten at startup, and allauth's TOTP and recovery-code helpers live under a
+package named ``internal`` -- so a new major of either can move ground this library
+stands on. When one is newer than anything the release was tested against,
+``manage.py check`` says so (``jwt_allauth.W003``) and names what to exercise before
+deploying. It is a heads-up, not a fault, and
+
+.. code-block:: python
+
+    SILENCED_SYSTEM_CHECKS = ['jwt_allauth.W003']
+
+turns it off.
+
 Quick Start
 ===========
 

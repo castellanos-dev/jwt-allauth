@@ -1,6 +1,40 @@
 Release Notes
 =============
 
+Version 1.4.0
+-------------
+
+Released: August 14, 2026
+
+New Features
+~~~~~~~~~~~~
+
+- **Any user model**: ``jwt_allauth.JAUser`` is no longer required. The ``role`` claim is read from a ``role`` field when the user model has one, and derived from ``is_staff`` / ``is_superuser`` when it does not — so a project that cannot swap ``AUTH_USER_MODEL`` can adopt the library with nothing to migrate. Staff and superusers keep the access :class:`~jwt_allauth.permissions.BasePermission` grants them either way. Roles of the project's own still need a field, and the admin-managed registration endpoint drops its ``role`` input when there is nowhere to write it. See :doc:`configuration.user_model`.
+
+- **RoleMixin**: adds the ``role`` field to a user model that already exists, in one migration. **Existing staff rows must be backfilled in that same migration**, or they drop to a regular user on their next login — :doc:`configuration.user_model` carries the code. ``JAUser`` is the mixin already applied and is unchanged; no migration comes out of this release for projects on it.
+
+- **Startup checks for a** ``role`` **field that means something else**: ``manage.py check`` now reports a ``role`` on the user model that cannot serve as the claim — an error when it is a relation (no token would encode), a warning when it is not an integer (staff would silently lose access).
+
+Compatibility
+~~~~~~~~~~~~~
+
+- **Django 6.0 and 6.1 are supported.** Tested from the Django 4.2 floor under Python 3.10 through to Django 6.1 under Python 3.13.
+
+- **Dependencies no longer carry upper bounds**, so a new Django, DRF, allauth or Simple JWT release cannot block installation. ``manage.py check`` reports an allauth or Simple JWT major newer than this release was tested against (``jwt_allauth.W003``); ``SILENCED_SYSTEM_CHECKS`` turns it off.
+
+- **The** ``mfa`` **extra now requires allauth 65.9** (was 65.5). Earlier allauth asks for ``fido2`` with no upper bound, and fido2 2.0 removed a flag it depends on, so that combination raised ``AttributeError`` on any request touching ``allauth.mfa``. **A project pinned to allauth 65.5–65.8 with the** ``mfa`` **extra will hit a resolution conflict on upgrade and has to move the pin.** The core dependency floor is unchanged at 65.5.
+
+- **An empty nullable** ``role`` **now reads as the account's staff flags** instead of ``null``. ``JAUser`` and ``RoleMixin`` declare the field ``null=False``, so neither is affected. A project with a nullable ``role`` of its own will see staff accounts whose column was never filled regain the access the permission classes have always documented; nobody loses access.
+
+- **The package declares its MIT licence** in its published metadata, which it had never done.
+
+Documentation
+~~~~~~~~~~~~~
+
+- **New page** — :doc:`refresh_token_theft`: why rotating refresh tokens does not detect theft on its own, and the four ways an implementation of reuse detection fails silently.
+
+- ``SECURITY.md`` gives vulnerability reports a private channel; ``CONTRIBUTING.md`` covers the test matrix.
+
 Version 1.3.1
 -------------
 

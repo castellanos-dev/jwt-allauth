@@ -29,7 +29,7 @@ if hasattr(django, 'setup'):
 project = 'JWT Allauth'
 copyright = '2025, Fernando Castellanos'
 author = 'Fernando Castellanos'
-release = '1.3.1'
+release = '1.4.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -47,7 +47,34 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
+    'sphinxext.opengraph',
 ]
 
 html_theme = 'furo'
 html_static_path = ['_static']
+
+# -- Discoverability ---------------------------------------------------------
+
+# Sphinx would otherwise stamp the release into the <title> of every page, which makes a
+# bookmark or a search result go stale on the next version.
+html_title = project
+
+# The root page names its subject instead, through _templates/base.html. Kept under 60
+# characters so that search engines show it whole.
+html_context = {
+    'root_page_title': 'JWT Allauth: JWT sessions for Django REST Framework',
+}
+
+# Canonical URL, so that the copies Read the Docs serves for every version and every pull
+# request preview do not compete with one another. The environment variable is the one
+# Read the Docs sets during its own builds.
+html_baseurl = os.environ.get(
+    'READTHEDOCS_CANONICAL_URL', 'https://jwt-allauth.readthedocs.io/en/latest/'
+)
+
+# og: tags, so that a link pasted into Slack, Discord or a social timeline renders as
+# something other than a bare URL.
+ogp_site_url = html_baseurl
+ogp_site_name = 'JWT Allauth'
+ogp_type = 'website'
+ogp_enable_meta_description = True

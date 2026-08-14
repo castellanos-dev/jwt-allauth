@@ -1,9 +1,8 @@
 View Permissions
 ----------------
 
-JWT Allauth enables role-based authentication for API views. The user model includes an integer field representing the
-assigned role, which is embedded in both refresh and access tokens. This allows authentication to occur without
-requiring database queries during the process.
+JWT Allauth enables role-based authentication for API views. The role is embedded in both refresh and access tokens,
+which allows authorization to occur without requiring database queries during the process.
 
 The default role codes are:
 
@@ -12,6 +11,16 @@ The default role codes are:
     - USER_CODE: 0
 
 New users are assigned the default role value of 0.
+
+Where the role comes from depends on the user model, and no particular one is required:
+
+    - A user model carrying a ``role`` field is authoritative. :class:`~jwt_allauth.models.JAUser` has one, and
+      :class:`~jwt_allauth.models.RoleMixin` adds it to a model that already exists. This is what makes roles of the
+      project's own -- ``accepted_roles = [700]`` -- possible.
+    - A user model without one falls back to ``is_staff`` and ``is_superuser``, so staff and superusers are still
+      told apart from regular users without changing ``AUTH_USER_MODEL``.
+
+See :doc:`configuration.user_model` for the three configurations and how to migrate between them.
 
 Because the role travels inside the tokens, a role change is not visible to the permission classes until a new token is
 issued. The refresh endpoint regenerates the role claim from the database on every rotation, so the change applies at

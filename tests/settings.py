@@ -151,3 +151,15 @@ except ImportError:
     pass
 else:
     REST_FRAMEWORK = {'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'}
+
+# Password hashing, for the test suite only.
+#
+# Django's default is PBKDF2 at a million iterations, which costs ~600 ms per hash on
+# purpose. This suite creates accounts and logs in constantly, so that default was the
+# single largest thing in its runtime: the same 490 tests take ~440 s under it and ~41 s
+# under this. Nothing here tests the hashing itself -- the password *validators* run
+# unchanged, and no test asserts on how long anything takes.
+#
+# MD5 is not a password hash. It belongs in this file and nowhere else: a project copying
+# it into its own settings has removed the protection on every stored password.
+PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
