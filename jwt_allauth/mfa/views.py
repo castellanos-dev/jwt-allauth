@@ -16,7 +16,13 @@ from jwt_allauth.constants import (
 
 from jwt_allauth.throttling import ExtraThrottlesMixin
 from jwt_allauth.tokens.app_settings import RefreshToken
-from jwt_allauth.utils import build_token_response, is_email_verified, load_user, verification_is_mandatory
+from jwt_allauth.utils import (
+    build_token_response,
+    get_user_agent,
+    is_email_verified,
+    load_user,
+    verification_is_mandatory,
+)
 from .serializers import (
     MFAActivateSerializer,
     MFAVerifySerializer,
@@ -122,6 +128,7 @@ class MFAActivateView(ExtraThrottlesMixin, APIView):
     serializer_class = MFAActivateSerializer
     extra_throttle_classes = (AnonRateThrottle, UserRateThrottle)
 
+    @get_user_agent
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
             return Response(
@@ -183,7 +190,7 @@ class MFAActivateView(ExtraThrottlesMixin, APIView):
             # withhold: registration itself hands one out.
             verification_pending = verification_is_mandatory() and not is_email_verified(user)
 
-            refresh = RefreshToken.for_user(user, enabled=not verification_pending)
+            refresh = RefreshToken.for_user(user, request, enabled=not verification_pending)
 
             if verification_pending:
                 # Same shape as RegisterView.get_response_data: disabled refresh token,
@@ -281,6 +288,7 @@ class MFAVerifyView(ExtraThrottlesMixin, APIView):
     serializer_class = MFAVerifySerializer
     extra_throttle_classes = (AnonRateThrottle,)
 
+    @get_user_agent
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
             return Response(
@@ -324,7 +332,7 @@ class MFAVerifyView(ExtraThrottlesMixin, APIView):
         delete_login_challenge(challenge_id)
         clear_failed_login_attempts(user.id)
 
-        refresh = RefreshToken.for_user(user)
+        refresh = RefreshToken.for_user(user, request)
         return build_token_response(refresh)
 
 
@@ -338,6 +346,7 @@ class MFAVerifyRecoveryView(ExtraThrottlesMixin, APIView):
     serializer_class = MFAVerifyRecoverySerializer
     extra_throttle_classes = (AnonRateThrottle,)
 
+    @get_user_agent
     def post(self, request: Request) -> Response:
         if get_mfa_totp_mode() == MFA_TOTP_DISABLED:
             return Response(
@@ -381,5 +390,5 @@ class MFAVerifyRecoveryView(ExtraThrottlesMixin, APIView):
         delete_login_challenge(challenge_id)
         clear_failed_login_attempts(user.id)
 
-        refresh = RefreshToken.for_user(user)
+        refresh = RefreshToken.for_user(user, request)
         return build_token_response(refresh)
