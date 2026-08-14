@@ -5,6 +5,9 @@ Registered from :meth:`jwt_allauth.apps.JWTAllauthAppConfig.ready`, and run by
 ``manage.py check``, ``runserver`` and the deployment checks.
 """
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as distribution_version
+
 from django.conf import settings
 from django.core.checks import Error, Tags, Warning, register
 from django.core.exceptions import FieldDoesNotExist
@@ -22,6 +25,22 @@ ROLE_FIELD_RELATION_ID = 'jwt_allauth.E001'
 
 #: Identifier of the check reported when the role field cannot hold the built-in role codes.
 ROLE_FIELD_TYPE_ID = 'jwt_allauth.W002'
+
+#: Identifier of the check reported when an upstream is newer than anything this release saw.
+UNTESTED_UPSTREAM_ID = 'jwt_allauth.W003'
+
+#: Highest major of each upstream this release was tested against, and what is at stake.
+#:
+#: These two are not ordinary dependencies. The library subclasses simplejwt's token and
+#: authentication classes and rewrites its settings at startup, and it reaches into
+#: ``allauth.mfa``'s internal TOTP and recovery-code helpers -- modules under a package
+#: named ``internal``, which is allauth's way of saying they may move. A major release of
+#: either can therefore break this library in ways its own version number says nothing
+#: about. **Bump these on every release that tests against a new major.**
+TESTED_UPSTREAM_MAJORS = {
+    'django-allauth': 65,
+    'djangorestframework-simplejwt': 5,
+}
 
 
 def _reverses(name, **kwargs):
@@ -133,3 +152,64 @@ def check_role_field(app_configs, **kwargs):
         ]
 
     return []
+
+
+def _installed_major(distribution):
+    """
+    Major version of an installed distribution, or ``None`` when it cannot be read.
+
+    Read from the installed metadata rather than from the package, so that it works the
+    same for every upstream and does not depend on any of them exposing a version
+    attribute. A version that does not start with a number is not worth guessing at:
+    packaging allows a good deal more than ``major.minor``, and a wrong reading here
+    would produce a warning about nothing.
+    """
+    try:
+        raw = distribution_version(distribution)
+    except PackageNotFoundError:
+        return None
+    head = raw.split('.', 1)[0]
+    return int(head) if head.isdigit() else None
+
+
+@register()
+def check_upstream_versions(app_configs, **kwargs):
+    """
+    Report an upstream newer than any this release was tested against.
+
+    This library used to cap the majors of allauth and simplejwt in its own metadata.
+    A cap is the wrong tool: it blocks the install outright, including for the security
+    releases of an upstream, and it propagates a conflict to every project that also
+    depends on the capped package -- all to guard against a break that may never happen.
+    A project is now free to install what it likes and is told, once, at startup.
+
+    What the warning is about is real, though, and specific: the coupling to these two
+    runs through their internals rather than their documented surface -- simplejwt's
+    token and authentication classes are subclassed and its settings rewritten at
+    startup, and allauth's TOTP and recovery-code helpers live under ``internal``. A
+    major of either can move that ground without saying so.
+
+    Nothing here means the installation is broken. It means this combination is one
+    nobody has run the suite against, and that its authentication is worth exercising
+    before it reaches production.
+    """
+    messages = []
+    for distribution, tested_major in sorted(TESTED_UPSTREAM_MAJORS.items()):
+        major = _installed_major(distribution)
+        if major is None or major <= tested_major:
+            continue
+        messages.append(
+            Warning(
+                f"{distribution} {major}.x is newer than the {tested_major}.x this "
+                f"version of jwt-allauth was tested against.",
+                hint=(
+                    f"jwt-allauth builds on internals of {distribution}, so a new major "
+                    f"can change behaviour it depends on without any error at import. "
+                    f"Exercise login, refresh token rotation and MFA before deploying, "
+                    f"and check for a newer jwt-allauth. This is a heads-up, not a fault: "
+                    f"silence it with SILENCED_SYSTEM_CHECKS = ['{UNTESTED_UPSTREAM_ID}']."
+                ),
+                id=UNTESTED_UPSTREAM_ID,
+            )
+        )
+    return messages

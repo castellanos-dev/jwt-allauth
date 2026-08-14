@@ -21,14 +21,19 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python 3.12
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.12"
+        python-version: |
+          3.12
+          3.13
     - name: Install tox
       run: |
         python -m pip install --upgrade pip
         pip install tox
-    - name: Run lint and latest-deps tests via tox
+    # The dependencies carry no upper bounds, so py313-latest resolves to whatever is
+    # current on the day it runs. That is the point: a breaking upstream release shows
+    # up here rather than in an installation.
+    - name: Run lint, LTS and latest-deps tests via tox
       run: |
-        tox -e lint,py312-latest
+        tox -e lint,py312-lts,py313-latest

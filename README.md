@@ -55,6 +55,17 @@ token here."* The rows marked — follow from that: there is no token implementa
 the one thing this library does not do, and no amount of session handling makes up for it.
 
 
+Requirements
+------------
+
+Python 3.10+ and Django 4.2 through 6.1, on Django REST Framework 3.15+.
+
+The dependencies carry no upper bounds — a cap in a library propagates a conflict to
+every project downstream and blocks the capped package's security releases. A startup
+check reports an allauth or Simple JWT major newer than the release was tested against
+(`jwt_allauth.W003`), rather than the install refusing to resolve.
+
+
 Quick Start
 -----------
 

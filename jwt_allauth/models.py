@@ -1,9 +1,19 @@
+import django
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.contrib.auth.models import UserManager as DefaultUserManager
 from django.db import models
 from django.db.models import Q
 
 from jwt_allauth.roles import STAFF_CODE, SUPER_USER_CODE, USER_CODE, has_role_field
+
+# Django 5.1 renamed ``CheckConstraint(check=...)`` to ``condition`` and 6.0 removed the
+# old spelling outright. Supported Djangos span both sides of that, so the argument is
+# named at import time rather than written down.
+_CONSTRAINT_CONDITION = 'condition' if django.VERSION >= (5, 1) else 'check'
+
+
+def _check_constraint(condition, name):
+    return models.CheckConstraint(name=name, **{_CONSTRAINT_CONDITION: condition})
 
 
 class UserManager(DefaultUserManager):
@@ -96,12 +106,12 @@ class JAUser(RoleMixin, AbstractUser):
 
     class Meta:
         constraints = [
-            models.CheckConstraint(
-                check=~Q(is_staff=True) | Q(role=STAFF_CODE),
+            _check_constraint(
+                ~Q(is_staff=True) | Q(role=STAFF_CODE),
                 name=f"staff_role_equal_to_{STAFF_CODE}"
             ),
-            models.CheckConstraint(
-                check=~(~Q(is_staff=True) & Q(is_superuser=True)) | Q(role=SUPER_USER_CODE),
+            _check_constraint(
+                ~(~Q(is_staff=True) & Q(is_superuser=True)) | Q(role=SUPER_USER_CODE),
                 name=f"superuser_role_equal_to_{SUPER_USER_CODE}"
             ),
         ]

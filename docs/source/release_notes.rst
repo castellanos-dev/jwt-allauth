@@ -17,6 +17,15 @@ New Features
 
 - **Two startup checks for a role field that means something else**: a project may already have a ``role`` on its user model standing for something entirely different, and the library will read it regardless. A relational one is reported as an error (``jwt_allauth.E001``): it puts a model instance in the payload and the token fails to encode, so every login raises. A non-integer one is reported as a warning (``jwt_allauth.W002``): it encodes fine and then matches nothing, so staff quietly lose the access ``BasePermission`` grants them by default — harmless in a project whose permission classes all declare ``accepted_roles`` of that same type, which is why it is not an error.
 
+Compatibility
+~~~~~~~~~~~~~
+
+- **Django 6.0 and 6.1 are supported, and the dependency caps are gone**: every dependency carried an upper bound, and ``Django>=4.2,<6.0`` had been keeping this package off two Django majors since Django 6.0 was released in December 2025. The whole of the incompatibility was one keyword argument: Django 5.1 renamed ``CheckConstraint(check=...)`` to ``condition`` and 6.0 removed the old spelling, which ``JAUser`` used for its two check constraints. The argument is now named at import time from ``django.VERSION``, and the suite passes unmodified on Django 6.1 under Python 3.13 as it does on the 4.2 floor under 3.10. An upper bound in a library propagates a conflict to every project that depends on it and blocks the security releases of the capped package, to guard against a break that may never arrive — so ``django-allauth``, ``djangorestframework``, ``djangorestframework-simplejwt`` and ``django-user-agents`` lost theirs too. The floors are unchanged.
+
+- **A startup check replaces the caps** (``jwt_allauth.W003``): the coupling to allauth and Simple JWT is not the ordinary kind — Simple JWT's token and authentication classes are subclassed and its settings rewritten in ``AppConfig.ready``, and allauth's TOTP and recovery-code helpers are imported from under ``allauth.mfa...internal``, a package name that is allauth's way of saying they may move. A new major of either can change behaviour this library depends on with nothing failing at import. ``manage.py check`` now reports an upstream newer than any the release was tested against, names what to exercise before deploying, and says how to silence it. Installation is never blocked. The majors it compares against live in ``jwt_allauth.checks.TESTED_UPSTREAM_MAJORS`` and are bumped as the matrix grows.
+
+- **One less internal import**: ``jwt_allauth.test`` pulled ``user_field`` from ``allauth.account.internal.userkit``, which put the test helpers this library ships — and therefore the suites of the projects using them — at the mercy of allauth rearranging a private module. It is a five-line function and it is now local, keeping the same behaviour of skipping a field the user model does not have.
+
 Documentation
 ~~~~~~~~~~~~~
 
