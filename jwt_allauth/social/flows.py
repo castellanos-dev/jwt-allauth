@@ -212,8 +212,11 @@ def sociallogin_from_code(request, provider, data: Dict[str, Any]):
         token = adapter.parse_token(token_data)
         token.app = app
         sociallogin = adapter.complete_login(request, app, token, response=token_data)
-    except (OAuth2Error, ValidationError, requests.RequestException) as e:
-        raise SocialTokenInvalid(str(e) or None)
+    except (OAuth2Error, ValidationError, requests.RequestException):
+        raise SocialTokenInvalid(
+            _("Unable to authenticate with the social provider."),
+            code='social_token_invalid',
+        )
 
     sociallogin.token = token
     return sociallogin
