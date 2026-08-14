@@ -9,12 +9,16 @@ a model with no role of its own -- and the startup checks that catch the fourth,
 ``role`` is a field of the project's meaning something else.
 """
 
+from unittest.mock import patch
+
+from django.contrib.auth.models import UserManager as DefaultUserManager
 from django.core.checks import Error, Warning
-from django.db import models
-from django.test import SimpleTestCase, override_settings
+from rest_framework import serializers
+from django.db import IntegrityError, models, transaction
+from django.test import SimpleTestCase, TestCase, override_settings
 
 from jwt_allauth.checks import ROLE_FIELD_RELATION_ID, ROLE_FIELD_TYPE_ID, check_role_field
-from jwt_allauth.models import JAUser, RoleMixin
+from jwt_allauth.models import JAUser, RoleMixin, UserManager
 from jwt_allauth.registration.serializers import UserRegisterSerializer
 from jwt_allauth.roles import (
     STAFF_CODE,
@@ -236,6 +240,29 @@ class AdminRegistrationRoleFieldTests(SimpleTestCase):
         serializer.custom_signup(None, user)
         self.assertEqual(user.role, 700)
 
+    def test_a_missing_role_is_rejected_when_the_model_stores_one(self):
+        with self.assertRaises(serializers.ValidationError) as raised:
+            UserRegisterSerializer().validate({'email': 'someone@example.com'})
+        self.assertIn('role', raised.exception.detail)
+
+    @override_settings(AUTH_USER_MODEL='jwt_allauth.RolelessUser')
+    def test_a_missing_role_is_not_rejected_when_there_is_nowhere_to_store_one(self):
+        # The endpoint has to stay usable on a model with no roles; demanding a field it
+        # dropped from itself would make every request fail validation.
+        data = {'email': 'someone@example.com'}
+        self.assertEqual(UserRegisterSerializer().validate(data), data)
+
+    def test_a_role_that_is_not_a_number_leaves_the_account_at_its_default(self):
+        # `role` is declared as an IntegerField, so this only arrives when a subclass
+        # widens it. Assigning the raw value would put a string in the claim, where
+        # `'admin' != 1000` costs staff their access without anything failing.
+        serializer = self._serializer(role='administrator')
+        serializer.cleaned_data = serializer.get_cleaned_data()
+        user = MixedInRoleUser()
+        user.set_unusable_password = lambda: None
+        serializer.custom_signup(None, user)
+        self.assertEqual(user.role, USER_CODE)
+
 
 class RoleFieldCheckTests(SimpleTestCase):
     """A `role` field meaning something else is a startup question, not a 500 at login."""
@@ -263,3 +290,124 @@ class RoleFieldCheckTests(SimpleTestCase):
         messages = check_role_field(None)
         self.assertEqual([m.id for m in messages], [ROLE_FIELD_RELATION_ID])
         self.assertIsInstance(messages[0], Error)
+
+
+class RoleAwareManagerTests(SimpleTestCase):
+    """
+    ``UserManager`` keeps the role in step with the staff flags, and stays out of the way
+    when there is no field to keep.
+
+    The second half is the one that breaks loudly if it regresses: Django raises
+    ``TypeError`` on a keyword its model has no field for, so a role forced onto a model
+    that cannot hold one takes ``createsuperuser`` down with it.
+    """
+
+    @staticmethod
+    def _manager(model):
+        manager = UserManager()
+        manager.model = model
+        return manager
+
+    def test_a_staff_account_is_given_the_staff_role(self):
+        with patch.object(DefaultUserManager, 'create_user') as create:
+            self._manager(JAUser).create_user('u', is_staff=True)
+        self.assertEqual(create.call_args.kwargs['role'], STAFF_CODE)
+
+    def test_a_superuser_that_is_not_staff_is_given_the_superuser_role(self):
+        with patch.object(DefaultUserManager, 'create_user') as create:
+            self._manager(JAUser).create_user('u', is_superuser=True)
+        self.assertEqual(create.call_args.kwargs['role'], SUPER_USER_CODE)
+
+    def test_an_explicit_role_is_left_alone(self):
+        with patch.object(DefaultUserManager, 'create_user') as create:
+            self._manager(JAUser).create_user('u', is_staff=True, role=700)
+        self.assertEqual(create.call_args.kwargs['role'], 700)
+
+    def test_a_plain_account_is_given_no_role_and_takes_the_default(self):
+        with patch.object(DefaultUserManager, 'create_user') as create:
+            self._manager(JAUser).create_user('u')
+        self.assertNotIn('role', create.call_args.kwargs)
+
+    def test_createsuperuser_is_given_the_staff_role(self):
+        with patch.object(DefaultUserManager, 'create_superuser') as create:
+            self._manager(JAUser).create_superuser('u')
+        self.assertEqual(create.call_args.kwargs['role'], STAFF_CODE)
+
+    def test_createsuperuser_refuses_a_role_that_is_not_staff(self):
+        with patch.object(DefaultUserManager, 'create_superuser'):
+            with self.assertRaises(ValueError):
+                self._manager(JAUser).create_superuser('u', role=USER_CODE)
+
+    def test_no_role_reaches_a_model_without_the_field(self):
+        with patch.object(DefaultUserManager, 'create_user') as create:
+            self._manager(RolelessUser).create_user('u', is_staff=True)
+        self.assertNotIn('role', create.call_args.kwargs)
+
+    def test_no_role_reaches_createsuperuser_on_a_model_without_the_field(self):
+        with patch.object(DefaultUserManager, 'create_superuser') as create:
+            self._manager(RolelessUser).create_superuser('u')
+        self.assertNotIn('role', create.call_args.kwargs)
+
+    def test_createsuperuser_does_not_second_guess_a_model_without_the_field(self):
+        # The ValueError above guards a promise the constraints make; a model with no
+        # role field makes no such promise, so a role passed to it is not its business.
+        with patch.object(DefaultUserManager, 'create_superuser'):
+            self._manager(RolelessUser).create_superuser('u', role=USER_CODE)
+
+
+class JAUserConstraintTests(SimpleTestCase):
+    """
+    The constraints tying the staff flags of ``JAUser`` to their role codes.
+
+    ``models.py`` picks between ``CheckConstraint(check=...)`` and ``condition=`` at
+    import time, from ``django.VERSION``. Get that wrong and the constraint is built with
+    an argument the running Django ignores or rejects -- so what is worth pinning is that
+    a condition arrives at the other end, whichever Django is underneath.
+    """
+
+    @staticmethod
+    def _condition(constraint):
+        # Django 5.1 renamed `check` to `condition` and 6.0 removed the old name, so the
+        # test reads whichever one this Django exposes rather than assuming.
+        return getattr(constraint, 'condition', None) or getattr(constraint, 'check', None)
+
+    def test_both_constraints_are_declared(self):
+        self.assertEqual(
+            {c.name for c in JAUser._meta.constraints},
+            {f'staff_role_equal_to_{STAFF_CODE}', f'superuser_role_equal_to_{SUPER_USER_CODE}'},
+        )
+
+    def test_every_constraint_carries_a_condition(self):
+        for constraint in JAUser._meta.constraints:
+            with self.subTest(constraint=constraint.name):
+                self.assertIsNotNone(self._condition(constraint))
+
+
+class JAUserConstraintEnforcementTests(TestCase):
+    """The constraints reach the database, which is the only place they do any work."""
+
+    def test_a_staff_row_with_a_regular_role_is_rejected(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                JAUser.objects.create(username='staff-mismatch', is_staff=True, role=USER_CODE)
+
+    def test_a_superuser_row_that_is_not_staff_needs_the_superuser_role(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                JAUser.objects.create(
+                    username='super-mismatch', is_staff=False, is_superuser=True, role=USER_CODE)
+
+    def test_a_matching_pair_is_accepted(self):
+        JAUser.objects.create(username='staff-ok', is_staff=True, role=STAFF_CODE)
+        JAUser.objects.create(username='plain-ok', role=USER_CODE)
+
+
+class BrokenUserModelCheckTests(SimpleTestCase):
+    """A user model Django itself cannot resolve is Django's to report, not ours."""
+
+    @override_settings(AUTH_USER_MODEL='nonexistent.Model')
+    def test_the_role_check_stays_quiet_rather_than_raising(self):
+        # Raising here would replace Django's own error about AUTH_USER_MODEL with a
+        # traceback out of this library, and `manage.py check` would stop before saying
+        # what is actually wrong.
+        self.assertEqual(check_role_field(None), [])
