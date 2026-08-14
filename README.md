@@ -56,7 +56,7 @@ REST API:
 | **Role and claims re-read from the DB on rotation**  |       ✗        |       ✗        |             —                  | **✓**                 |
 | Login, sign-up, e-mail verification, password reset  |       ✓        |       ✓        |             ✓                  | ✓                     |
 | Second factor                                        | TOTP, passkeys |    WebAuthn    | TOTP, recovery codes, WebAuthn | TOTP, recovery codes  |
-| **Social authentication**                            |     **✓**      |     **✓**      |           **✓**                | **not yet**           |
+| Social authentication                                |       ✓        |       ✓        |             ✓                  | ✓&nbsp;⁴              |
 
 ¹ dj-rest-auth authenticates with DRF's own tokens by default. JWT means installing Simple
 JWT yourself and setting `USE_JWT = True`; it is not a dependency of the package.
@@ -67,8 +67,11 @@ token here."* The rows marked — follow from that: there is no token implementa
 
 ³ `allauth.usersessions` lists Django sessions, not JWT sessions.
 
-**Social authentication is not implemented.** If a project needs it today, dj-rest-auth
-and allauth headless cover it.
+⁴ Provider token and authorization code with PKCE, one generic endpoint per flow. The
+server-initiated redirect flow is not covered. A provider that vouches for an address an
+established account already holds signs that account in and leaves its password usable,
+rather than wiping it as allauth's e-mail authentication does. See
+[Social login](https://jwt-allauth.readthedocs.io/en/latest/social_login.html).
 
 
 Requirements
@@ -148,6 +151,10 @@ Features
   outstanding capability (unused reset links, MFA challenges) and every unconfirmed
   secondary address.
 - **Role-based permissions**: authorization from a JWT claim, with no user table lookup.
+- **Social login**: sign in through any provider `django-allauth` registers, by provider
+  token or by authorization code with PKCE, with one generic endpoint per flow. An address
+  a provider vouches for signs in the account that already holds it, without wiping the
+  password that account still uses.
 - **The rest of the flows**: e-mail verification, password reset and change, MFA over
   TOTP with recovery codes, admin-managed registration, session logout.
 - **Effortless setup**: get a project running with a single command.

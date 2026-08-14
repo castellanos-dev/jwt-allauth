@@ -165,6 +165,18 @@ Configure these variables in the ``settings.py`` file of your project.
 
     - ``LOGOUT_ON_PASSWORD_CHANGE`` - whether a credential change revokes the account's sessions (default: ``True``). Applies to the password change, the password reset and the set-password step, and takes down **every** session -- the one asking for the change included, which is answered with a replacement session minted after the change -- along with every capability still outstanding and every unconfirmed secondary address. Setting it to ``False`` revokes nothing.
 
+- Social login
+
+    See :doc:`social_login`. The endpoints are routed only when ``allauth.socialaccount`` is installed together with the ``social`` extra.
+
+    - ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING`` - whether an address a provider vouches for may resolve to an account that already holds it (default: ``True``). ``True`` links for every provider, ``False`` for none, and a list of provider ids links only for those. Linking signs the existing account in and leaves its password usable; the trust rests on the provider's claim that it verified the address, which is why it can be narrowed per provider. An account whose address was never confirmed and which was never used is superseded instead, exactly as a duplicate registration supersedes it. With linking off, a taken address answers ``409`` ``email_already_registered``.
+
+    - ``JWT_ALLAUTH_SOCIAL_REQUIRE_VERIFIED_EMAIL`` - whether a provider has to vouch for the address before an account is created (default: ``True``). With it off, an unvouched address falls back to the registration behaviour: the account is created, the session is withheld and a confirmation mail goes out.
+
+    - ``JWT_ALLAUTH_SOCIAL_CALLBACK_URLS`` - redirect URIs the authorization-code endpoint will exchange a code against (default: ``None``, meaning any, with the provider left to reject a mismatch). A list turns it into an allow-list.
+
+    allauth's own settings still govern what they always governed: ``SOCIALACCOUNT_PROVIDERS`` (where the client id and secret live), ``SOCIALACCOUNT_ADAPTER`` (jwt-allauth installs its own when the project declares none), ``SOCIALACCOUNT_AUTO_SIGNUP``, ``SOCIALACCOUNT_STORE_TOKENS`` and ``SOCIALACCOUNT_REQUESTS_TIMEOUT``. ``SOCIALACCOUNT_EMAIL_AUTHENTICATION`` is the exception: it does **not** apply to these endpoints, and ``jwt_allauth.W005`` says so at startup.
+
 - Admin-managed registration
 
     - ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` - enable admin-only registration endpoint and set-password flow (default: ``False``). When enabled with ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, the ``/mfa/activate/`` endpoint issues tokens immediately after successful MFA setup.

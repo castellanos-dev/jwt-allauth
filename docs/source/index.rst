@@ -46,12 +46,6 @@ and it is the reason this library exists.
 :doc:`refresh_token_theft` works through the whole argument, including the four ways an
 implementation of it fails silently.
 
-.. note::
-
-    Social authentication is the one thing JWT Allauth does not do. If a project needs it
-    today, `dj-rest-auth <https://github.com/iMerica/dj-rest-auth>`_ and
-    `allauth.headless <https://docs.allauth.org/en/latest/headless/index.html>`_ cover it.
-
 
 Features
 --------
@@ -64,6 +58,7 @@ Features
 - **Revocation on credential change**: setting a password drops every session, every outstanding capability (unused reset links, MFA challenges) and every unconfirmed secondary address.
 - **Role-based permissions**: authorization from a JWT claim, with no user table lookup, on any user model.
 - **Refresh tokens as HttpOnly cookies** by default, keeping the longest-lived credential out of reach of JavaScript.
+- **Social login**: sign in through any provider ``django-allauth`` registers, by provider token or by authorization code with PKCE, with one generic endpoint per flow. An address a provider vouches for signs in the account that already holds it, without wiping the password that account still uses.
 - **The rest of the flows**: e-mail verification, password reset and change, MFA over TOTP with recovery codes, admin-managed registration, session logout.
 - **Effortless setup**: get a project running with a single command.
 

@@ -12,6 +12,7 @@ Modules
    jwt_allauth.password_change
    jwt_allauth.password_reset
    jwt_allauth.registration
+   jwt_allauth.social
    jwt_allauth.token
    jwt_allauth.token_refresh
    jwt_allauth.user_details

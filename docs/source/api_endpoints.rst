@@ -836,6 +836,160 @@ Recovery code failures share the same budgets as ``/mfa/verify/`` and answer ``4
    - ``'optional'``: Users can set up MFA but it's not required during login.
    - ``'required'``: Users must set up MFA and provide TOTP code during login. Deactivation is blocked.
 
+Social login
+------------
+
+Routed under ``/social/`` only when ``allauth.socialaccount`` is installed together with the
+``social`` extra. The provider id travels in the path, e.g. ``/social/google/token/``. See
+:doc:`social_login`.
+
+**/social/<provider>/token/** (POST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Request**
+
+.. list-table::
+   :widths: 20 20 60
+   :header-rows: 1
+
+   * - Location
+     - Field
+     - Description
+   * - Path
+     - ``provider``
+     - Provider id as registered with allauth, e.g. ``google``.
+   * - Body (JSON)
+     - ``id_token``
+     - Credential issued by the provider. Either this or ``access_token`` is required.
+   * - Body (JSON)
+     - ``access_token``
+     - Provider access token, when the provider verifies one.
+   * - Body (JSON)
+     - ``client_id``
+     - OAuth client the credential was issued for. Required, so that the provider can check the credential against it.
+
+**Response**
+
+.. list-table::
+   :widths: 20 20 60
+   :header-rows: 1
+
+   * - Location
+     - Field
+     - Description
+   * - Body (JSON)
+     - ``access``
+     - JWT access token. Absent when a second factor is outstanding.
+   * - Body (JSON)
+     - ``mfa_required``
+     - Present when the account has an authenticator; complete at ``/mfa/verify/``.
+   * - Body (JSON)
+     - ``challenge_id``
+     - Challenge to verify the code against, alongside ``mfa_required``.
+   * - Cookie (HTTP-only)
+     - ``refresh_token``
+     - JWT refresh token set in the ``refresh_token`` cookie (by default).
+
+Answers ``404`` ``provider_not_configured`` for an unknown provider, ``400``
+``flow_not_supported`` for a provider that cannot verify a token out of band, ``401``
+``invalid_social_token`` when the provider rejects the credential, ``400``
+``provider_email_unverified`` when it vouches for no address, and ``409``
+``email_already_registered`` when the address belongs to somebody and linking is off for
+this provider.
+
+.. note:: Throttled with ``AnonRateThrottle`` on top of the project defaults.
+
+**URL Name:** ``jwt_allauth_social_token_login``
+
+**/social/<provider>/code/** (POST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Request**
+
+.. list-table::
+   :widths: 20 20 60
+   :header-rows: 1
+
+   * - Location
+     - Field
+     - Description
+   * - Path
+     - ``provider``
+     - Provider id as registered with allauth.
+   * - Body (JSON)
+     - ``code``
+     - Authorization code returned by the provider.
+   * - Body (JSON)
+     - ``callback_url``
+     - The ``redirect_uri`` of the authorization request, byte for byte.
+   * - Body (JSON)
+     - ``code_verifier``
+     - PKCE verifier, when the authorization request carried a challenge.
+
+**Response**
+
+Same as ``/social/<provider>/token/``.
+
+.. note:: Throttled with ``AnonRateThrottle`` on top of the project defaults.
+
+**URL Name:** ``jwt_allauth_social_code_login``
+
+**/social/<provider>/connect/token/** (POST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Connects the provider to the authenticated caller. Requires a bearer token. Opens no session
+and closes none, and does not add the provider's addresses to the account.
+
+**Response**
+
+.. list-table::
+   :widths: 20 20 60
+   :header-rows: 1
+
+   * - Location
+     - Field
+     - Description
+   * - Body (JSON)
+     - ``id``, ``provider``, ``uid``, ``last_login``, ``date_joined``
+     - The connection, at ``201``.
+
+Answers ``409`` ``social_account_in_use`` when the provider account belongs to another user.
+
+.. note:: Throttled with ``AnonRateThrottle`` and ``UserRateThrottle`` on top of the project defaults.
+
+**URL Name:** ``jwt_allauth_social_token_connect``
+
+**/social/<provider>/connect/code/** (POST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As above, from an authorization code. Request fields as in ``/social/<provider>/code/``.
+
+**URL Name:** ``jwt_allauth_social_code_connect``
+
+**/social/accounts/** (GET)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The caller's provider connections. Requires a bearer token.
+
+**URL Name:** ``jwt_allauth_social_accounts``
+
+**/social/accounts/<id>/** (DELETE)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Removes one connection, answering ``204``. An id that is not the caller's answers ``404``.
+Removing the last connection of an account with no usable password answers ``400``
+``disconnect_not_allowed``: there would be nothing left to sign in with.
+
+**URL Name:** ``jwt_allauth_social_disconnect``
+
+**/social/providers/** (GET)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The configured providers, each with ``id``, ``name`` and ``client_id``, so a frontend can build
+its authorization requests. The app secret is never included.
+
+**URL Name:** ``jwt_allauth_social_providers``
+
 OpenAPI schema
 --------------
 

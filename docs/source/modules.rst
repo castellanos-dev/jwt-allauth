@@ -32,6 +32,11 @@
 .. toctree::
    :maxdepth: 1
 
+   social_login
+
+.. toctree::
+   :maxdepth: 1
+
    refresh_token_theft
 
 .. toctree::

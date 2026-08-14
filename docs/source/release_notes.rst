@@ -1,6 +1,40 @@
 Release Notes
 =============
 
+Version 1.5.0
+-------------
+
+Released: unreleased
+
+New Features
+~~~~~~~~~~~~
+
+- **Social login**: sign in through any provider ``django-allauth`` registers, either with a credential the client obtained from the provider (``POST /social/<provider>/token/``) or with an authorization code exchanged server side, PKCE included (``POST /social/<provider>/code/``). One generic endpoint per flow serves every provider — the provider id travels in the URL — so there is no view to subclass and no adapter to name. Providers can also be connected to and disconnected from an existing account, and listed. The session is minted the way every other session is, so it carries its device, appears on the whitelist and answers to ``/logout/``, rotation and replay detection. Install the new ``social`` extra: ``pip install "django-jwt-allauth[social]"``. See :doc:`social_login`.
+
+- **A provider signs in the account that already holds the address, without wiping its password.** When a provider vouches for an address an established local account holds — one whose address was confirmed, or which has been used — the two are taken to be the same person: the provider is connected and the password stays usable, so both ways in keep working. An address held only by a sign-up that was never confirmed and never used is superseded instead, exactly as a duplicate registration supersedes it. This is deliberately not allauth's behaviour: ``SOCIALACCOUNT_EMAIL_AUTHENTICATION`` wipes the local password every time it matches an account by address, and it has **no effect** on these endpoints. Use ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING`` (default ``True``, or a list of provider ids) instead.
+
+- **A social login does not skip the second factor.** An account with an authenticator gets the same ``mfa_required`` challenge ``/login/`` returns, completed at the same ``/mfa/verify/``, and ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` bootstraps enrolment for a social sign-up as it does for any other.
+
+- **Two new startup checks**: ``jwt_allauth.W004`` when the social endpoints cannot serve a request — ``allauth.socialaccount`` installed without its dependencies, or no provider declared in ``SOCIALACCOUNT_PROVIDERS`` — and ``jwt_allauth.W005`` when ``SOCIALACCOUNT_EMAIL_AUTHENTICATION`` is declared and has no effect.
+
+Compatibility
+~~~~~~~~~~~~~
+
+- **The social endpoints are routed only when** ``allauth.socialaccount`` **is in** ``INSTALLED_APPS`` **and its dependencies are importable.** ``jwt-allauth startproject`` has always written that app into generated projects, so an installation can have the app without the extra; it keeps working untouched and ``jwt_allauth.W004`` reports the shortfall rather than the import failing at startup.
+
+- **A default** ``SOCIALACCOUNT_ADAPTER`` **is installed** when ``allauth.socialaccount`` is present and the project declares none. It closes social sign-up under ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION``, and refuses to disconnect the last provider of an account with no usable password — allauth's default allows it, which locks the owner out for good. A project with an adapter of its own is left alone.
+
+- **New settings**: ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING``, ``JWT_ALLAUTH_SOCIAL_REQUIRE_VERIFIED_EMAIL`` and ``JWT_ALLAUTH_SOCIAL_CALLBACK_URLS``. See :doc:`configuration.settings_py`.
+
+- **No new model and no migration.** Both flows are driven by the client, so there is no OAuth ``state`` for the server to store.
+
+Documentation
+~~~~~~~~~~~~~
+
+- **New page** — :doc:`social_login`: the two flows, the linking decision and the trust it places in the provider, and what the feature deliberately does not cover.
+
+- The README and the documentation index no longer say social authentication is unimplemented.
+
 Version 1.4.0
 -------------
 
