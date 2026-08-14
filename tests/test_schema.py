@@ -57,7 +57,26 @@ class OpenAPISchemaTests(SimpleTestCase):
         The mixin comes first on the MRO of every view that uses it, so its docstring
         became the description of the login, registration, refresh and MFA endpoints.
         """
-        for path in ('/jwt-allauth/login/', '/jwt-allauth/registration/', '/jwt-allauth/refresh/'):
+        paths = (
+            '/jwt-allauth/login/',
+            '/jwt-allauth/registration/',
+            '/jwt-allauth/refresh/',
+            '/jwt-allauth/social/{provider}/token/',
+            '/jwt-allauth/social/{provider}/code/',
+            '/jwt-allauth/social/{provider}/connect/token/',
+        )
+        for path in paths:
             description = self.operation(path).get('description', '')
             self.assertNotIn('throttle', description.lower(), path)
             self.assertTrue(description.strip(), path)
+
+    def test_social_login_documents_the_session_and_the_mfa_challenge(self):
+        """
+        The social logins answer either with a session or with an MFA challenge, and a
+        frontend has to know both shapes are the same 200.
+        """
+        properties = self.properties(self.operation('/jwt-allauth/social/{provider}/token/'), '200')
+        self.assertIn('access', properties)
+        self.assertIn('mfa_required', properties)
+        self.assertIn('challenge_id', properties)
+        self.assertNotIn('id_token', properties)

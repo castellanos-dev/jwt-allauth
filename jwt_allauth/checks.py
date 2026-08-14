@@ -8,6 +8,7 @@ Registered from :meth:`jwt_allauth.apps.JWTAllauthAppConfig.ready`, and run by
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as distribution_version
 
+from django.apps import apps
 from django.conf import settings
 from django.core.checks import Error, Tags, Warning, register
 from django.core.exceptions import FieldDoesNotExist
@@ -28,6 +29,12 @@ ROLE_FIELD_TYPE_ID = 'jwt_allauth.W002'
 
 #: Identifier of the check reported when an upstream is newer than anything this release saw.
 UNTESTED_UPSTREAM_ID = 'jwt_allauth.W003'
+
+#: Identifier of the check reported when the social endpoints are routed with no provider set up.
+SOCIAL_NO_PROVIDERS_ID = 'jwt_allauth.W004'
+
+#: Identifier of the check reported when allauth's own e-mail authentication is declared.
+SOCIAL_EMAIL_AUTHENTICATION_ID = 'jwt_allauth.W005'
 
 #: Highest major of each upstream this release was tested against, and what is at stake.
 #:
@@ -81,6 +88,86 @@ def check_verified_redirect(app_configs, **kwargs):
                 f"built-in page in place."
             ),
             id=VERIFIED_REDIRECT_ID,
+        )
+    ]
+
+
+@register(Tags.urls)
+def check_social_providers(app_configs, **kwargs):
+    """
+    Report social endpoints that cannot serve a request as configured.
+
+    Two ways to get there, and both answer ``404`` to everything, which reads as a bug
+    in this library rather than as a missing piece of configuration:
+
+        - ``allauth.socialaccount`` is installed but its HTTP stack is not, so the views
+          were never routed. ``jwt-allauth startproject`` has always written the app into
+          ``INSTALLED_APPS``, so a project can arrive here without ever having asked for
+          social login.
+        - The endpoints are routed but no provider app is declared in settings. A warning
+          rather than an error, and deliberately so: apps registered in the database are
+          a supported setup, and a startup check must not query the database to find out.
+    """
+    if not _reverses('jwt_allauth_social_token_login', provider='google'):
+        if not apps.is_installed('allauth.socialaccount'):
+            return []
+        try:
+            import jwt_allauth.social.urls  # noqa: F401
+        except ImportError:
+            return [
+                Warning(
+                    "'allauth.socialaccount' is installed, but its dependencies are not, "
+                    'so the social endpoints are not routed.',
+                    hint=(
+                        "Install them with `pip install django-jwt-allauth[social]`, or drop "
+                        "'allauth.socialaccount' from INSTALLED_APPS if the project does not "
+                        'use social login.'
+                    ),
+                    id=SOCIAL_NO_PROVIDERS_ID,
+                )
+            ]
+        return []
+    providers = getattr(settings, 'SOCIALACCOUNT_PROVIDERS', {}) or {}
+    if any(cfg.get('APP') or cfg.get('APPS') for cfg in providers.values() if isinstance(cfg, dict)):
+        return []
+    return [
+        Warning(
+            'The social endpoints are routed, but no provider app is configured in settings.',
+            hint=(
+                "Add the client id and secret under SOCIALACCOUNT_PROVIDERS, e.g. "
+                "{'google': {'APPS': [{'client_id': '...', 'secret': '...'}]}}, or register "
+                "the app in the database through the admin. Until then every social "
+                "endpoint answers 404."
+            ),
+            id=SOCIAL_NO_PROVIDERS_ID,
+        )
+    ]
+
+
+@register(Tags.security)
+def check_social_email_authentication(app_configs, **kwargs):
+    """
+    Report ``SOCIALACCOUNT_EMAIL_AUTHENTICATION``, which these endpoints do not read.
+
+    allauth's setting governs its own views, and its implementation wipes the local
+    password whenever it matches an account by address. This library decides the same
+    question itself -- and keeps the password when the address was already confirmed --
+    so a project that sets allauth's flag expecting it to change these endpoints has
+    configured nothing at all.
+    """
+    if not hasattr(settings, 'SOCIALACCOUNT_EMAIL_AUTHENTICATION'):
+        return []
+    if not _reverses('jwt_allauth_social_token_login', provider='google'):
+        return []
+    return [
+        Warning(
+            'SOCIALACCOUNT_EMAIL_AUTHENTICATION does not apply to the jwt-allauth social endpoints.',
+            hint=(
+                "Use JWT_ALLAUTH_SOCIAL_EMAIL_LINKING instead: True (the default) to link a "
+                "provider-verified address to the account that already holds it, False to "
+                "refuse, or a list of provider ids to allow it for some providers only."
+            ),
+            id=SOCIAL_EMAIL_AUTHENTICATION_ID,
         )
     ]
 

@@ -272,6 +272,31 @@ CACHES = {
 """
         settings_content += mfa_settings
 
+    # Social authentication. Written commented out on purpose: the endpoints answer 404
+    # until a provider is configured, and a project that does not want social login
+    # should not have to remove settings it never asked for.
+    social_settings = """
+
+# Social authentication
+# The endpoints live under /jwt-allauth/social/ and need `pip install
+# django-jwt-allauth[social]`. Fill in a provider to switch them on. Read the client id
+# and secret from the environment; never commit them.
+# SOCIALACCOUNT_PROVIDERS = {
+#     'google': {
+#         'APPS': [{
+#             'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
+#             'secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+#         }],
+#     },
+# }
+
+# A provider that vouches for an address already held by an established local account
+# signs that account in, keeping its password. Set to False to refuse instead, or to a
+# list of provider ids to allow it only for the providers you trust.
+# JWT_ALLAUTH_SOCIAL_EMAIL_LINKING = True
+"""
+    settings_content += social_settings
+
     # Add email configuration if requested
     if email_config:
         email_settings = """

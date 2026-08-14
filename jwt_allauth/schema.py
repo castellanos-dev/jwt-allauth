@@ -109,6 +109,32 @@ class RegistrationResponseSerializer(serializers.Serializer):
     )
 
 
+class SessionOrChallengeResponseSerializer(SessionResponseSerializer):
+    """
+    Response of the endpoints that either open a session or ask for the second factor.
+
+    ``/login/`` and the social logins answer with the same shape, so a frontend has one
+    MFA path to implement rather than one per way in.
+    """
+
+    mfa_required = serializers.BooleanField(
+        required=False,
+        help_text='Present when the account has an authenticator; complete at ``/mfa/verify/``.',
+    )
+    challenge_id = serializers.CharField(
+        required=False,
+        help_text='Challenge to verify the code against, alongside ``mfa_required``.',
+    )
+    mfa_setup_required = serializers.BooleanField(
+        required=False,
+        help_text='Present when ``JWT_ALLAUTH_MFA_TOTP_MODE = \'required\'`` and the account has no authenticator.',
+    )
+    setup_challenge_id = serializers.CharField(
+        required=False,
+        help_text='Challenge to bootstrap MFA enrolment with, alongside ``mfa_setup_required``.',
+    )
+
+
 def capability_parameters(cookie_name):
     """
     Declare how a capability endpoint is authorized: a cookie and a CSRF header.
@@ -166,7 +192,10 @@ set_password_schema = extend_schema(
 registration_schema = extend_schema(responses={201: RegistrationResponseSerializer})
 
 #: Annotation for ``POST /login/``.
-login_schema = extend_schema(responses={200: SessionResponseSerializer})
+login_schema = extend_schema(responses={200: SessionOrChallengeResponseSerializer})
+
+#: Annotation for the social endpoints that open a session.
+social_login_schema = extend_schema(responses={200: SessionOrChallengeResponseSerializer})
 
 #: Annotation for ``POST /refresh/``.
 token_refresh_schema = extend_schema(responses={200: SessionResponseSerializer})

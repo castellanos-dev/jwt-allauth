@@ -47,7 +47,17 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.mfa',
+    'tests.socialprovider',
 ]
+
+# Provider apps are configured from settings rather than from the database, which keeps
+# `django.contrib.sites` -- and the queries `SocialApp.objects.on_site()` would make --
+# out of a suite that has no use for either.
+SOCIALACCOUNT_PROVIDERS = {
+    'dummy': {'APPS': [{'client_id': 'dummy-client', 'secret': 'dummy-secret'}]},
+    'second': {'APPS': [{'client_id': 'second-client', 'secret': 'second-secret'}]},
+    'notoken': {'APPS': [{'client_id': 'notoken-client', 'secret': 'notoken-secret'}]},
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

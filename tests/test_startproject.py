@@ -60,6 +60,12 @@ MIDDLEWARE = [
         # Check if middleware is added
         self.assertIn("'allauth.account.middleware.AccountMiddleware'", content)
 
+        # Social authentication is offered but left switched off: a commented provider
+        # block, and no live setting for a project that does not want it.
+        self.assertIn("# SOCIALACCOUNT_PROVIDERS = {", content)
+        self.assertIn("# JWT_ALLAUTH_SOCIAL_EMAIL_LINKING = True", content)
+        self.assertNotIn("\nSOCIALACCOUNT_PROVIDERS", content)
+
         # Check if authentication backends are added
         self.assertIn("AUTHENTICATION_BACKENDS", content)
         self.assertIn("django.contrib.auth.backends.ModelBackend", content)

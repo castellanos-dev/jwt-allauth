@@ -4,7 +4,7 @@ from importlib import reload
 
 import allauth.app_settings
 import rest_framework_simplejwt.settings
-from django.apps import AppConfig
+from django.apps import AppConfig, apps
 from django.core.exceptions import ImproperlyConfigured
 
 #: The three states e-mail verification can be in, in allauth's vocabulary.
@@ -170,6 +170,13 @@ class JWTAllauthAppConfig(AppConfig):
             settings.ACCOUNT_ADAPTER = 'jwt_allauth.adapter.JWTAllAuthAdapter'
         if not hasattr(settings, 'MFA_ADAPTER'):
             settings.MFA_ADAPTER = 'jwt_allauth.mfa.adapter.JWTAllAuthMFAAdapter'
+        if apps.is_installed('allauth.socialaccount') and not hasattr(settings, 'SOCIALACCOUNT_ADAPTER'):
+            settings.SOCIALACCOUNT_ADAPTER = 'jwt_allauth.social.adapter.JWTAllAuthSocialAccountAdapter'
+        # The two guards below are about the local sign-up form, which the social flow
+        # never renders: `save_user` takes its `form is None` branch, so an account
+        # created through a provider needs no password field. What they do reach is
+        # `SOCIALACCOUNT_EMAIL_REQUIRED`, which allauth derives from ACCOUNT_SIGNUP_FIELDS
+        # and which comes out `True` -- which is what this library wants anyway.
         if hasattr(settings, 'ACCOUNT_LOGIN_METHODS') and settings.ACCOUNT_LOGIN_METHODS != {'email'}:
             raise ValueError('Only login email is supported.')
         settings.ACCOUNT_LOGIN_METHODS = {'email'}
