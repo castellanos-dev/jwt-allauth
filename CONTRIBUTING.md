@@ -1,8 +1,8 @@
 Contributing
 ============
 
-Thanks for looking. This is a small project with one maintainer, so the most useful
-thing you can send is something that is easy to say yes to.
+The most useful contribution is one that is easy to review: scoped to a single change,
+covered by a test, and clear about what it does and does not do.
 
 **Found a security problem?** Do not open an issue — see [SECURITY.md](SECURITY.md).
 

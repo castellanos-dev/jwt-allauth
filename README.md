@@ -67,8 +67,8 @@ token here."* The rows marked — follow from that: there is no token implementa
 
 ³ `allauth.usersessions` lists Django sessions, not JWT sessions.
 
-**If you need social authentication today, use dj-rest-auth or allauth headless.** It is
-the one thing this library does not do, and no amount of session handling makes up for it.
+**Social authentication is not implemented.** If a project needs it today, dj-rest-auth
+and allauth headless cover it.
 
 
 Requirements

@@ -32,7 +32,6 @@ What helps, in rough order of usefulness:
 - A sequence of requests that reproduces it, or a failing test.
 - What an attacker gets out of it, and what they need to hold before they start.
 
-This is a one-maintainer project, so please do not expect same-day acknowledgement.
 Expect a first reply within a week. If a report is confirmed, you will be told what the
 fix is and when it ships, and credited in the release notes unless you would rather not
 be.
