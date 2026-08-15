@@ -4,11 +4,15 @@ From a credential handed over by a provider to a user this library will mint a s
 Two things shape this module.
 
 The first is that it does not call ``allauth.socialaccount.helpers.complete_social_login()``.
-That function opens a Django session and answers with redirects or by raising
+That function logs the user into a Django session and answers with redirects or by raising
 ``ImmediateHttpResponse``, which is the interactive flow; an API has to decide the same
 questions and answer with JSON. The steps are therefore taken one at a time here, each
 through allauth's public surface, so that every decision is visible at this level rather
-than buried in a redirect chain.
+than buried in a redirect chain. (A sign-up still leaves one ``django_session`` row
+behind: allauth's ``setup_user_email`` clears its stashed address through the session and
+marks it modified. Nothing is logged in and no session cookie is honoured by these
+endpoints -- authentication is the bearer token -- but the row is written, once per new
+account, the same way ``/registration/`` writes one.)
 
 The second is that the linking of a provider to an account that already exists is
 governed here rather than by allauth. allauth links by e-mail through
@@ -53,10 +57,12 @@ from jwt_allauth.exceptions import (
     SocialFlowNotSupported,
     SocialLoginRejected,
     SocialProviderNotConfigured,
+    SocialSecondFactorPending,
     SocialSignupClosed,
     SocialSignupNotAllowed,
     SocialTokenInvalid,
 )
+from jwt_allauth.mfa.gate import second_factor_pending
 from jwt_allauth.social.app_settings import callback_url_allowed, email_linking_enabled, require_verified_email
 from jwt_allauth.utils import is_email_verified, verification_is_mandatory
 
@@ -252,9 +258,16 @@ def _prepare(request, sociallogin, process: str) -> None:
     project inspect it.
 
     ``lookup()`` runs first so that the adapter hook and any receiver of
-    ``pre_social_login`` see the user it resolved to rather than a placeholder. A
-    receiver that vetoes the login raises ``ImmediateHttpResponse`` carrying a redirect,
-    which is meaningless over an API, so it is turned into a refusal.
+    ``pre_social_login`` see the account the provider is already connected to, rather
+    than a placeholder. A receiver that vetoes the login raises ``ImmediateHttpResponse``
+    carrying a redirect, which is meaningless over an API, so it is turned into a refusal.
+
+    A receiver sees a **blank user** when the only match was by address, because that
+    match is discarded below and the account it points at has not been chosen yet -- the
+    choice belongs to :func:`_signup_or_link`, which runs after this. A receiver that
+    vetoes on identity has to read ``sociallogin.email_addresses`` and
+    ``sociallogin.account.provider`` in that case, which are what the provider actually
+    asserted; ``sociallogin.user`` says nothing there.
 
     A match ``lookup()`` made **by e-mail address** is then discarded, because that
     verdict is this module's to reach and not allauth's. allauth matches by address
@@ -403,6 +416,20 @@ def _signup_or_link(request, sociallogin):
         # The provider proved control of an address whose owner is already established.
         # Connecting is all that is needed: the local password stays usable, so both
         # ways in keep working.
+        #
+        # But a provider only proves the *first* factor, and connecting is a durable
+        # change to somebody else's established account -- one that outlives this
+        # request, survives the address changing hands, and thereafter reaches the
+        # account by provider uid with no address check at all. So it waits for the
+        # second factor, which is asked here rather than in the view because by the time
+        # the view sees the answer the row would already be written.
+        #
+        # The sign-up branch below is deliberately not gated the same way: there is no
+        # established account to attach anything to, and the enrolment challenge that
+        # ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` hands a new account needs that
+        # account to exist.
+        if second_factor_pending(owner):
+            raise SocialSecondFactorPending(owner)
         sociallogin.connect(request, owner)
         return owner
 

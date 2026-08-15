@@ -22,6 +22,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
+from jwt_allauth.exceptions import SocialSecondFactorPending
 from jwt_allauth.mfa.gate import mfa_challenge
 # `extend_schema` is used here rather than in `jwt_allauth.schema` because the
 # annotations below reference serializers that import allauth's socialaccount models,
@@ -91,7 +92,17 @@ class BaseSocialLoginView(ExtraThrottlesMixin, APIView):
         data = self.read_credential(request)
         prov = get_provider(request, provider, data.get('client_id'))
         sociallogin = self.build_sociallogin(request, prov, data)
-        user, email_verified = authenticate_social_login(request, sociallogin)
+        try:
+            user, email_verified = authenticate_social_login(request, sociallogin)
+        except SocialSecondFactorPending as pending:
+            # The account already existed and owes a second factor, so the flow refused
+            # to connect the provider to it. Nothing was written -- the connection and
+            # `last_login` rolled back with the transaction -- and the challenge is
+            # created here, outside it, so that it survives to be answered.
+            challenge = mfa_challenge(pending.user)
+            if challenge is None:
+                raise
+            return Response(challenge, status=status.HTTP_200_OK)
 
         # A provider is a way of proving the first factor, not a substitute for the
         # second: whoever takes over the identity provider account would otherwise walk

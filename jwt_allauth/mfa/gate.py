@@ -65,6 +65,28 @@ def has_totp(user) -> bool:
     ).exists()
 
 
+def second_factor_pending(user) -> bool:
+    """
+    Whether a session for this account has to wait for a second factor.
+
+    The same question :func:`mfa_challenge` answers, without issuing the challenge --
+    which is a write, and a caller that is about to make a durable change needs to ask
+    *before* making it rather than undo the challenge along with everything else.
+
+    Args:
+        user: Account whose first factor has just been proved.
+
+    Returns:
+        bool: ``True`` when :func:`mfa_challenge` would answer with a payload.
+    """
+    mode = get_mfa_totp_mode()
+    if mode == MFA_TOTP_DISABLED or Authenticator is None:
+        return False
+    if not has_totp(user):
+        return mode == MFA_TOTP_REQUIRED
+    return True
+
+
 def mfa_challenge(user) -> Optional[Dict[str, Any]]:
     """
     The payload that has to precede the session, or ``None`` when nothing does.

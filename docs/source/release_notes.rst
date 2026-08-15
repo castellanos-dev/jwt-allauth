@@ -38,9 +38,15 @@ Compatibility
 
 - **The confirmation link is steadier under** ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION``. A link opened twice — a scanner, a browser prefetch, a forwarded mail — lands on the same page both times instead of a bare ``404`` on the second, and a deactivated account no longer has its address confirmed by a link the flow already refuses to do anything else with. Neither ever granted a session or a capability.
 
+- **A provider is not connected to an existing account until its second factor is in.** Signing in through a provider already returned an ``mfa_required`` challenge instead of a session, but the ``SocialAccount`` row and ``last_login`` were written first — on the strength of the first factor alone, and durably: once the row exists the provider reaches that account by uid with no address check at all. The connection is now withheld until the challenge is answered. A social **sign-up** is unchanged: there is no established account to attach to, and the enrolment challenge ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` hands a new account needs that account to exist.
+
+- **``POST /registration/user-register/`` is throttled** with ``UserRateThrottle`` on top of the project defaults. The role check bounds who may invite, not how fast; the request sends mail to an address of its choosing and reports whether that address is in use.
+
+- **The** ``social`` **extra is probed by everything it installs** — ``requests``, ``oauthlib`` and ``cryptography`` — not by ``requests`` alone. A host carrying ``requests`` for unrelated reasons used to route the endpoints, keep ``jwt_allauth.W004`` quiet, and fail with ``ModuleNotFoundError`` on the first credential.
+
 - **Provider credentials are declared sensitive.** ``id_token``, ``access_token``, ``code`` and ``code_verifier`` are masked in tracebacks, the ``django.request`` log and the mail to ``ADMINS``, as passwords already were.
 
-- **``RefreshToken.for_user`` accepts an optional** ``email_verified``. It is additive — omitted, the token asks the database as before — and lets a caller that has just checked hand the answer on instead of paying for the query twice. ``jwt_allauth.social.flows.authenticate_social_login`` now returns ``(user, email_verified)`` for that reason; it is new in this release, so nothing depended on the old shape.
+- **``RefreshToken.for_user`` accepts an optional** ``email_verified``. It is additive — omitted, the token asks the database as before — and lets a caller that has just checked hand the answer on instead of paying for the query twice. ``jwt_allauth.social.flows.authenticate_social_login`` now returns ``(user, email_verified)`` for that reason; it is new in this release, so nothing depended on the old shape. ``RefreshToken.set_email_verified`` takes the same optional argument, and is called with it only when a caller supplied one — so a subclass that overrides the one-argument form keeps working.
 
 - **The** ``social`` **extra requires allauth 65.9**, like the ``mfa`` extra, while the core dependency floor is unchanged at 65.5. A project pinned to allauth 65.5–65.8 that adds ``[social]`` will hit a resolution conflict on upgrade and has to move the pin.
 

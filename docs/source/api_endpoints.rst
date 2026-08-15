@@ -928,6 +928,9 @@ Error codes, all in the ``code`` field beside ``detail``:
    * - ``401``
      - ``email_not_verified`` / ``no_active_account``
      - The account exists but is unconfirmed or inactive — the same answers ``/login/`` gives.
+   * - ``401``
+     - ``mfa_required``
+     - The account owes a second factor and the challenge could not be issued. The ordinary answer is a ``200`` carrying ``mfa_required`` and ``challenge_id``; this code appears only when that failed.
 
 .. note:: Throttled with ``AnonRateThrottle`` on top of the project defaults.
 

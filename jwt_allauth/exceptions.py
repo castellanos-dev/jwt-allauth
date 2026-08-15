@@ -40,6 +40,24 @@ class SocialAPIException(DetailDictMixin, APIException):
     """
 
 
+class SocialSecondFactorPending(SocialAPIException):
+    """
+    Raised instead of connecting a provider to an account that owes a second factor.
+
+    Carries the account so that the view can issue the challenge once the transaction has
+    rolled back -- creating it inside would roll it back too. Reaching a client at all
+    means the challenge could not be issued afterwards either, which is why it is a
+    refusal rather than a payload.
+    """
+    status_code = status.HTTP_401_UNAUTHORIZED
+    default_detail = _("This account requires a second factor.")
+    default_code = "mfa_required"
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+
 class SocialProviderNotConfigured(SocialAPIException):
     status_code = status.HTTP_404_NOT_FOUND
     default_detail = _("This provider is not configured.")

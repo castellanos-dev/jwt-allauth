@@ -581,6 +581,27 @@ class SocialMFATests(SocialTestsMixin):
         self.assertNotIn(REFRESH_TOKEN_COOKIE, self.response.cookies)
 
     @responses.activate
+    def test_the_provider_is_not_connected_until_the_second_factor_is_in(self):
+        """
+        Linking is a durable change to somebody else's established account: once the row
+        exists the provider reaches that account by uid, with no address check at all, and
+        it outlives the address changing hands. A provider proves the first factor, so it
+        cannot buy that on its own.
+        """
+        self.enrol(self.USER)
+        self.fake_profile(profile(email=self.EMAIL))
+
+        resp = self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_200_OK)
+
+        self.assertTrue(resp['mfa_required'])
+        self.assertNotIn('access', resp)
+        # Nothing was written on the strength of the provider credential alone.
+        self.assertFalse(SocialAccount.objects.exists())
+        before = self.USER.last_login
+        self.USER.refresh_from_db()
+        self.assertEqual(self.USER.last_login, before)
+
+    @responses.activate
     @override_settings(JWT_ALLAUTH_MFA_TOTP_MODE='required')
     def test_required_mode_bootstraps_enrolment(self):
         self.fake_profile()
@@ -706,8 +727,12 @@ class SocialQueryCountTests(SocialTestsMixin):
 
     @responses.activate
     def test_linking_to_an_established_account_resolves_once(self):
+        # One more than the sign-up path pays for the same work, deliberately: linking
+        # asks the MFA gate before writing the connection, and the view asks it again
+        # afterwards. The second question is what every other way in already pays; the
+        # first is the price of not connecting a provider on the first factor alone.
         self.fake_profile(profile(email=self.EMAIL))
-        with self.assertNumQueries(14):
+        with self.assertNumQueries(15):
             self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_200_OK)
 
 
