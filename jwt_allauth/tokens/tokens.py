@@ -213,7 +213,13 @@ class RefreshToken(DefaultRefreshToken):
         token.set_session_iat()  # type: ignore
         token.cap_exp_to_session()  # type: ignore
         token.set_user_role(user)  # type: ignore
-        token.set_email_verified(user, email_verified)  # type: ignore
+        if email_verified is None:
+            # Called with one argument unless the caller actually has an answer, so a
+            # subclass that overrode `set_email_verified(self, user)` -- the shape this
+            # method had before -- keeps working on every path that does not.
+            token.set_email_verified(user)  # type: ignore
+        else:
+            token.set_email_verified(user, email_verified)  # type: ignore
         token.set_user_attributes(user)  # type: ignore
         # Store the token in the database
         refresh_serializer = RefreshTokenWhitelistSerializer(data={

@@ -24,7 +24,6 @@ from jwt_allauth.constants import (
     ONE_TIME_PERMISSION, PASS_SET_ACCESS, PASS_RESET_ACCESS, PASS_RESET_COOKIE,
     SET_PASSWORD_COOKIE,
     MFA_TOKEN_MAX_AGE_SECONDS,
-    MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
     EMAIL_CONFIRMATION,
     INVITATION,
@@ -46,18 +45,8 @@ from jwt_allauth.utils import (
     sensitive_post_parameters_m,
 )
 from jwt_allauth.csrf import ensure_csrf_cookie
+from jwt_allauth.mfa.gate import get_mfa_totp_mode
 from jwt_allauth.mfa.storage import create_setup_challenge
-
-
-def get_mfa_totp_mode() -> str:
-    """
-    Return the current MFA TOTP mode from settings.
-
-    This must be evaluated at call time (not import time) so that
-    Django's `override_settings` used in tests – and any runtime changes
-    – are respected.
-    """
-    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
 
 
 class CapabilityCookieViewMixin:
