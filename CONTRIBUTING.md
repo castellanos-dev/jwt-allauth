@@ -89,6 +89,28 @@ your change adds or alters a setting, it belongs in the relevant page **and** in
 upgrade, so say what changes for them, not what you edited.
 
 
+Translations
+------------
+
+A user-facing string must go through `gettext` and then into every catalogue, because a
+half-translated catalogue answers some of a request in one language and the rest in
+another. Two commands, both run from `jwt_allauth/`:
+
+```bash
+django-admin makemessages --all --no-obsolete --no-wrap   # extract into the .po files
+django-admin compilemessages                              # build the .mo files
+```
+
+**Commit the `.mo` files.** `.gitignore` excludes compiled catalogues everywhere except
+`jwt_allauth/locale/`, and the exception is deliberate: Django reads `.mo` and never
+`.po`, and nothing between here and PyPI compiles anything — the release workflow runs
+`python -m build` and no more. An uncommitted `.mo` is a translation that never reaches
+an installation, which is the state this package shipped in until 1.5.1.
+
+`tests/test_translations.py` checks both halves: that every language is compiled and
+current, and that a string actually comes back translated out of `gettext`.
+
+
 Reporting a bug
 ---------------
 

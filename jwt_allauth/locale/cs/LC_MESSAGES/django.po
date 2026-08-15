@@ -1,102 +1,382 @@
-# Czech translations of Tivix/django-rest-auth
-#
-# This file is distributed under the same license as the Tivix/django-rest-auth package.
+# Translations for django-jwt-allauth.
+# Copyright (C) Fernando Castellanos.
+# This file is distributed under the same license as the django-jwt-allauth package.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Tivix/django-rest-auth\n"
-"Report-Msgid-Bugs-To: https://github.com/Tivix/django-rest-auth/issues\n"
-"POT-Creation-Date: 2018-06-27 23:05+0200\n"
-"PO-Revision-Date: 2018-06-27 23:22+0200\n"
+"Project-Id-Version: django-jwt-allauth 1.5.1\n"
+"Report-Msgid-Bugs-To: https://github.com/castellanos-dev/jwt-allauth/issues\n"
+"POT-Creation-Date: 2026-08-15 14:54+0000\n"
+"PO-Revision-Date: 2026-08-15 14:54+0000\n"
+"Last-Translator: JWT Allauth <fcastellanos.dev@gmail.com>\n"
+"Language-Team: Czech <fcastellanos.dev@gmail.com>\n"
 "Language: cs\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
-"Last-Translator: Václav Dohnal <vaclav.dohnal@gmail.com>\n"
-"Language-Team: N/A\n"
-"X-Generator: Poedit 2.0.8\n"
+"\n"
 
-#: .\registration\serializers.py:67
-msgid "View is not defined, pass it as a context variable"
-msgstr "View není definováno, předejte jej jako proměnnou kontextu"
+#: authentication.py:70
+msgid "Session is no longer active."
+msgstr "Relace již není aktivní."
 
-#: .\registration\serializers.py:72
-msgid "Define adapter_class in view"
-msgstr "Definujte adapter_class ve view"
+#: exceptions.py:10
+msgid "User email is not verified"
+msgstr "E-mail uživatele není ověřen"
 
-#: .\registration\serializers.py:91
-msgid "Define callback_url in view"
-msgstr "Definujte callback_url ve view"
+#: exceptions.py:16
+msgid "Session reached its maximum lifetime. Please log in again"
+msgstr "Relace dosáhla své maximální životnosti. Přihlaste se prosím znovu"
 
-#: .\registration\serializers.py:95
-msgid "Define client_class in view"
-msgstr "Definujte client_class ve view"
+#: exceptions.py:22
+msgid "Incorrect credentials"
+msgstr "Nesprávné přihlašovací údaje"
 
-#: .\registration\serializers.py:116
-msgid "Incorrect input. access_token or code is required."
-msgstr "Nesprávný vstup. access_token je povinný."
+#: exceptions.py:53
+msgid "This account requires a second factor."
+msgstr "Tento účet vyžaduje druhý faktor."
 
-#: .\registration\serializers.py:125
-msgid "Incorrect value"
-msgstr "Nesprávná hodnota"
+#: exceptions.py:63
+msgid "This provider is not configured."
+msgstr "Tento poskytovatel není nakonfigurován."
 
-#: .\registration\serializers.py:139
-msgid "User is already registered with this e-mail address."
-msgstr "Uživatel s touto adresou je již registrován."
+#: exceptions.py:69
+msgid "This provider does not support this authentication flow."
+msgstr "Tento poskytovatel nepodporuje tento způsob ověření."
 
-#: .\registration\serializers.py:185
+#: exceptions.py:75 social/flows.py:251
+msgid "The provider rejected the credential."
+msgstr "Poskytovatel odmítl přihlašovací údaje."
+
+#: exceptions.py:87
+msgid "The provider did not supply a verified e-mail address."
+msgstr "Poskytovatel neposkytl ověřenou e-mailovou adresu."
+
+#: exceptions.py:93
+msgid "This provider account is already connected to another user."
+msgstr "Tento účet poskytovatele je již propojen s jiným uživatelem."
+
+#: exceptions.py:105 registration/serializers.py:22
 msgid "A user is already registered with this e-mail address."
-msgstr "Uživatel s touto adresou je již registrován."
+msgstr "S touto e-mailovou adresou je již zaregistrován uživatel."
 
-#: .\registration\serializers.py:193
-msgid "The two password fields didn't match."
-msgstr "Zadaná hesla se neshodují."
+#: exceptions.py:127
+msgid "Confirm this e-mail address on the existing account before connecting a provider."
+msgstr "Než propojíte poskytovatele, potvrďte tuto e-mailovou adresu na stávajícím účtu."
 
-#: .\registration\views.py:51
-msgid "Verification e-mail sent."
-msgstr "Ověřovací e-mail odeslán."
+#: exceptions.py:133
+msgid "Registration is closed."
+msgstr "Registrace je uzavřena."
 
-#: .\registration\views.py:98
-msgid "ok"
-msgstr "ok"
+#: exceptions.py:139
+msgid "Signing up through a provider is not allowed."
+msgstr "Registrace prostřednictvím poskytovatele není povolena."
 
-#: .\serializers.py:30
-msgid "Must include \"email\" and \"password\"."
-msgstr "Musí obsahovat \"e-mail\" a \"heslo\"."
+#: exceptions.py:145
+msgid "This social login was rejected."
+msgstr "Toto přihlášení přes poskytovatele bylo odmítnuto."
 
-#: .\serializers.py:41
-msgid "Must include \"username\" and \"password\"."
-msgstr "Musí obsahovat \"uživatelské jméno\" a \"heslo\"."
+#: exceptions.py:151
+msgid "This provider cannot be disconnected."
+msgstr "Tohoto poskytovatele nelze odpojit."
 
-#: .\serializers.py:54
-msgid "Must include either \"username\" or \"email\" and \"password\"."
-msgstr "Musí obsahovat \"uživatelské jméno\" nebo \"e-mail\" a \"heslo\"."
+#: logout/views.py:47
+msgid "Refresh token cookie not found."
+msgstr "Cookie s obnovovacím tokenem nebyla nalezena."
 
-#: .\serializers.py:95
-msgid "User account is disabled."
-msgstr "Uživatelský účet je zakázán."
-
-#: .\serializers.py:98
-msgid "Unable to log in with provided credentials."
-msgstr "Pomocí zadaných údajů se nelze přihlásit."
-
-#: .\serializers.py:107
-msgid "E-mail is not verified."
-msgstr "E-mail není ověřený."
-
-#: .\views.py:127
+#: logout/views.py:57
 msgid "Successfully logged out."
-msgstr "Byli jste úspěšně odhlášeni."
+msgstr "Odhlášení proběhlo úspěšně."
 
-#: .\views.py:175
-msgid "Password reset e-mail has been sent."
-msgstr "E-mail pro resetování hesla byl odeslán."
+#: logout/views.py:62
+msgid "Invalid token."
+msgstr "Neplatný token."
 
-#: .\views.py:201
-msgid "Password has been reset with the new password."
-msgstr "Vaše heslo bylo resetováno."
+#: logout/views.py:89
+msgid "Successfully logged out from all devices."
+msgstr "Odhlášení ze všech zařízení proběhlo úspěšně."
 
-#: .\views.py:223
+#: mfa/views.py:202 registration/views.py:87 registration/views.py:146
+msgid "Verification e-mail sent."
+msgstr "Ověřovací e-mail byl odeslán."
+
+#: password_change/serializers.py:39
+msgid "Your old password was entered incorrectly. Please enter it again."
+msgstr "Vaše původní heslo bylo zadáno nesprávně. Zadejte je prosím znovu."
+
+#: password_change/views.py:49
 msgid "New password has been saved."
 msgstr "Nové heslo bylo uloženo."
+
+#: password_reset/views.py:108
+msgid "Too many password reset requests for this e-mail address."
+msgstr "Příliš mnoho žádostí o obnovení hesla pro tuto e-mailovou adresu."
+
+#: password_reset/views.py:113
+msgid "Password reset e-mail has been sent."
+msgstr "E-mail pro obnovení hesla byl odeslán."
+
+#: password_reset/views.py:266
+msgid "Password reset."
+msgstr "Heslo bylo obnoveno."
+
+#: password_reset/views.py:321
+msgid "Password set. Please configure MFA to complete registration."
+msgstr "Heslo bylo nastaveno. Dokončete registraci nastavením MFA."
+
+#: password_reset/views.py:329
+msgid "Password set."
+msgstr "Heslo bylo nastaveno."
+
+#: permissions.py:144
+msgid "E-mail address is not verified."
+msgstr "E-mailová adresa není ověřena."
+
+#: registration/serializers.py:164
+msgid "The two password fields didn't match."
+msgstr "Hesla se neshodují."
+
+#: registration/serializers.py:255
+msgid "Role is required"
+msgstr "Role je povinná"
+
+#: social/adapter.py:61
+msgid "This is the only way to sign in to this account."
+msgstr "Toto je jediný způsob, jak se k tomuto účtu přihlásit."
+
+#: social/flows.py:124 social/flows.py:167
+msgid "The credential was not issued for this application."
+msgstr "Tyto přihlašovací údaje nebyly vydány pro tuto aplikaci."
+
+#: social/flows.py:154 social/serializers.py:23
+msgid "Either an id_token or an access_token is required."
+msgstr "Je vyžadován id_token nebo access_token."
+
+#: social/flows.py:209
+msgid "This callback_url is not allowed."
+msgstr "Tato callback_url není povolena."
+
+#: social/flows.py:370
+msgid "No active account found with the given credentials"
+msgstr "Se zadanými přihlašovacími údaji nebyl nalezen žádný aktivní účet"
+
+#: templates/email/account_exists/email_message.html:8 templates/email/account_exists/email_message.html:69 templates/email/account_exists/email_subject.txt:2
+msgid "You already have an account"
+msgstr "Účet už máte"
+
+#: templates/email/account_exists/email_message.html:74
+msgid "Somebody just tried to sign up with this email address, but an account already exists for it. No new account has been created and nothing has changed."
+msgstr "Někdo se právě pokusil zaregistrovat s touto e-mailovou adresou, ale účet k ní už existuje. Nový účet nebyl vytvořen a nic se nezměnilo."
+
+#: templates/email/account_exists/email_message.html:76
+msgid "If it was you, sign in with your usual credentials. If you do not remember your password, request a password reset instead of signing up again."
+msgstr "Pokud jste to byli vy, přihlaste se svými obvyklými údaji. Pokud si heslo nepamatujete, požádejte o jeho obnovení místo nové registrace."
+
+#: templates/email/account_exists/email_message.html:79
+msgid "If it was not you and this address is yours, somebody else may be using it on an account you never created. Reset the password to take control of the account: doing so signs out everybody who is currently using it."
+msgstr "Pokud jste to nebyli vy a tato adresa patří vám, může ji někdo jiný používat na účtu, který jste nikdy nevytvořili. Obnovte heslo a převezměte nad účtem kontrolu: tím se odhlásí všichni, kdo jej právě používají."
+
+#: templates/email/account_exists/email_message.html:84 templates/email/password/reset_email_message.html:82
+msgid "Reset Password"
+msgstr "Obnovit heslo"
+
+#: templates/email/account_exists/email_message.html:87 templates/email/password/reset_email_message.html:85 templates/email/signup/email_message.html:76
+msgid "If the button above doesn't work, you can also copy and paste the following link into your browser:"
+msgstr "Pokud tlačítko výše nefunguje, můžete také zkopírovat a vložit do prohlížeče následující odkaz:"
+
+#: templates/email/account_exists/email_message.html:93 templates/email/admin_invite/email_message.html:99 templates/email/password/reset_email_message.html:91 templates/email/signup/email_message.html:83
+msgid "This is an automated message, please do not reply to this email."
+msgstr "Toto je automatická zpráva, neodpovídejte prosím na tento e-mail."
+
+#: templates/email/account_exists/email_message.html:94 templates/email/admin_invite/email_message.html:100 templates/email/password/reset_email_message.html:92 templates/email/signup/email_message.html:84
+msgid "If you have any questions, please contact our support team."
+msgstr "Máte-li jakékoli dotazy, obraťte se na náš tým podpory."
+
+#: templates/email/admin_invite/email_message.html:8
+msgid "You're invited"
+msgstr "Jste pozváni"
+
+#: templates/email/admin_invite/email_message.html:61 templates/email/admin_invite/email_subject.txt:2
+msgid "You've been invited to join our platform"
+msgstr "Byli jste pozváni na naši platformu"
+
+#: templates/email/admin_invite/email_message.html:66
+msgid ""
+"\n"
+"                An administrator has created an account for you using this email address.\n"
+"                To activate your account and set your password, please confirm your email address.\n"
+"                "
+msgstr ""
+"\n"
+"                Správce pro vás vytvořil účet s touto e-mailovou adresou.\n"
+"                Chcete-li jej aktivovat a nastavit heslo, potvrďte prosím svou e-mailovou adresu.\n"
+"                "
+
+#: templates/email/admin_invite/email_message.html:74
+msgid "Confirm email and set password"
+msgstr "Potvrdit e-mail a nastavit heslo"
+
+#: templates/email/admin_invite/email_message.html:79
+msgid ""
+"\n"
+"                If the button above does not work, you can also copy and paste the following link\n"
+"                into your browser:\n"
+"                "
+msgstr ""
+"\n"
+"                Pokud tlačítko výše nefunguje, můžete také zkopírovat a vložit následující odkaz\n"
+"                do svého prohlížeče:\n"
+"                "
+
+#: templates/email/admin_invite/email_message.html:87
+msgid ""
+"\n"
+"                After confirming your email, you will be redirected to a secure page where you can\n"
+"                choose your password and finish activating your account.\n"
+"                "
+msgstr ""
+"\n"
+"                Po potvrzení e-mailu budete přesměrováni na zabezpečenou stránku, kde si zvolíte\n"
+"                heslo a dokončíte aktivaci účtu.\n"
+"                "
+
+#: templates/email/admin_invite/email_message.html:94
+msgid "If you did not expect this invitation, you can safely ignore this email."
+msgstr "Pokud jste toto pozvání nečekali, můžete tento e-mail bez obav ignorovat."
+
+#: templates/email/password/reset_email_message.html:8
+msgid "Password Reset"
+msgstr "Obnovení hesla"
+
+#: templates/email/password/reset_email_message.html:73
+msgid "Password Reset Request"
+msgstr "Žádost o obnovení hesla"
+
+#: templates/email/password/reset_email_message.html:77
+msgid "Hello"
+msgstr "Dobrý den"
+
+#: templates/email/password/reset_email_message.html:79
+msgid "You're receiving this email because you requested a password reset for your account. Please click the button below to set a new password:"
+msgstr "Tento e-mail jste obdrželi, protože jste požádali o obnovení hesla ke svému účtu. Nové heslo nastavíte kliknutím na tlačítko níže:"
+
+#: templates/email/password/reset_email_subject.txt:2
+msgid "Password reset"
+msgstr "Obnovení hesla"
+
+#: templates/email/signup/email_message.html:8
+msgid "Email Verification"
+msgstr "Ověření e-mailu"
+
+#: templates/email/signup/email_message.html:65
+msgid "Welcome to our platform!"
+msgstr "Vítejte na naší platformě!"
+
+#: templates/email/signup/email_message.html:70
+msgid "Thank you for signing up on our website. To complete your registration, please click the button below to verify your email address:"
+msgstr "Děkujeme za registraci na našem webu. Dokončíte ji kliknutím na tlačítko níže, kterým ověříte svou e-mailovou adresu:"
+
+#: templates/email/signup/email_message.html:73
+msgid "Verify Email Address"
+msgstr "Ověřit e-mailovou adresu"
+
+#: templates/email/signup/email_message.html:79
+msgid "If you did not request this email, you can safely ignore it."
+msgstr "Pokud jste o tento e-mail nežádali, můžete jej bez obav ignorovat."
+
+#: templates/email/signup/email_subject.txt:2
+msgid "Welcome"
+msgstr "Vítejte"
+
+#: tokens/models.py:14
+msgid "created"
+msgstr "vytvořeno"
+
+#: tokens/models.py:15
+msgid "ip"
+msgstr "IP"
+
+#: tokens/models.py:16
+msgid "is mobile"
+msgstr "je mobil"
+
+#: tokens/models.py:17
+msgid "is tablet"
+msgstr "je tablet"
+
+#: tokens/models.py:18
+msgid "is pc"
+msgstr "je PC"
+
+#: tokens/models.py:19
+msgid "is bot"
+msgstr "je bot"
+
+#: tokens/models.py:20
+msgid "browser"
+msgstr "prohlížeč"
+
+#: tokens/models.py:21
+msgid "browser version"
+msgstr "verze prohlížeče"
+
+#: tokens/models.py:22
+msgid "os"
+msgstr "operační systém"
+
+#: tokens/models.py:23
+msgid "os version"
+msgstr "verze operačního systému"
+
+#: tokens/models.py:24
+msgid "device"
+msgstr "zařízení"
+
+#: tokens/models.py:25
+msgid "device brand"
+msgstr "značka zařízení"
+
+#: tokens/models.py:26
+msgid "device model"
+msgstr "model zařízení"
+
+#: tokens/models.py:30 tokens/models.py:46
+msgid "refresh token"
+msgstr "obnovovací token"
+
+#: tokens/models.py:31 tokens/models.py:47
+msgid "refresh tokens"
+msgstr "obnovovací tokeny"
+
+#: tokens/models.py:40
+msgid "jti"
+msgstr "jti"
+
+#: tokens/models.py:41
+msgid "enabled"
+msgstr "povoleno"
+
+#: tokens/models.py:42
+msgid "session"
+msgstr "relace"
+
+#: tokens/models.py:55 tokens/models.py:64
+msgid "user"
+msgstr "uživatel"
+
+#: tokens/models.py:66
+msgid "token"
+msgstr "token"
+
+#: tokens/models.py:67
+msgid "purpose"
+msgstr "účel"
+
+#: tokens/models.py:70
+msgid "generic token"
+msgstr "obecný token"
+
+#: tokens/models.py:71
+msgid "generic tokens"
+msgstr "obecné tokeny"

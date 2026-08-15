@@ -9,6 +9,7 @@ recursive-exclude jwt_allauth/migrations *
 recursive-include jwt_allauth/templates *.html
 recursive-include jwt_allauth/templates *.txt
 recursive-include jwt_allauth/locale *.po
+recursive-include jwt_allauth/locale *.mo
 recursive-include jwt_allauth/static *
 recursive-include jwt_allauth/bin *
 recursive-include jwt_allauth/management *

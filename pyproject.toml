@@ -110,4 +110,6 @@ jwt_allauth = [
     "templates/**/*.html",
     "templates/**/*.txt",
     "locale/**/*.po",
+    # The compiled catalogue is the one gettext reads; the source stays for translators.
+    "locale/**/*.mo",
 ]
