@@ -152,21 +152,50 @@ class VerifyEmailView(APIView, ConfirmEmailView):
             return True
         return not self_registration_enabled() and not token_entry.user.has_usable_password()
 
-    def _confirm_without_capability(self, request):
+    def _confirm_key(self, request, user):
+        """
+        Confirm the address the key names, tolerating a link that is opened twice.
+
+        Args:
+            request (HttpRequest): Request being served.
+            user (AbstractBaseUser): Owner recorded with the key, which is known good
+                even when allauth turns the key itself down.
+
+        Returns:
+            HttpResponse|None: The failure page when the key is genuinely bad, ``None``
+            once the address is confirmed.
+        """
+        try:
+            confirmation = self.get_object()
+            confirmation.confirm(self.request)
+        except (Http404, InvalidToken):
+            # allauth rejects the key once the address has been confirmed, so a second
+            # click on the same link lands here (multi-use) -- and so does a link
+            # scanner or a browser prefetch, on a URL an end user opens. Expiration is
+            # already covered by the caller's cutoff; anything else is a genuine error.
+            if not EmailAddress.objects.filter(user=user, verified=True).exists():
+                return self._verification_failed(request)
+        return None
+
+    def _confirm_without_capability(self, request, user):
         """
         Honour a confirmation that is not an invitation.
 
         ``None`` hands it back to the ordinary flow, which is what an installation with
-        self-service sign-up wants. With registration closed there is no ordinary flow to
-        hand it to -- these endpoints are the only ones routed -- so the address is
-        confirmed here and the browser lands where any confirmation lands, without the
-        password-set capability.
+        self-service sign-up wants -- and keeps this identical to an installation with no
+        invitations at all, where the key never reaches this method. With registration
+        closed there is no ordinary flow to hand it to -- these endpoints are the only
+        ones routed -- so the address is confirmed here and the browser lands where any
+        confirmation lands, without the password-set capability.
         """
         if self_registration_enabled():
             return None
-        confirmation = self.get_object()
-        confirmation.confirm(self.request)
-        return _verified_response(request)
+        # Nothing comes of this link for a deactivated account, the confirmation
+        # included: it is the same guard the invitation path applies, and this branch is
+        # the only other one that confirms on its own.
+        if not user.is_active:
+            return self._verification_failed(request)
+        return self._confirm_key(request, user) or _verified_response(request)
 
     def _claim_invitation(self, request, key):
         """
@@ -204,23 +233,16 @@ class VerifyEmailView(APIView, ConfirmEmailView):
 
         user = token_entry.user
         if not self._serves_invitation(token_entry):
-            return self._confirm_without_capability(request)
+            return self._confirm_without_capability(request, user)
 
         # A deactivated account gets no capability: login and refresh both refuse it,
         # and setting the password opens a session.
         if not user.is_active:
             return self._verification_failed(request)
 
-        try:
-            confirmation = self.get_object()
-            confirmation.confirm(self.request)
-        except (Http404, InvalidToken):
-            # allauth rejects the key once the address has been confirmed, so a second
-            # click on the same link lands here (multi-use). Expiration is already
-            # covered by `cutoff` above; anything else is a genuine error.
-            # Note: We use the user from our GenericTokenModel which we know is valid.
-            if not EmailAddress.objects.filter(user=user, verified=True).exists():
-                return self._verification_failed(request)
+        failed = self._confirm_key(request, user)
+        if failed is not None:
+            return failed
 
         # The password-set capability only makes sense for an invited account that has
         # not chosen a password yet. Issuing it for an account that already has one

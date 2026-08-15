@@ -279,6 +279,49 @@ class AdminManagedRegistrationTests(TestsMixin):
             ).exists()
         )
 
+    def _confirmation_for_an_account_with_a_password(self, username, **user_kwargs):
+        """An ordinary confirmation under closed registration: not an invitation."""
+        user = get_user_model().objects.create_user(
+            username, email=self.INVITED_EMAIL, password='A-1_strong', **user_kwargs)
+        address = EmailAddress.objects.create(
+            user=user, email=self.INVITED_EMAIL, verified=False, primary=True)
+        key = EmailConfirmationHMAC(address).key
+        GenericTokenModel.objects.create(
+            user=user, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+        return user, address, key
+
+    def test_a_confirmation_link_survives_being_opened_twice(self):
+        """
+        A link scanner, a browser prefetch or a forwarded mail all open the URL more than
+        once, and allauth turns the key down as soon as the address is confirmed. The
+        second click must land on the same page as the first, not on a bare 404.
+        """
+        _, address, key = self._confirmation_for_an_account_with_a_password('twice')
+        url = reverse('account_confirm_email', args=[key])
+
+        first = self.client.get(url)
+        second = self.client.get(url)
+
+        self.assertEqual(first.status_code, 302)
+        self.assertEqual(second.status_code, 302)
+        self.assertEqual(first['Location'], second['Location'])
+        address.refresh_from_db()
+        self.assertTrue(address.verified)
+
+    def test_a_deactivated_account_gets_nothing_from_its_confirmation_link(self):
+        """
+        The link is refused for a deactivated account whether or not it is an invitation.
+        Verifying its address is the one thing the account still had to gain from it.
+        """
+        _, address, key = self._confirmation_for_an_account_with_a_password(
+            'deactivated', is_active=False)
+
+        resp = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(resp.status_code, 400)
+        address.refresh_from_db()
+        self.assertFalse(address.verified)
+
     @override_settings(LOGOUT_ON_PASSWORD_CHANGE=False)
     def test_invitation_token_is_spent_even_without_session_revocation(self):
         """
