@@ -158,7 +158,7 @@ class RefreshToken(DefaultRefreshToken):
         """
         self.payload['role'] = get_user_role(user)
 
-    def set_email_verified(self, user):
+    def set_email_verified(self, user, verified=None):
         """
         Record whether the account has a confirmed e-mail address.
 
@@ -166,8 +166,15 @@ class RefreshToken(DefaultRefreshToken):
         token that has not been rotated since the confirmation denies access it should
         by now be granting -- never the other way round. The exception is an address
         changed after the fact, and that one is bounded by the life of the access token.
+
+        Args:
+            user (AbstractBaseUser): Owner of the token.
+            verified (bool|None): The answer, when the caller has just asked the same
+                question -- a login gate does, immediately before minting. ``None`` asks
+                the database. Never cached on the user instance: an address confirmed
+                earlier in the same request would make a cached answer wrong.
         """
-        self.payload[EMAIL_VERIFIED_CLAIM] = is_email_verified(user)
+        self.payload[EMAIL_VERIFIED_CLAIM] = is_email_verified(user) if verified is None else verified
 
     def sync_user_claims(self, user):
         """
@@ -187,8 +194,15 @@ class RefreshToken(DefaultRefreshToken):
         self.set_user_attributes(user)
 
     @classmethod
-    def for_user(cls, user, request=None, enabled=True):
+    def for_user(cls, user, request=None, enabled=True, email_verified=None):
         """
+        Args:
+            user (AbstractBaseUser): Account to open the session for.
+            request (HttpRequest|None): Request the device is recorded from.
+            enabled (bool): Whether the session may be refreshed straight away.
+            email_verified (bool|None): Passed on to :meth:`set_email_verified` when the
+                caller has already asked; ``None`` lets the token ask.
+
         Return
         ------
         RefreshToken
@@ -199,7 +213,13 @@ class RefreshToken(DefaultRefreshToken):
         token.set_session_iat()  # type: ignore
         token.cap_exp_to_session()  # type: ignore
         token.set_user_role(user)  # type: ignore
-        token.set_email_verified(user)  # type: ignore
+        if email_verified is None:
+            # Called with one argument unless the caller actually has an answer, so a
+            # subclass that overrode `set_email_verified(self, user)` -- the shape this
+            # method had before -- keeps working on every path that does not.
+            token.set_email_verified(user)  # type: ignore
+        else:
+            token.set_email_verified(user, email_verified)  # type: ignore
         token.set_user_attributes(user)  # type: ignore
         # Store the token in the database
         refresh_serializer = RefreshTokenWhitelistSerializer(data={

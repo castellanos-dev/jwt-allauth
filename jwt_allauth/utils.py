@@ -3,6 +3,7 @@ import warnings
 from contextlib import contextmanager
 from datetime import timedelta
 from importlib import import_module
+from importlib.util import find_spec
 from typing import Any, Dict, Optional
 
 from allauth.account import app_settings as allauth_settings
@@ -136,6 +137,61 @@ def verification_is_mandatory() -> bool:
         allauth_settings.EMAIL_VERIFICATION
         == allauth_settings.EmailVerificationMethod.MANDATORY
     )
+
+
+def socialaccount_stack_available() -> bool:
+    """Whether the dependencies the social flows need are installed.
+
+    ``allauth.socialaccount`` imports without them -- it defers ``requests`` into a
+    method, and ``jwt``/``cryptography`` behind ``allauth.core.internal.deferred`` -- so
+    the question cannot be answered by catching an ``ImportError`` around the import. It
+    is asked of the module finder instead, which is what makes the difference between
+    "the extra is missing" and "no provider is configured" reportable at startup rather
+    than as a 500 on the first request.
+
+    All three are checked, not just ``requests``: a host that happens to carry ``requests``
+    for unrelated reasons but no ``cryptography`` would otherwise route the endpoints, keep
+    ``jwt_allauth.W004`` quiet, and raise ``ModuleNotFoundError`` from allauth's JWT kit on
+    the first credential -- exactly the 500 this check exists to forestall.
+
+    Returns:
+        bool: ``True`` when everything ``django-allauth[socialaccount]`` pulls in is
+        importable, which is what ``pip install django-jwt-allauth[social]`` installs.
+    """
+    return all(find_spec(module) is not None for module in ('requests', 'oauthlib', 'cryptography'))
+
+
+def invitations_enabled() -> bool:
+    """Whether an admin may create an account for somebody else to claim.
+
+    Two settings switch it on, and they are not the same question.
+    ``JWT_ALLAUTH_INVITATIONS`` adds the invitation endpoints and leaves self-service
+    sign-up exactly as it was, which is what most installations want: a public sign-up
+    for customers and invitations for staff.
+    ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` is the older setting and means something
+    stronger -- invitations *instead of* open registration -- so it implies this one. It
+    is unchanged and stays supported; see :func:`self_registration_enabled`.
+
+    Returns:
+        bool: ``True`` when ``/registration/user-register/`` and
+        ``/registration/set-password/`` are served.
+    """
+    if getattr(settings, 'JWT_ALLAUTH_INVITATIONS', False):
+        return True
+    return bool(getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False))
+
+
+def self_registration_enabled() -> bool:
+    """Whether anybody may open an account for themselves.
+
+    Only ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` closes it. Turning invitations on
+    through ``JWT_ALLAUTH_INVITATIONS`` adds a way in rather than replacing one, so
+    ``/registration/`` keeps answering and social sign-up keeps working.
+
+    Returns:
+        bool: ``True`` unless registration is closed to everyone but invited accounts.
+    """
+    return not bool(getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False))
 
 
 def enumeration_prevented():
@@ -311,7 +367,12 @@ def user_agent_dict(request):
 
 sensitive_post_parameters_m = method_decorator(
     sensitive_post_parameters(
-        'password', 'old_password', 'new_password1', 'new_password2', 'password1', 'password2'
+        'password', 'old_password', 'new_password1', 'new_password2', 'password1', 'password2',
+        # A provider's credentials are credentials too: Django's error reporter prints
+        # the POST parameters into the traceback, the `django.request` log line and the
+        # mail to ADMINS, so an unhandled exception on a form-encoded request would put
+        # a live provider token where all three can be read.
+        'id_token', 'access_token', 'code', 'code_verifier',
     )
 )
 

@@ -12,7 +12,8 @@ To use MFA TOTP, install ``django-jwt-allauth`` with the ``mfa`` extra:
 
     pip install "django-jwt-allauth[mfa]"
 
-This will automatically install ``django-allauth[mfa]`` and all required dependencies.
+That is the only command needed: the extra brings every dependency the TOTP and recovery
+code flows require. See :ref:`optional-features` for the extras this package ships.
 
 Add to your ``INSTALLED_APPS``:
 
@@ -316,7 +317,7 @@ The login endpoint (``POST /login/``) behavior varies depending on the MFA mode 
 Registration Flow with MFA REQUIRED
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, both self-service and admin-managed registration flows are modified to enforce MFA setup before token issuance:
+When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, both self-service registration and invitations are modified to enforce MFA setup before token issuance:
 
 **Self-Service Registration** (``POST /registration/``)
 
@@ -358,7 +359,7 @@ When ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'``, both self-service and admin-man
         "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
     }
 
-**Admin-Managed Registration** (``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``)
+**Invitations** (``JWT_ALLAUTH_INVITATIONS`` or ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION``)
 
 .. code-block:: bash
 
@@ -475,7 +476,7 @@ Security Considerations
 - MFA setup is mandatory before any API access
 
 ✅ **Consistent Across Methods:**
-- Self-service and admin-managed registration behave identically
+- Self-service registration and invitations behave identically
 - Login and registration share the same bootstrap mechanism
 
  ✅ **Temporary Access Control:**

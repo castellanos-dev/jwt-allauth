@@ -2,22 +2,14 @@ import logging
 from uuid import uuid4
 
 from allauth.account import app_settings as allauth_settings
-# from allauth.account.adapter import get_adapter
 from allauth.account.utils import complete_signup
-# from allauth.socialaccount import signals
-# from allauth.socialaccount.adapter import get_adapter as get_social_adapter
-# from allauth.socialaccount.models import SocialAccount
-from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status
-# from rest_framework.exceptions import NotFound
-from rest_framework.generics import CreateAPIView  #, ListAPIView, GenericAPIView
-# from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from django.http import HttpResponseNotFound
 
-# from jwt_allauth.login.views import LoginView
 from jwt_allauth.tokens.models import TokenModel
 from jwt_allauth.registration.app_settings import register_permission_classes
 from jwt_allauth.app_settings import RegisterSerializer
@@ -26,34 +18,21 @@ from jwt_allauth.permissions import RegisterUsersPermission
 from jwt_allauth.throttling import ExtraThrottlesMixin
 from jwt_allauth.registration.serializers import UserRegisterSerializer
 from jwt_allauth.schema import registration_schema
-# from jwt_allauth.registration.serializers import (
-#     SocialLoginSerializer, SocialAccountSerializer, SocialConnectSerializer)
 from jwt_allauth.utils import (
     enumeration_prevented,
     get_user_agent,
+    invitations_enabled,
     refresh_token_as_cookie,
+    self_registration_enabled,
     sensitive_post_parameters_m,
     set_refresh_token_cookie,
     verification_is_mandatory,
 )
-from jwt_allauth.constants import (
-    MFA_TOTP_DISABLED,
-    MFA_TOTP_REQUIRED,
-)
+from jwt_allauth.constants import MFA_TOTP_REQUIRED
+from jwt_allauth.mfa.gate import get_mfa_totp_mode
 from jwt_allauth.mfa.storage import create_setup_challenge
 
 logger = logging.getLogger(__name__)
-
-
-def get_mfa_totp_mode() -> str:
-    """
-    Return the current MFA TOTP mode from settings.
-
-    This must be evaluated at call time (not import time) so that
-    Django's `override_settings` used in tests – and any runtime changes
-    – are respected.
-    """
-    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
 
 
 @registration_schema
@@ -117,8 +96,9 @@ class RegisterView(ExtraThrottlesMixin, CreateAPIView):
 
     @get_user_agent
     def create(self, request, *args, **kwargs):
-        # If admin-managed registration is enabled, disable open registration endpoint
-        if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        # Closed registration removes this endpoint. Adding invitations does not: they
+        # are a second way in, not a replacement for this one.
+        if not self_registration_enabled():
             return HttpResponseNotFound()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -179,7 +159,7 @@ class RegisterView(ExtraThrottlesMixin, CreateAPIView):
         return refresh
 
 
-class UserRegisterView(CreateAPIView):
+class UserRegisterView(ExtraThrottlesMixin, CreateAPIView):
     """
     Admin-managed registration endpoint.
     - Only accessible to users with admin role (see AdminPermission).
@@ -189,6 +169,12 @@ class UserRegisterView(CreateAPIView):
     serializer_class = UserRegisterSerializer
     permission_classes = (RegisterUsersPermission,)
     http_method_names = ['post', 'head', 'options']
+    # An authorized caller, but the request still sends mail to an address of its
+    # choosing, reports whether that address is in use -- the endpoint answers conflicts
+    # rather than hiding them -- and supersedes an unclaimed account holding it. The role
+    # check bounds who may do it, not how fast, and `JWT_ALLAUTH_INVITATIONS` now routes
+    # this in installations that keep their public sign-up.
+    extra_throttle_classes = (UserRateThrottle,)
 
     @staticmethod
     def get_response_data(_):
@@ -196,7 +182,7 @@ class UserRegisterView(CreateAPIView):
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
-        if not getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        if not invitations_enabled():
             return HttpResponseNotFound()
         return super(UserRegisterView, self).dispatch(*args, **kwargs)
 
@@ -211,91 +197,3 @@ class UserRegisterView(CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(self.request)
         return None
-
-
-# class SocialLoginView(LoginView):
-#     """
-#     class used for social authentications
-#     example usage for facebook with access_token
-#     -------------
-#     from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
-#
-#     class FacebookLogin(SocialLoginView):
-#         adapter_class = FacebookOAuth2Adapter
-#     -------------
-#
-#     example usage for facebook with code
-#
-#     -------------
-#     from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
-#     from allauth.socialaccount.providers.oauth2.client import OAuth2Client
-#
-#     class FacebookLogin(SocialLoginView):
-#         adapter_class = FacebookOAuth2Adapter
-#         client_class = OAuth2Client
-#         callback_url = 'localhost:8000'
-#     -------------
-#     """
-#     serializer_class = SocialLoginSerializer
-#
-#     def process_login(self):
-#         get_adapter(self.request).login(self.request, self.user)
-#
-#
-# class SocialConnectView(LoginView):
-#     """
-#     class used for social account linking
-#
-#     example usage for facebook with access_token
-#     -------------
-#     from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
-#
-#     class FacebookConnect(SocialConnectView):
-#         adapter_class = FacebookOAuth2Adapter
-#     -------------
-#     """
-#     serializer_class = SocialConnectSerializer
-#     permission_classes = (IsAuthenticated,)
-#
-#     def process_login(self):
-#         get_adapter(self.request).login(self.request, self.user)
-#
-#
-# class SocialAccountListView(ListAPIView):
-#     """
-#     List SocialAccounts for the currently logged in user
-#     """
-#     serializer_class = SocialAccountSerializer
-#     permission_classes = (IsAuthenticated,)
-#
-#     def get_queryset(self):
-#         return SocialAccount.objects.filter(user=self.request.user)
-#
-#
-# class SocialAccountDisconnectView(GenericAPIView):
-#     """
-#     Disconnect SocialAccount from remote service for
-#     the currently logged in user
-#     """
-#     serializer_class = SocialConnectSerializer
-#     permission_classes = (IsAuthenticated,)
-#
-#     def get_queryset(self):
-#         return SocialAccount.objects.filter(user=self.request.user)
-#
-#     def post(self, request, *args, **kwargs):
-#         accounts = self.get_queryset()
-#         account = accounts.filter(pk=kwargs['pk']).first()
-#         if not account:
-#             raise NotFound
-#
-#         get_social_adapter(self.request).validate_disconnect(account, accounts)
-#
-#         account.delete()
-#         signals.social_account_removed.send(
-#             sender=SocialAccount,
-#             request=self.request,
-#             socialaccount=account
-#         )
-#
-#         return Response(self.get_serializer(account).data)

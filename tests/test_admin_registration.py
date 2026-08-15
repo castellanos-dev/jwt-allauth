@@ -1,21 +1,25 @@
 import re
+from datetime import timedelta
 
+from allauth.account import app_settings as allauth_app_settings
 from allauth.account.models import EmailAddress, EmailConfirmationHMAC
 from django.conf import settings as django_settings
 from django.core import mail
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.urls import NoReverseMatch, clear_url_caches, reverse
+from django.utils import timezone
 from rest_framework import status
 
 from jwt_allauth.constants import (
+    INVITATION,
     SET_PASSWORD_COOKIE,
     PASS_SET_ACCESS,
     REFRESH_TOKEN_COOKIE,
     EMAIL_CONFIRMATION,
 )
 from jwt_allauth.tokens.app_settings import RefreshToken
-from jwt_allauth.tokens.models import GenericTokenModel
+from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.utils import hash_token
 from .mixins import APIClient, TestsMixin
 
@@ -109,6 +113,37 @@ class AdminManagedRegistrationTests(TestsMixin):
         )
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_an_invitation_can_be_reissued(self):
+        """
+        There is no resend endpoint: re-inviting is how an administrator replaces a link
+        that never arrived. The reservation an invitation puts on its address must not
+        stand in the way of the endpoint that created it.
+        """
+        staff = get_user_model().objects.create_user(
+            'admin_reinvite', email='admin_reinvite@demo.com', password='A-1_strong', is_staff=True)
+        EmailAddress.objects.create(user=staff, email=staff.email, verified=True, primary=True)
+        staff_access = str(RefreshToken.for_user(staff).access_token)
+        payload = {"email": self.INVITED_EMAIL, "role": 300}
+
+        first = self.client.post(
+            self.user_register_url, data=payload, content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {staff_access}')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        invited = get_user_model().objects.get(email=self.INVITED_EMAIL)
+
+        mail.outbox = []
+        second = self.client.post(
+            self.user_register_url, data=payload, content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {staff_access}')
+
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(mail.outbox), 1)
+        # The pending invitation is superseded, exactly as an abandoned sign-up is:
+        # one account holds the address, and it is not the one the first link belongs to.
+        self.assertEqual(
+            get_user_model().objects.filter(email=self.INVITED_EMAIL).count(), 1)
+        self.assertFalse(get_user_model().objects.filter(pk=invited.pk).exists())
+
     def test_duplicate_email_rules(self):
         staff = get_user_model().objects.create_user(
             'admin2', email='admin2@demo.com', password='A-1_strong', is_staff=True)
@@ -140,8 +175,8 @@ class AdminManagedRegistrationTests(TestsMixin):
     def test_email_confirmation_token_created_on_registration(self):
         """
         When a staff user registers an invited user, a confirmation token should be
-        persisted for EMAIL_CONFIRMATION as the digest of the key sent by email — the
-        raw key must never be readable from the database.
+        persisted for INVITATION as the digest of the key sent by email — the raw key
+        must never be readable from the database.
         """
         staff = get_user_model().objects.create_user(
             'admin_token', email='admin_token@demo.com', password='A-1_strong', is_staff=True
@@ -177,7 +212,7 @@ class AdminManagedRegistrationTests(TestsMixin):
         self.assertEqual(confirmation.email_address, email_addr)
 
         token = GenericTokenModel.objects.filter(
-            user=invited, purpose=EMAIL_CONFIRMATION
+            user=invited, purpose=INVITATION
         ).first()
         self.assertIsNotNone(token)
         self.assertEqual(token.token, hash_token(key))
@@ -203,7 +238,7 @@ class AdminManagedRegistrationTests(TestsMixin):
 
     def test_email_confirmation_token_multi_use_until_password_set(self):
         """
-        The EMAIL_CONFIRMATION token allows multiple GET requests (e.g. link scanners).
+        The INVITATION token allows multiple GET requests (e.g. link scanners).
         It should only be invalidated after the password is set.
         """
         invited = get_user_model().objects.create_user('invited_multi_use', email=self.INVITED_EMAIL)
@@ -212,7 +247,7 @@ class AdminManagedRegistrationTests(TestsMixin):
         )
 
         key = EmailConfirmationHMAC(email_addr).key
-        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=INVITATION)
 
         verify_url = reverse('account_confirm_email', args=[key])
 
@@ -222,7 +257,7 @@ class AdminManagedRegistrationTests(TestsMixin):
         self.assertIn(SET_PASSWORD_COOKIE, self.client.cookies)
         self.assertTrue(
             GenericTokenModel.objects.filter(
-                user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION
+                user=invited, token=hash_token(key), purpose=INVITATION
             ).exists()
         )
 
@@ -240,9 +275,80 @@ class AdminManagedRegistrationTests(TestsMixin):
         # Now the token should be gone
         self.assertFalse(
             GenericTokenModel.objects.filter(
-                user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION
+                user=invited, token=hash_token(key), purpose=INVITATION
             ).exists()
         )
+
+    def _confirmation_for_an_account_with_a_password(self, username, **user_kwargs):
+        """An ordinary confirmation under closed registration: not an invitation."""
+        user = get_user_model().objects.create_user(
+            username, email=self.INVITED_EMAIL, password='A-1_strong', **user_kwargs)
+        address = EmailAddress.objects.create(
+            user=user, email=self.INVITED_EMAIL, verified=False, primary=True)
+        key = EmailConfirmationHMAC(address).key
+        GenericTokenModel.objects.create(
+            user=user, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+        return user, address, key
+
+    def test_a_confirmation_link_survives_being_opened_twice(self):
+        """
+        A link scanner, a browser prefetch or a forwarded mail all open the URL more than
+        once, and allauth turns the key down as soon as the address is confirmed. The
+        second click must land on the same page as the first, not on a bare 404.
+        """
+        _, address, key = self._confirmation_for_an_account_with_a_password('twice')
+        url = reverse('account_confirm_email', args=[key])
+
+        first = self.client.get(url)
+        second = self.client.get(url)
+
+        self.assertEqual(first.status_code, 302)
+        self.assertEqual(second.status_code, 302)
+        self.assertEqual(first['Location'], second['Location'])
+        address.refresh_from_db()
+        self.assertTrue(address.verified)
+
+    def test_a_deactivated_account_gets_nothing_from_its_confirmation_link(self):
+        """
+        The link is refused for a deactivated account whether or not it is an invitation.
+        Verifying its address is the one thing the account still had to gain from it.
+        """
+        _, address, key = self._confirmation_for_an_account_with_a_password(
+            'deactivated', is_active=False)
+
+        resp = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(resp.status_code, 400)
+        address.refresh_from_db()
+        self.assertFalse(address.verified)
+
+    @override_settings(LOGOUT_ON_PASSWORD_CHANGE=False)
+    def test_invitation_token_is_spent_even_without_session_revocation(self):
+        """
+        The link stays re-clickable until the password is set, so setting it has to spend
+        the token. With ``LOGOUT_ON_PASSWORD_CHANGE`` off, ``revoke_on_credential_change``
+        deletes nothing and this is the only thing that does -- which is why the deletion
+        exists apart from the revocation, and why the default hides a miss here.
+        """
+        invited = get_user_model().objects.create_user('invited_spent', email=self.INVITED_EMAIL)
+        invited.set_unusable_password()
+        invited.save()
+        email_addr = EmailAddress.objects.create(
+            user=invited, email=self.INVITED_EMAIL, verified=False, primary=True
+        )
+        key = EmailConfirmationHMAC(email_addr).key
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=INVITATION)
+
+        self.client.get(reverse('account_confirm_email', args=[key]))
+        resp = self.client.post(
+            self.set_password_url,
+            data={"new_password1": "A-1_newpass", "new_password2": "A-1_newpass"},
+            content_type='application/json'
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(user=invited, purpose=INVITATION).exists())
 
     def test_email_confirmation_invalid_token_renders_error_page(self):
         """
@@ -264,7 +370,7 @@ class AdminManagedRegistrationTests(TestsMixin):
         )
 
         key = EmailConfirmationHMAC(email_addr).key
-        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=INVITATION)
 
         # Simulate expiration by overriding the setting to 0 days (or -1 if possible, but 0 usually means
         # immediate expiration)
@@ -393,7 +499,7 @@ class AdminManagedRegistrationTests(TestsMixin):
         )
 
         key = EmailConfirmationHMAC(email_addr).key
-        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=INVITATION)
         verify_url = reverse('account_confirm_email', args=[key])
 
         self.client.get(verify_url)
@@ -415,7 +521,7 @@ class AdminManagedRegistrationTests(TestsMixin):
             user=invited, email=email, verified=False, primary=True
         )
         key = EmailConfirmationHMAC(email_addr).key
-        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=INVITATION)
         return invited, key
 
     def test_confirmation_of_deactivated_account_grants_nothing(self):
@@ -520,7 +626,7 @@ class AdminManagedRegistrationTests(TestsMixin):
         # Simulate clicking the verification link sent by email
         key = EmailConfirmationHMAC(email_addr).key
         # Persist confirmation token as it would be created by the adapter
-        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=INVITATION)
         verify_url = reverse('account_confirm_email', args=[key])
         verify_resp = self.client.get(verify_url)
         self.assertEqual(verify_resp.status_code, 302)  # redirected after confirming
@@ -629,7 +735,7 @@ class AdminManagedEmailVerificationOffTests(TestsMixin):
         # Simulate verification GET
         key = EmailConfirmationHMAC(email_addr).key
         # Persist confirmation token as it would be created by the adapter
-        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=INVITATION)
         verify_url = reverse('account_confirm_email', args=[key])
         verify_resp = self.client.get(verify_url)
         self.assertEqual(verify_resp.status_code, 302)
@@ -654,3 +760,272 @@ class AdminManagedEmailVerificationOffTests(TestsMixin):
         )
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
         self.assertIn('access', login_response.json())
+
+
+@override_settings(
+    JWT_ALLAUTH_INVITATIONS=True,
+    EMAIL_VERIFICATION=True,
+    PASSWORD_SET_REDIRECT='/set-password-ui/',
+    ROOT_URLCONF='tests.django_urls')
+class InvitationsAlongsideOpenRegistrationTests(TestsMixin):
+    """
+    Invitations added to a project that keeps its public sign-up.
+
+    ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` has always meant invitations *instead of*
+    open registration, which rules out the ordinary shape of a product: customers sign
+    themselves up and staff are invited. ``JWT_ALLAUTH_INVITATIONS`` adds the second way
+    in without taking the first one away.
+    """
+
+    INVITED_EMAIL = 'invited@demo.com'
+    SELF_EMAIL = 'self.signup@demo.com'
+
+    def setUp(self):
+        clear_url_caches()
+        from importlib import reload
+        import jwt_allauth.registration.urls
+        import jwt_allauth.urls
+        import tests.django_urls
+        reload(jwt_allauth.registration.urls)
+        reload(jwt_allauth.urls)
+        reload(tests.django_urls)
+
+        self.init()
+        self.user_register_url = reverse('rest_user_register')
+        self.set_password_url = reverse('rest_set_password')
+
+    def tearDown(self):
+        clear_url_caches()
+        from importlib import reload
+        import jwt_allauth.registration.urls
+        import jwt_allauth.urls
+        import tests.django_urls
+        reload(jwt_allauth.registration.urls)
+        reload(jwt_allauth.urls)
+        reload(tests.django_urls)
+
+    def test_both_ways_in_are_routed(self):
+        self.assertTrue(reverse('rest_register'))
+        self.assertTrue(reverse('rest_user_register'))
+
+    def test_public_sign_up_still_works(self):
+        """The regression that matters: adding invitations must not close the door."""
+        resp = self.client.post(
+            reverse('rest_register'),
+            data={
+                'email': self.SELF_EMAIL,
+                'password1': 'A-1_newpass',
+                'password2': 'A-1_newpass',
+                'first_name': self.FIRST_NAME,
+                'last_name': self.LAST_NAME,
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(get_user_model().objects.filter(email=self.SELF_EMAIL).exists())
+
+    def _invite(self):
+        self.token = str(RefreshToken.for_user(self.USER).access_token)
+        self.USER.is_staff = True
+        self.USER.save()
+        return self.client.post(
+            self.user_register_url,
+            data={'email': self.INVITED_EMAIL, 'first_name': 'In', 'last_name': 'Vited'},
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {self.token}',
+        )
+
+    def test_invitation_flow_completes(self):
+        invited = get_user_model().objects.create_user('invited', email=self.INVITED_EMAIL)
+        address = EmailAddress.objects.create(
+            user=invited, email=self.INVITED_EMAIL, verified=False, primary=True)
+        key = EmailConfirmationHMAC(address).key
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=INVITATION)
+
+        verify = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(verify.status_code, 302)
+        self.assertIn(SET_PASSWORD_COOKIE, self.client.cookies)
+
+        resp = self.client.post(
+            self.set_password_url,
+            data={'new_password1': 'A-1_newpass', 'new_password2': 'A-1_newpass'},
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('access', resp.json())
+
+    @override_settings(JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION=True)
+    def test_a_self_registered_confirmation_is_not_treated_as_an_invitation(self):
+        """
+        Both flows arrive through the same link, and the password is what tells them
+        apart. A sign-up that chose a password has to go through the ordinary
+        confirmation -- which enables the session registration left disabled and, under
+        ``JWT_ALLAUTH_SESSION_ON_EMAIL_VERIFICATION``, hands one out. The invitation path
+        does neither, so mistaking one for the other silently breaks sign-up.
+        """
+        signed_up = get_user_model().objects.create_user(
+            'selfsignup', email=self.SELF_EMAIL, password='A-1_newpass')
+        address = EmailAddress.objects.create(
+            user=signed_up, email=self.SELF_EMAIL, verified=False, primary=True)
+        pending = RefreshToken.for_user(signed_up, enabled=False)
+        key = EmailConfirmationHMAC(address).key
+        GenericTokenModel.objects.create(user=signed_up, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+
+        verify = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(verify.status_code, 302)
+        self.assertNotIn(SET_PASSWORD_COOKIE, self.client.cookies)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(user=signed_up, purpose=PASS_SET_ACCESS).exists())
+        address.refresh_from_db()
+        self.assertTrue(address.verified)
+
+        # The two assertions that only the ordinary confirmation satisfies.
+        self.assertTrue(
+            RefreshTokenWhitelistModel.objects.get(jti=pending.payload['jti']).enabled)
+        self.assertIn(REFRESH_TOKEN_COOKIE, verify.cookies)
+
+    def test_a_confirmation_with_no_invitation_behind_it_still_confirms(self):
+        """
+        With registration closed a key with no row behind it is refused. With sign-up
+        open it is an ordinary confirmation, and refusing it would break registration.
+        """
+        signed_up = get_user_model().objects.create_user(
+            'nolinkrow', email=self.SELF_EMAIL, password='A-1_newpass')
+        address = EmailAddress.objects.create(
+            user=signed_up, email=self.SELF_EMAIL, verified=False, primary=True)
+        key = EmailConfirmationHMAC(address).key
+
+        verify = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(verify.status_code, 302)
+        address.refresh_from_db()
+        self.assertTrue(address.verified)
+
+    def test_social_signup_stays_open(self):
+        """Only closed registration shuts social sign-up; invitations do not."""
+        from jwt_allauth.social.adapter import JWTAllAuthSocialAccountAdapter
+        self.assertTrue(JWTAllAuthSocialAccountAdapter().is_open_for_signup(None, None))
+
+
+@override_settings(
+    JWT_ALLAUTH_INVITATIONS=True,
+    EMAIL_VERIFICATION=True,
+    PASSWORD_SET_REDIRECT='/set-password-ui/',
+    ROOT_URLCONF='tests.django_urls')
+class InvitationReservesTheAddressTests(TestsMixin):
+    """
+    An invitation in flight holds on to the address it was sent to.
+
+    An invited account is indistinguishable from an abandoned sign-up by shape alone --
+    no password, never used, address unconfirmed -- so before the invitation was recorded
+    as such, anybody could post the invitee's address to the public sign-up and destroy
+    the account, the role granted with it and the link, silently. The reservation lasts
+    exactly as long as the link does: a dead invitation must not keep an address hostage.
+    """
+
+    INVITED_EMAIL = 'invited@demo.com'
+
+    def setUp(self):
+        clear_url_caches()
+        from importlib import reload
+        import jwt_allauth.registration.urls
+        import jwt_allauth.urls
+        import tests.django_urls
+        reload(jwt_allauth.registration.urls)
+        reload(jwt_allauth.urls)
+        reload(tests.django_urls)
+
+        self.init()
+        self.register_url = reverse('rest_register')
+
+    def tearDown(self):
+        clear_url_caches()
+        from importlib import reload
+        import jwt_allauth.registration.urls
+        import jwt_allauth.urls
+        import tests.django_urls
+        reload(jwt_allauth.registration.urls)
+        reload(jwt_allauth.urls)
+        reload(tests.django_urls)
+
+    def _invite(self, age_days=0):
+        """An invited account with its link either still live or long expired."""
+        invited = get_user_model().objects.create_user('invited', email=self.INVITED_EMAIL)
+        invited.set_unusable_password()
+        invited.save()
+        address = EmailAddress.objects.create(
+            user=invited, email=self.INVITED_EMAIL, verified=False, primary=True)
+        key = EmailConfirmationHMAC(address).key
+        token = GenericTokenModel.objects.create(
+            user=invited, token=hash_token(key), purpose=INVITATION)
+        if age_days:
+            GenericTokenModel.objects.filter(pk=token.pk).update(
+                created=timezone.now() - timedelta(days=age_days))
+        return invited, key
+
+    def _sign_up(self):
+        return self.client.post(
+            self.register_url,
+            data={
+                'email': self.INVITED_EMAIL,
+                'password1': 'A-1_newpass',
+                'password2': 'A-1_newpass',
+                'first_name': self.FIRST_NAME,
+                'last_name': self.LAST_NAME,
+            },
+            content_type='application/json',
+        )
+
+    def test_a_public_sign_up_does_not_destroy_a_live_invitation(self):
+        invited, key = self._invite()
+
+        resp = self._sign_up()
+
+        # The conflict is hidden, so the caller is told nothing either way.
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(get_user_model().objects.filter(pk=invited.pk).exists())
+        self.assertEqual(
+            get_user_model().objects.filter(email=self.INVITED_EMAIL).count(), 1)
+        # The link still works, and still leads to the password-set capability.
+        verify = self.client.get(reverse('account_confirm_email', args=[key]))
+        self.assertEqual(verify.status_code, 302)
+        self.assertIn(SET_PASSWORD_COOKIE, self.client.cookies)
+
+    def test_an_expired_invitation_frees_the_address(self):
+        invited, _ = self._invite(
+            age_days=allauth_app_settings.EMAIL_CONFIRMATION_EXPIRE_DAYS + 1)
+
+        resp = self._sign_up()
+
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(get_user_model().objects.filter(pk=invited.pk).exists())
+        self.assertEqual(
+            get_user_model().objects.filter(email=self.INVITED_EMAIL).count(), 1)
+
+    def test_a_password_less_account_without_an_invitation_is_not_invited(self):
+        """
+        An account created by a social provider has no usable password either, which is
+        what an invitation used to be recognised by. Handing that account's confirmation
+        link the password-set capability turns any provider's mail into a way of setting
+        a local password on it.
+        """
+        social_like = get_user_model().objects.create_user(
+            'socially', email='social.signup@demo.com')
+        social_like.set_unusable_password()
+        social_like.save()
+        address = EmailAddress.objects.create(
+            user=social_like, email=social_like.email, verified=False, primary=True)
+        key = EmailConfirmationHMAC(address).key
+        GenericTokenModel.objects.create(
+            user=social_like, token=hash_token(key), purpose=EMAIL_CONFIRMATION)
+
+        verify = self.client.get(reverse('account_confirm_email', args=[key]))
+
+        self.assertEqual(verify.status_code, 302)
+        self.assertNotIn(SET_PASSWORD_COOKIE, self.client.cookies)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(user=social_like, purpose=PASS_SET_ACCESS).exists())
+        address.refresh_from_db()
+        self.assertTrue(address.verified)

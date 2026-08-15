@@ -6,18 +6,14 @@ from allauth.account.adapter import get_adapter
 from allauth.account.admin import EmailAddress
 from allauth.account.models import get_emailconfirmation_model
 from allauth.account.utils import setup_user_email
-# from allauth.socialaccount.helpers import complete_social_login
-# from allauth.socialaccount.models import SocialAccount
-# from allauth.socialaccount.providers.base import AuthProcess
 from allauth.utils import get_username_max_length
 from django.contrib.auth import get_user_model
 from django.db import transaction
-# from django.http import HttpRequest
 from django.utils.crypto import constant_time_compare
 from django.utils.translation import gettext_lazy as _
-# from requests.exceptions import HTTPError
 from rest_framework import serializers
 
+from jwt_allauth.accounts import account_is_claimed, superseded_accounts
 from jwt_allauth.roles import has_role_field, user_model_has_role_field
 from jwt_allauth.utils import enumeration_prevented, verification_enabled
 
@@ -75,48 +71,15 @@ class RegisterSerializer(serializers.Serializer):
         """
         return self.prevent_enumeration and enumeration_prevented()
 
-    @staticmethod
-    def _account_is_claimed(user):
-        """
-        Whether somebody has already established ownership of ``user``.
-
-        Args:
-            user (AbstractBaseUser): Owner of the address under evaluation.
-
-        Returns:
-            bool: ``True`` unless the account is a sign-up that was never confirmed.
-        """
-        if user is None:
-            return True
-        if user.is_staff or user.is_superuser:
-            return True
-        if user.last_login is not None:
-            return True
-        return EmailAddress.objects.filter(user=user, verified=True).exists()
-
-    @classmethod
-    def _superseded_accounts(cls, email):
-        """
-        Accounts a registration for ``email`` is allowed to take over.
-
-        An address is only up for grabs while nobody has proven control over it: it
-        must be unverified and belong to an account that was never used. Anything
-        else -- a verified address, a secondary address of an established account --
-        is off limits, no matter that it is still pending confirmation.
-
-        Args:
-            email (str): Normalized address requested by the caller.
-
-        Returns:
-            list|None: Pending accounts to supersede, empty when the address is
-            free, or ``None`` when the address is taken.
-        """
-        accounts = []
-        for address in EmailAddress.objects.filter(email__iexact=email).select_related('user'):
-            if address.verified or cls._account_is_claimed(address.user):
-                return None
-            accounts.append(address.user)
-        return accounts
+    # Both live in `jwt_allauth.accounts` now, because social login has to reach the
+    # same verdict about the same address.
+    #
+    # `_superseded_accounts` is the override point: it is what this serializer calls, and
+    # what `UserRegisterSerializer` narrows. `_account_is_claimed` is exposed for a
+    # subclass to read, not to override -- the verdict is reached inside
+    # `superseded_accounts`, which calls the module function directly.
+    _account_is_claimed = staticmethod(account_is_claimed)
+    _superseded_accounts = staticmethod(superseded_accounts)
 
     def _claim_email(self):
         """
@@ -263,6 +226,22 @@ class UserRegisterSerializer(RegisterSerializer):
     # address is already in use: there is nobody to hide it from.
     prevent_enumeration = False
 
+    @staticmethod
+    def _superseded_accounts(email):
+        """
+        Reissuing an invitation is this endpoint's job, so its own reservation is lifted.
+
+        A pending invitation holds on to its address, which is what stops a stranger
+        posting the invitee's address to the public sign-up and destroying the account.
+        The administrator who sent it is not that stranger: there is no resend endpoint,
+        so re-inviting somebody whose link was lost *is* this request, and honouring the
+        reservation here would refuse it until the link expired.
+
+        The pending account is superseded exactly as an abandoned sign-up would be: the
+        old link dies with it and a fresh one goes out.
+        """
+        return superseded_accounts(email, reserve_invitations=False)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not user_model_has_role_field():
@@ -320,148 +299,3 @@ class UserRegisterSerializer(RegisterSerializer):
             emailconfirmation = confirmation_model.create(email_address)
             adapter.send_confirmation_mail(request, emailconfirmation, signup=True)
         return user
-
-#
-# class SocialAccountSerializer(serializers.ModelSerializer):
-#     """
-#     serialize allauth SocialAccounts for use with a REST API
-#     """
-#     class Meta:
-#         model = SocialAccount
-#         fields = (
-#             'id',
-#             'provider',
-#             'uid',
-#             'last_login',
-#             'date_joined',
-#         )
-#
-#
-# class SocialLoginSerializer(serializers.Serializer):
-#     access_token = serializers.CharField(required=False, allow_blank=True)
-#     code = serializers.CharField(required=False, allow_blank=True)
-#
-#     def _get_request(self):
-#         request = self.context.get('request')
-#         if not isinstance(request, HttpRequest):
-#             request = request._request
-#         return request
-#
-#     def get_social_login(self, adapter, app, token, response):
-#         """
-#         :param adapter: allauth.socialaccount Adapter subclass.
-#             Usually OAuthAdapter or Auth2Adapter
-#         :param app: `allauth.socialaccount.SocialApp` instance
-#         :param token: `allauth.socialaccount.SocialToken` instance
-#         :param response: Provider's response for OAuth1. Not used in the
-#         :returns: A populated instance of the
-#             `allauth.socialaccount.SocialLoginView` instance
-#         """
-#         request = self._get_request()
-#         social_login = adapter.complete_login(request, app, token, response=response)
-#         social_login.token = token
-#         return social_login
-#
-#     def validate(self, attrs):
-#         view = self.context.get('view')
-#         request = self._get_request()
-#
-#         if not view:
-#             raise serializers.ValidationError(
-#                 _("View is not defined, pass it as a context variable")
-#             )
-#
-#         adapter_class = getattr(view, 'adapter_class', None)
-#         if not adapter_class:
-#             raise serializers.ValidationError(_("Define adapter_class in view"))
-#
-#         adapter = adapter_class(request)
-#         app = adapter.get_provider().get_app(request)
-#
-#         # More info on code vs access_token
-#         # http://stackoverflow.com/questions/8666316/facebook-oauth-2-0-code-and-token
-#
-#         # Case 1: We received the access_token
-#         if attrs.get('access_token'):
-#             access_token = attrs.get('access_token')
-#
-#         # Case 2: We received the authorization code
-#         elif attrs.get('code'):
-#             self.callback_url = getattr(view, 'callback_url', None)
-#             self.client_class = getattr(view, 'client_class', None)
-#
-#             if not self.callback_url:
-#                 raise serializers.ValidationError(
-#                     _("Define callback_url in view")
-#                 )
-#             if not self.client_class:
-#                 raise serializers.ValidationError(
-#                     _("Define client_class in view")
-#                 )
-#
-#             code = attrs.get('code')
-#
-#             provider = adapter.get_provider()
-#             scope = provider.get_scope(request)
-#             client = self.client_class(
-#                 request,
-#                 app.client_id,
-#                 app.secret,
-#                 adapter.access_token_method,
-#                 adapter.access_token_url,
-#                 self.callback_url,
-#                 scope
-#             )
-#             token = client.get_access_token(code)
-#             access_token = token['access_token']
-#
-#         else:
-#             raise serializers.ValidationError(
-#                 _("Incorrect input. access_token or code is required."))
-#
-#         social_token = adapter.parse_token({'access_token': access_token})
-#         social_token.app = app
-#
-#         try:
-#             login = self.get_social_login(adapter, app, social_token, access_token)
-#             complete_social_login(request, login)
-#         except HTTPError:
-#             raise serializers.ValidationError(_("Incorrect value"))
-#
-#         if not login.is_existing:
-#             # We have an account already signed up in a different flow
-#             # with the same email address: raise an exception.
-#             # This needs to be handled in the frontend. We can not just
-#             # link up the accounts due to security constraints
-#             if allauth_settings.UNIQUE_EMAIL:
-#                 # Do we have an account already with this email address?
-#                 account_exists = get_user_model().objects.filter(
-#                     email=login.user.email,
-#                 ).exists()
-#                 if account_exists:
-#                     raise serializers.ValidationError(
-#                         _("User is already registered with this e-mail address.")
-#                     )
-#
-#             login.lookup()
-#             login.save(request, connect=True)
-#
-#         attrs['user'] = login.account.user
-#
-#         return attrs
-#
-#
-# class SocialConnectMixin(object):
-#     def get_social_login(self, *args, **kwargs):
-#         """
-#         Set the social login process state to connect rather than login
-#         Refer to the implementation of get_social_login in base class and to the
-#         allauth.socialaccount.helpers module complete_social_login function.
-#         """
-#         social_login = super(SocialConnectMixin, self).get_social_login(*args, **kwargs)
-#         social_login.state['process'] = AuthProcess.CONNECT
-#         return social_login
-#
-#
-# class SocialConnectSerializer(SocialConnectMixin, SocialLoginSerializer):
-#     pass

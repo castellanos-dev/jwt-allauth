@@ -24,9 +24,9 @@ from jwt_allauth.constants import (
     ONE_TIME_PERMISSION, PASS_SET_ACCESS, PASS_RESET_ACCESS, PASS_RESET_COOKIE,
     SET_PASSWORD_COOKIE,
     MFA_TOKEN_MAX_AGE_SECONDS,
-    MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
     EMAIL_CONFIRMATION,
+    INVITATION,
 )
 from jwt_allauth.password_reset.permissions import ResetPasswordPermission, SetPasswordPermission
 from jwt_allauth.password_reset.serializers import SetPasswordSerializer
@@ -40,22 +40,13 @@ from jwt_allauth.tokens.tokens import GenericToken
 from jwt_allauth.utils import (
     build_token_response,
     get_user_agent,
+    invitations_enabled,
     load_capability_user,
     sensitive_post_parameters_m,
 )
 from jwt_allauth.csrf import ensure_csrf_cookie
+from jwt_allauth.mfa.gate import get_mfa_totp_mode
 from jwt_allauth.mfa.storage import create_setup_challenge
-
-
-def get_mfa_totp_mode() -> str:
-    """
-    Return the current MFA TOTP mode from settings.
-
-    This must be evaluated at call time (not import time) so that
-    Django's `override_settings` used in tests – and any runtime changes
-    – are respected.
-    """
-    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
 
 
 class CapabilityCookieViewMixin:
@@ -289,7 +280,7 @@ class SetPasswordView(CapabilityCookieViewMixin, ExtraThrottlesMixin, GenericAPI
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
-        if not getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
+        if not invitations_enabled():
             return HttpResponseNotFound()
         return super(SetPasswordView, self).dispatch(*args, **kwargs)
 
@@ -312,8 +303,12 @@ class SetPasswordView(CapabilityCookieViewMixin, ExtraThrottlesMixin, GenericAPI
         revoke_on_credential_change(self.request.user.id)
 
         # The confirmation token is what makes the invitation link re-clickable, so it
-        # goes even when the installation opted out of revoking sessions.
-        GenericTokenModel.objects.filter(user=request.user, purpose=EMAIL_CONFIRMATION).delete()
+        # goes even when the installation opted out of revoking sessions. Both purposes:
+        # an invitation carries its own, and the confirmation of an address added later
+        # is the one an account that already has a password re-clicks.
+        GenericTokenModel.objects.filter(
+            user=request.user, purpose__in=(INVITATION, EMAIL_CONFIRMATION)
+        ).delete()
 
         # If MFA TOTP is REQUIRED, return setup challenge instead of tokens
         if get_mfa_totp_mode() == MFA_TOTP_REQUIRED:

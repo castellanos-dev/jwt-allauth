@@ -8,6 +8,7 @@ Registered from :meth:`jwt_allauth.apps.JWTAllauthAppConfig.ready`, and run by
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as distribution_version
 
+from django.apps import apps
 from django.conf import settings
 from django.core.checks import Error, Tags, Warning, register
 from django.core.exceptions import FieldDoesNotExist
@@ -16,6 +17,7 @@ from django.urls import NoReverseMatch, reverse
 
 from jwt_allauth.constants import EMAIL_VERIFIED_REDIRECT
 from jwt_allauth.roles import ROLE_FIELD, STAFF_CODE, SUPER_USER_CODE
+from jwt_allauth.utils import socialaccount_stack_available
 
 #: Identifier of the check reported when the confirmation flow has nowhere to land.
 VERIFIED_REDIRECT_ID = 'jwt_allauth.W001'
@@ -28,6 +30,12 @@ ROLE_FIELD_TYPE_ID = 'jwt_allauth.W002'
 
 #: Identifier of the check reported when an upstream is newer than anything this release saw.
 UNTESTED_UPSTREAM_ID = 'jwt_allauth.W003'
+
+#: Identifier of the check reported when the social endpoints are routed with no provider set up.
+SOCIAL_NO_PROVIDERS_ID = 'jwt_allauth.W004'
+
+#: Identifier of the check reported when allauth's own e-mail authentication is declared.
+SOCIAL_EMAIL_AUTHENTICATION_ID = 'jwt_allauth.W005'
 
 #: Highest major of each upstream this release was tested against, and what is at stake.
 #:
@@ -81,6 +89,100 @@ def check_verified_redirect(app_configs, **kwargs):
                 f"built-in page in place."
             ),
             id=VERIFIED_REDIRECT_ID,
+        )
+    ]
+
+
+@register(Tags.urls)
+def check_social_providers(app_configs, **kwargs):
+    """
+    Report social endpoints that cannot serve a request as configured.
+
+    Two ways to get there, and both answer ``404`` to everything, which reads as a bug
+    in this library rather than as a missing piece of configuration:
+
+        - ``allauth.socialaccount`` is installed but its HTTP stack is not, so the views
+          were never routed. ``jwt-allauth startproject`` has always written the app into
+          ``INSTALLED_APPS``, so a project can arrive here without ever having asked for
+          social login.
+        - The endpoints are routed but no provider app is declared in settings. A warning
+          rather than an error, and deliberately so: apps registered in the database are
+          a supported setup, and a startup check must not query the database to find out.
+    """
+    if not apps.is_installed('allauth.socialaccount'):
+        return []
+
+    providers = getattr(settings, 'SOCIALACCOUNT_PROVIDERS', {}) or {}
+    provider_app_installed = any(
+        app.startswith('allauth.socialaccount.providers.') for app in settings.INSTALLED_APPS
+    )
+    # `startproject` writes 'allauth.socialaccount' into every generated project, so its
+    # presence says nothing about whether the project wants social login. Asking for a
+    # provider -- an app or a settings entry -- is what says so, and without that the
+    # library has nothing to complain about.
+    if not providers and not provider_app_installed:
+        return []
+
+    if not socialaccount_stack_available():
+        return [
+            Warning(
+                'A social provider is configured, but the dependencies its flows need are not '
+                'installed, so the social endpoints are not routed.',
+                hint=(
+                    'Install them with `pip install django-jwt-allauth[social]`, or drop the '
+                    'provider configuration if the project does not use social login.'
+                ),
+                id=SOCIAL_NO_PROVIDERS_ID,
+            )
+        ]
+
+    if any(cfg.get('APP') or cfg.get('APPS') for cfg in providers.values() if isinstance(cfg, dict)):
+        return []
+    return [
+        Warning(
+            'The social endpoints are routed, but no provider app is configured in settings.',
+            hint=(
+                "Add the client id and secret under SOCIALACCOUNT_PROVIDERS, e.g. "
+                "{'google': {'APPS': [{'client_id': '...', 'secret': '...'}]}}, or register "
+                "the app in the database through the admin. Until then every social "
+                "endpoint answers 404."
+            ),
+            id=SOCIAL_NO_PROVIDERS_ID,
+        )
+    ]
+
+
+@register(Tags.security)
+def check_social_email_authentication(app_configs, **kwargs):
+    """
+    Report ``SOCIALACCOUNT_EMAIL_AUTHENTICATION``, which these endpoints override.
+
+    allauth's setting governs its own views, and its implementation wipes the local
+    password whenever it matches an account by address. This library decides the same
+    question itself -- and keeps the password when the address was already confirmed --
+    so the match allauth would make by address is discarded in
+    :func:`jwt_allauth.social.flows._prepare` and the flag has no say here.
+
+    Reported because a project that sets it expects it to govern these endpoints, and it
+    does not: `JWT_ALLAUTH_SOCIAL_EMAIL_LINKING` does.
+    """
+    per_provider = any(
+        isinstance(cfg, dict) and 'EMAIL_AUTHENTICATION' in cfg
+        for cfg in (getattr(settings, 'SOCIALACCOUNT_PROVIDERS', {}) or {}).values()
+    )
+    if not hasattr(settings, 'SOCIALACCOUNT_EMAIL_AUTHENTICATION') and not per_provider:
+        return []
+    if not _reverses('jwt_allauth_social_token_login', provider='google'):
+        return []
+    return [
+        Warning(
+            "allauth's e-mail authentication is overridden on the jwt-allauth social endpoints.",
+            hint=(
+                "Use JWT_ALLAUTH_SOCIAL_EMAIL_LINKING instead: True (the default) to link a "
+                "provider-verified address to the account that already holds it, False to "
+                "refuse, or a list of provider ids to allow it for some providers only."
+            ),
+            id=SOCIAL_EMAIL_AUTHENTICATION_ID,
         )
     ]
 

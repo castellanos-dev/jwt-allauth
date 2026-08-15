@@ -7,38 +7,11 @@ from rest_framework import exceptions
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
 
-from jwt_allauth.constants import (
-    MFA_TOTP_DISABLED,
-    MFA_TOTP_REQUIRED,
-)
-from jwt_allauth.mfa.storage import (
-    create_login_challenge,
-    create_setup_challenge,
-    login_lockout_remaining,
-)
+# Re-exported: this module was where the MFA mode used to be read from, and projects
+# and tests import it from here.
+from jwt_allauth.mfa.gate import get_mfa_totp_mode, mfa_challenge  # noqa: F401
 from jwt_allauth.tokens.app_settings import RefreshToken
 from jwt_allauth.utils import allauth_authenticate
-
-
-def get_mfa_totp_mode() -> str:
-    """
-    Return the current MFA TOTP mode from settings.
-
-    This must be evaluated at call time (not import time) so that
-    Django's `override_settings` used in tests – and any runtime changes
-    – are respected.
-    """
-    return getattr(settings, "JWT_ALLAUTH_MFA_TOTP_MODE", MFA_TOTP_DISABLED)
-
-try:
-    from allauth.mfa.models import Authenticator  # type: ignore
-except Exception:  # pragma: no cover - optional dependency guard
-    Authenticator = None  # type: ignore
-    if get_mfa_totp_mode() != MFA_TOTP_DISABLED:
-        raise Exception(
-            "MFA TOTP is not available. Please ensure 'django-jwt-allauth[mfa]' "
-            "is installed and 'allauth.mfa' is added to INSTALLED_APPS."
-        )
 
 
 class LoginSerializer(TokenObtainPairSerializer):
@@ -75,37 +48,11 @@ class LoginSerializer(TokenObtainPairSerializer):
                 "no_active_account",
             )
 
-        # MFA TOTP check
-        mfa_mode = get_mfa_totp_mode()
-        if mfa_mode != MFA_TOTP_DISABLED and Authenticator is not None:
-            has_mfa = Authenticator.objects.filter(
-                user=self.user,
-                type=getattr(Authenticator, "Type").TOTP if hasattr(Authenticator, "Type") else "totp",
-            ).exists()
-
-            # If MFA is REQUIRED, user must have MFA enabled
-            # Instead of raising 403, return setup challenge for bootstrap
-            if mfa_mode == MFA_TOTP_REQUIRED and not has_mfa:
-                setup_challenge_id = create_setup_challenge(self.user.id)
-                return {
-                    "mfa_setup_required": True,
-                    "setup_challenge_id": setup_challenge_id,
-                }
-
-            # If user has MFA enabled (OPTIONAL or REQUIRED mode), request MFA verification
-            if has_mfa:
-                # Handing out a new challenge to a locked out user would hand out a new
-                # batch of code guesses along with it.
-                retry_after = login_lockout_remaining(self.user.id)
-                if retry_after:
-                    raise exceptions.Throttled(
-                        wait=retry_after,
-                        detail="Too many failed MFA attempts. Try again later.",
-                    )
-
-                # Store MFA challenge server-side using MFA storage backend
-                challenge_id = create_login_challenge(self.user.id)
-                return {"mfa_required": True, "challenge_id": challenge_id}
+        # MFA TOTP check. The same gate stands in front of every way into the library,
+        # so it is asked here rather than reimplemented.
+        challenge = mfa_challenge(self.user)
+        if challenge is not None:
+            return challenge
 
         # The parent implementation is deliberately not called: it authenticates a second
         # time -- with Django's `authenticate()` rather than allauth's, repeating the

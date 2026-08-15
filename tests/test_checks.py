@@ -1,12 +1,17 @@
 from importlib.metadata import PackageNotFoundError
 from unittest.mock import patch
 
+from django.conf import settings
 from django.test import SimpleTestCase, override_settings
 
 from jwt_allauth.checks import (
+    SOCIAL_EMAIL_AUTHENTICATION_ID,
+    SOCIAL_NO_PROVIDERS_ID,
     TESTED_UPSTREAM_MAJORS,
     UNTESTED_UPSTREAM_ID,
     VERIFIED_REDIRECT_ID,
+    check_social_email_authentication,
+    check_social_providers,
     check_upstream_versions,
     check_verified_redirect,
 )
@@ -95,3 +100,69 @@ class UpstreamVersionCheckTests(SimpleTestCase):
         versions = {name: f'{major - 1}.0.0' for name, major in TESTED_UPSTREAM_MAJORS.items()}
         with self._with_versions(**versions):
             self.assertEqual(check_upstream_versions(None), [])
+
+
+class SocialProvidersCheckTests(SimpleTestCase):
+    """Social endpoints that cannot serve a request, and the silence a project deserves."""
+
+    def test_silent_when_a_provider_is_configured(self):
+        # tests/settings.py configures the dummy providers from settings.
+        self.assertEqual(check_social_providers(None), [])
+
+    @override_settings(SOCIALACCOUNT_PROVIDERS={})
+    def test_silent_when_the_project_never_asked_for_social_login(self):
+        """
+        `startproject` writes 'allauth.socialaccount' into every generated project, so
+        the app alone is not a request for social login. Warning there sent every new
+        project a message telling it to go configure Google.
+        """
+        without_provider_app = [app for app in settings.INSTALLED_APPS
+                                if app != 'tests.socialprovider']
+        with override_settings(INSTALLED_APPS=without_provider_app):
+            self.assertEqual(check_social_providers(None), [])
+
+    @override_settings(SOCIALACCOUNT_PROVIDERS={'google': {'SCOPE': ['email']}})
+    def test_warns_when_a_provider_is_declared_without_credentials(self):
+        warnings = check_social_providers(None)
+        self.assertEqual([w.id for w in warnings], [SOCIAL_NO_PROVIDERS_ID])
+
+    @override_settings(SOCIALACCOUNT_PROVIDERS={'google': {'SCOPE': ['email']}})
+    def test_reports_the_missing_extra_when_a_provider_is_configured_without_it(self):
+        with patch('jwt_allauth.checks.socialaccount_stack_available', lambda: False):
+            warnings = check_social_providers(None)
+        self.assertEqual([w.id for w in warnings], [SOCIAL_NO_PROVIDERS_ID])
+        self.assertIn('django-jwt-allauth[social]', warnings[0].hint)
+
+    def test_silent_when_the_app_is_not_installed_at_all(self):
+        without_socialaccount = [app for app in settings.INSTALLED_APPS
+                                 if app not in ('allauth.socialaccount', 'tests.socialprovider')]
+        with override_settings(INSTALLED_APPS=without_socialaccount):
+            self.assertEqual(check_social_providers(None), [])
+
+
+class SocialEmailAuthenticationCheckTests(SimpleTestCase):
+    """allauth's flag governs allauth's views, not these endpoints."""
+
+    def test_silent_when_the_setting_is_absent(self):
+        self.assertEqual(check_social_email_authentication(None), [])
+
+    @override_settings(SOCIALACCOUNT_EMAIL_AUTHENTICATION=True)
+    def test_warns_when_the_setting_is_declared(self):
+        warnings = check_social_email_authentication(None)
+        self.assertEqual([w.id for w in warnings], [SOCIAL_EMAIL_AUTHENTICATION_ID])
+        self.assertIn('JWT_ALLAUTH_SOCIAL_EMAIL_LINKING', warnings[0].hint)
+
+    @override_settings(SOCIALACCOUNT_EMAIL_AUTHENTICATION=False)
+    def test_warns_even_when_it_is_declared_false(self):
+        # Setting it to False also says the project believes it has a say here.
+        self.assertEqual([w.id for w in check_social_email_authentication(None)], [SOCIAL_EMAIL_AUTHENTICATION_ID])
+
+    @override_settings(SOCIALACCOUNT_PROVIDERS={'dummy': {'EMAIL_AUTHENTICATION': True}})
+    def test_warns_on_the_per_provider_form_too(self):
+        # allauth reads the flag from three places; reporting only the global one would
+        # leave the other two silently overridden.
+        self.assertEqual([w.id for w in check_social_email_authentication(None)], [SOCIAL_EMAIL_AUTHENTICATION_ID])
+
+    @override_settings(ROOT_URLCONF='empty_urls', SOCIALACCOUNT_EMAIL_AUTHENTICATION=True)
+    def test_silent_when_the_endpoints_are_not_routed(self):
+        self.assertEqual(check_social_email_authentication(None), [])
