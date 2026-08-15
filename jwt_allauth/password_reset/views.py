@@ -27,6 +27,7 @@ from jwt_allauth.constants import (
     MFA_TOTP_DISABLED,
     MFA_TOTP_REQUIRED,
     EMAIL_CONFIRMATION,
+    INVITATION,
 )
 from jwt_allauth.password_reset.permissions import ResetPasswordPermission, SetPasswordPermission
 from jwt_allauth.password_reset.serializers import SetPasswordSerializer
@@ -313,8 +314,12 @@ class SetPasswordView(CapabilityCookieViewMixin, ExtraThrottlesMixin, GenericAPI
         revoke_on_credential_change(self.request.user.id)
 
         # The confirmation token is what makes the invitation link re-clickable, so it
-        # goes even when the installation opted out of revoking sessions.
-        GenericTokenModel.objects.filter(user=request.user, purpose=EMAIL_CONFIRMATION).delete()
+        # goes even when the installation opted out of revoking sessions. Both purposes:
+        # an invitation carries its own, and the confirmation of an address added later
+        # is the one an account that already has a password re-clicks.
+        GenericTokenModel.objects.filter(
+            user=request.user, purpose__in=(INVITATION, EMAIL_CONFIRMATION)
+        ).delete()
 
         # If MFA TOTP is REQUIRED, return setup challenge instead of tokens
         if get_mfa_totp_mode() == MFA_TOTP_REQUIRED:

@@ -279,6 +279,34 @@ class AdminManagedRegistrationTests(TestsMixin):
             ).exists()
         )
 
+    @override_settings(LOGOUT_ON_PASSWORD_CHANGE=False)
+    def test_invitation_token_is_spent_even_without_session_revocation(self):
+        """
+        The link stays re-clickable until the password is set, so setting it has to spend
+        the token. With ``LOGOUT_ON_PASSWORD_CHANGE`` off, ``revoke_on_credential_change``
+        deletes nothing and this is the only thing that does -- which is why the deletion
+        exists apart from the revocation, and why the default hides a miss here.
+        """
+        invited = get_user_model().objects.create_user('invited_spent', email=self.INVITED_EMAIL)
+        invited.set_unusable_password()
+        invited.save()
+        email_addr = EmailAddress.objects.create(
+            user=invited, email=self.INVITED_EMAIL, verified=False, primary=True
+        )
+        key = EmailConfirmationHMAC(email_addr).key
+        GenericTokenModel.objects.create(user=invited, token=hash_token(key), purpose=INVITATION)
+
+        self.client.get(reverse('account_confirm_email', args=[key]))
+        resp = self.client.post(
+            self.set_password_url,
+            data={"new_password1": "A-1_newpass", "new_password2": "A-1_newpass"},
+            content_type='application/json'
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertFalse(
+            GenericTokenModel.objects.filter(user=invited, purpose=INVITATION).exists())
+
     def test_email_confirmation_invalid_token_renders_error_page(self):
         """
         If the token is invalid or does not exist, show a friendly error page
