@@ -36,6 +36,12 @@ Compatibility
 
 - **Invitations sent before this release keep working.** They are stored with a purpose of their own from now on; the rows already in the database carry the generic confirmation purpose, and under ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` — the only configuration that could have produced one — they are still accepted until they expire. No migration and no backfill: the rows are short-lived by design (``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS``). They do not reserve their address, which only the new purpose does.
 
+- **The confirmation link is steadier under** ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION``. A link opened twice — a scanner, a browser prefetch, a forwarded mail — lands on the same page both times instead of a bare ``404`` on the second, and a deactivated account no longer has its address confirmed by a link the flow already refuses to do anything else with. Neither ever granted a session or a capability.
+
+- **Provider credentials are declared sensitive.** ``id_token``, ``access_token``, ``code`` and ``code_verifier`` are masked in tracebacks, the ``django.request`` log and the mail to ``ADMINS``, as passwords already were.
+
+- **``RefreshToken.for_user`` accepts an optional** ``email_verified``. It is additive — omitted, the token asks the database as before — and lets a caller that has just checked hand the answer on instead of paying for the query twice. ``jwt_allauth.social.flows.authenticate_social_login`` now returns ``(user, email_verified)`` for that reason; it is new in this release, so nothing depended on the old shape.
+
 - **The** ``social`` **extra requires allauth 65.9**, like the ``mfa`` extra, while the core dependency floor is unchanged at 65.5. A project pinned to allauth 65.5–65.8 that adds ``[social]`` will hit a resolution conflict on upgrade and has to move the pin.
 
 - **No new model and no migration.** Both flows are driven by the client, so there is no OAuth ``state`` for the server to store.
