@@ -228,6 +228,23 @@ def sociallogin_from_code(request, provider, data: Dict[str, Any]):
     return sociallogin
 
 
+def _matched_by_email_only(sociallogin) -> bool:
+    """
+    Whether ``lookup()`` resolved this login by address rather than by provider account.
+
+    ``_lookup_by_socialaccount`` attaches a stored ``SocialAccount`` -- one with a primary
+    key. ``_lookup_by_email`` only points ``user`` at somebody. So a login carrying a user
+    whose row exists, with no saved account behind it, was matched by address.
+    """
+    account = getattr(sociallogin, 'account', None)
+    user = getattr(sociallogin, 'user', None)
+    return (
+        user is not None
+        and getattr(user, 'pk', None) is not None
+        and (account is None or account.pk is None)
+    )
+
+
 def _prepare(request, sociallogin, process: str) -> None:
     """
     Resolve the social login against what is already in the database, then let the
@@ -237,6 +254,16 @@ def _prepare(request, sociallogin, process: str) -> None:
     ``pre_social_login`` see the user it resolved to rather than a placeholder. A
     receiver that vetoes the login raises ``ImmediateHttpResponse`` carrying a redirect,
     which is meaningless over an API, so it is turned into a refusal.
+
+    A match ``lookup()`` made **by e-mail address** is then discarded, because that
+    verdict is this module's to reach and not allauth's. allauth matches by address
+    whenever ``SOCIALACCOUNT_EMAIL_AUTHENTICATION`` is on -- and it can be switched on
+    from three places: that setting, an ``EMAIL_AUTHENTICATION`` key under
+    ``SOCIALACCOUNT_PROVIDERS``, or a column on the ``SocialApp`` row. Left alone it
+    walks straight past ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING``, past the claimed-account
+    rule in :func:`jwt_allauth.accounts.resolve_email`, and past
+    ``SocialLogin.save()`` -- so the account is signed into with no connection recorded
+    at all, invisible to ``/social/accounts/`` and impossible to disconnect.
     """
     from allauth.core.exceptions import ImmediateHttpResponse
     from allauth.socialaccount import signals
@@ -245,6 +272,10 @@ def _prepare(request, sociallogin, process: str) -> None:
 
     sociallogin.state['process'] = process
     sociallogin.lookup()
+    if _matched_by_email_only(sociallogin):
+        # Telling the two matches apart needs no private API: a match on the provider
+        # account leaves `account` saved, while a match on the address only sets `user`.
+        sociallogin.user = get_user_model()()
     try:
         get_social_adapter().pre_social_login(request, sociallogin)
         signals.pre_social_login.send(sender=SocialLogin, request=request, sociallogin=sociallogin)

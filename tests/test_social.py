@@ -580,3 +580,54 @@ class SocialRoutingTests(SimpleTestCase):
                 self.assertTrue(reverse('rest_login'))
         finally:
             self._reload_urls()
+
+
+@override_settings(SOCIALACCOUNT_EMAIL_AUTHENTICATION=True)
+class SocialAllauthEmailAuthenticationTests(SocialTestsMixin):
+    """
+    allauth's own e-mail matching must not decide what this library decides.
+
+    ``SocialLogin.lookup()`` falls through to matching by address whenever allauth's
+    flag is on, and that verdict skips ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING``, skips the
+    claimed-account rule, and never records the connection.
+    """
+
+    def setUp(self):
+        self.init_social()
+
+    @responses.activate
+    @override_settings(JWT_ALLAUTH_SOCIAL_EMAIL_LINKING=False)
+    def test_allauth_email_matching_does_not_override_linking_off(self):
+        self.fake_profile(profile(email=self.EMAIL))
+
+        resp = self.post(self.token_login_url, data=self.token_payload(),
+                         status_code=status.HTTP_409_CONFLICT)
+
+        self.assertEqual(resp['code'], 'email_already_registered')
+        self.assertFalse(SocialAccount.objects.exists())
+
+    @responses.activate
+    def test_linking_still_records_the_connection(self):
+        """
+        With linking on the answer is the same as without allauth's flag -- and the
+        connection is persisted, so it can be listed and disconnected.
+        """
+        self.fake_profile(profile(email=self.EMAIL))
+
+        self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_200_OK)
+
+        account = SocialAccount.objects.get(provider='dummy')
+        self.assertEqual(account.user_id, self.USER.id)
+        self.assertIsNotNone(account.pk)
+
+    @responses.activate
+    def test_connect_persists_the_account(self):
+        """A 201 that stored nothing is worse than a refusal: it reports a lie."""
+        self._login()
+        self.fake_profile(profile(email=self.EMAIL))
+
+        resp = self.post(self.token_connect_url, data=self.token_payload(),
+                         status_code=status.HTTP_201_CREATED)
+
+        self.assertIsNotNone(resp['id'])
+        self.assertEqual(SocialAccount.objects.filter(user=self.USER).count(), 1)
