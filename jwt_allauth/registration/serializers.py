@@ -222,6 +222,22 @@ class UserRegisterSerializer(RegisterSerializer):
     # address is already in use: there is nobody to hide it from.
     prevent_enumeration = False
 
+    @staticmethod
+    def _superseded_accounts(email):
+        """
+        Reissuing an invitation is this endpoint's job, so its own reservation is lifted.
+
+        A pending invitation holds on to its address, which is what stops a stranger
+        posting the invitee's address to the public sign-up and destroying the account.
+        The administrator who sent it is not that stranger: there is no resend endpoint,
+        so re-inviting somebody whose link was lost *is* this request, and honouring the
+        reservation here would refuse it until the link expired.
+
+        The pending account is superseded exactly as an abandoned sign-up would be: the
+        old link dies with it and a fresh one goes out.
+        """
+        return superseded_accounts(email, reserve_invitations=False)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not user_model_has_role_field():

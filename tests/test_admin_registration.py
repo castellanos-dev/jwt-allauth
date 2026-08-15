@@ -113,6 +113,37 @@ class AdminManagedRegistrationTests(TestsMixin):
         )
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_an_invitation_can_be_reissued(self):
+        """
+        There is no resend endpoint: re-inviting is how an administrator replaces a link
+        that never arrived. The reservation an invitation puts on its address must not
+        stand in the way of the endpoint that created it.
+        """
+        staff = get_user_model().objects.create_user(
+            'admin_reinvite', email='admin_reinvite@demo.com', password='A-1_strong', is_staff=True)
+        EmailAddress.objects.create(user=staff, email=staff.email, verified=True, primary=True)
+        staff_access = str(RefreshToken.for_user(staff).access_token)
+        payload = {"email": self.INVITED_EMAIL, "role": 300}
+
+        first = self.client.post(
+            self.user_register_url, data=payload, content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {staff_access}')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        invited = get_user_model().objects.get(email=self.INVITED_EMAIL)
+
+        mail.outbox = []
+        second = self.client.post(
+            self.user_register_url, data=payload, content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {staff_access}')
+
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(mail.outbox), 1)
+        # The pending invitation is superseded, exactly as an abandoned sign-up is:
+        # one account holds the address, and it is not the one the first link belongs to.
+        self.assertEqual(
+            get_user_model().objects.filter(email=self.INVITED_EMAIL).count(), 1)
+        self.assertFalse(get_user_model().objects.filter(pk=invited.pk).exists())
+
     def test_duplicate_email_rules(self):
         staff = get_user_model().objects.create_user(
             'admin2', email='admin2@demo.com', password='A-1_strong', is_staff=True)

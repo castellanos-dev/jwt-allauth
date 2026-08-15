@@ -119,7 +119,19 @@ prove that address was worth reserving; it was the administrator who sent the in
 The reservation lasts exactly as long as the link. Once the invitation expires
 (``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS``) the account goes back to being an ordinary
 unclaimed one and the address is free again -- a dead invitation must not hold an address
-hostage. Re-inviting the same person issues a fresh link and reserves it anew.
+hostage.
+
+It reserves the address against everybody **except the endpoint that issued it**. There is
+no resend endpoint: posting the same address to the invite endpoint again is how an
+administrator replaces a link that never arrived, so it supersedes the pending invitation
+and sends a fresh one. The first link dies with the account it belonged to.
+
+An invitee who signs up through ``/registration/`` instead of following their link gets
+the ordinary answer for an address that is taken: with ``ACCOUNT_PREVENT_ENUMERATION`` on
+-- the default -- a ``201`` that creates nothing, and the "account already exists" notice
+by e-mail. That notice points at the password reset, which cannot help them here: the
+reset only goes out to a **verified** address, and an invited address is unverified by
+definition. Their invitation link remains the only way in, and it is untouched.
 
 With a second factor required
 -----------------------------

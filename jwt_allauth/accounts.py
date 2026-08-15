@@ -24,12 +24,15 @@ from jwt_allauth.constants import INVITATION
 from jwt_allauth.tokens.models import GenericTokenModel
 
 
-def account_is_claimed(user) -> bool:
+def account_is_claimed(user, reserve_invitations=True) -> bool:
     """
     Whether somebody has already established ownership of ``user``.
 
     Args:
         user (AbstractBaseUser): Owner of the address under evaluation.
+        reserve_invitations (bool): Whether a live invitation counts as ownership. It
+            does for everybody except the endpoint that issues invitations, which is
+            also the one that reissues them -- see :func:`resolve_email`.
 
     Returns:
         bool: ``True`` unless the account is a sign-up that was never confirmed.
@@ -42,7 +45,7 @@ def account_is_claimed(user) -> bool:
         return True
     if EmailAddress.objects.filter(user=user, verified=True).exists():
         return True
-    return _has_open_invitation(user)
+    return reserve_invitations and _has_open_invitation(user)
 
 
 def _has_open_invitation(user) -> bool:
@@ -68,7 +71,7 @@ def _has_open_invitation(user) -> bool:
     ).exists()
 
 
-def resolve_email(email):
+def resolve_email(email, reserve_invitations=True):
     """
     Who holds ``email``, in one query.
 
@@ -81,6 +84,10 @@ def resolve_email(email):
 
     Args:
         email (str): Normalized address to resolve.
+        reserve_invitations (bool): Whether a live invitation counts as ownership. Only
+            :class:`~jwt_allauth.registration.serializers.UserRegisterSerializer` passes
+            ``False``: the invitation reserves the address against everybody except the
+            administrator who created it, who has to be able to reissue a lost link.
 
     Returns:
         tuple: ``(owner, superseded)``. ``owner`` is the account that established
@@ -90,13 +97,13 @@ def resolve_email(email):
     """
     accounts = []
     for address in EmailAddress.objects.filter(email__iexact=email).select_related('user'):
-        if address.verified or account_is_claimed(address.user):
+        if address.verified or account_is_claimed(address.user, reserve_invitations):
             return address.user, []
         accounts.append(address.user)
     return None, accounts
 
 
-def superseded_accounts(email):
+def superseded_accounts(email, reserve_invitations=True):
     """
     Accounts a registration for ``email`` is allowed to take over.
 
@@ -107,6 +114,7 @@ def superseded_accounts(email):
 
     Args:
         email (str): Normalized address requested by the caller.
+        reserve_invitations (bool): See :func:`resolve_email`.
 
     Kept as the shape :class:`~jwt_allauth.registration.serializers.RegisterSerializer`
     exposes and a subclass may override. :func:`resolve_email` is the one that answers
@@ -116,5 +124,5 @@ def superseded_accounts(email):
         list|None: Pending accounts to supersede, empty when the address is
         free, or ``None`` when the address is taken.
     """
-    owner, superseded = resolve_email(email)
+    owner, superseded = resolve_email(email, reserve_invitations)
     return None if owner is not None else superseded
