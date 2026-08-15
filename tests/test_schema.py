@@ -80,3 +80,15 @@ class OpenAPISchemaTests(SimpleTestCase):
         self.assertIn('mfa_required', properties)
         self.assertIn('challenge_id', properties)
         self.assertNotIn('id_token', properties)
+
+    def test_connect_documents_the_connection_it_answers_with(self):
+        """
+        Undecorated, spectacular derived the response from the request serializer — a
+        200 whose every field is write-only, i.e. an empty body, for an endpoint that
+        answers 201 with a SocialAccount.
+        """
+        operation = self.operation('/jwt-allauth/social/{provider}/connect/token/')
+        properties = self.properties(operation, '201')
+        self.assertIn('provider', properties)
+        self.assertIn('uid', properties)
+        self.assertNotIn('id_token', properties)

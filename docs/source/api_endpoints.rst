@@ -892,12 +892,45 @@ See :doc:`social_login`.
      - ``refresh_token``
      - JWT refresh token set in the ``refresh_token`` cookie (by default).
 
-Answers ``404`` ``provider_not_configured`` for an unknown provider, ``400``
-``flow_not_supported`` for a provider that cannot verify a token out of band, ``401``
-``invalid_social_token`` when the provider rejects the credential, ``400``
-``provider_email_unverified`` when it vouches for no address, and ``409``
-``email_already_registered`` when the address belongs to somebody and linking is off for
-this provider.
+Error codes, all in the ``code`` field beside ``detail``:
+
+.. list-table::
+   :widths: 12 30 58
+   :header-rows: 1
+
+   * - Status
+     - Code
+     - When
+   * - ``404``
+     - ``provider_not_configured``
+     - Unknown provider, or none registered for it.
+   * - ``400``
+     - ``flow_not_supported``
+     - The provider cannot verify a token out of band, or does not speak OAuth2.
+   * - ``400``
+     - ``callback_url_not_allowed``
+     - The ``callback_url`` is outside ``JWT_ALLAUTH_SOCIAL_CALLBACK_URLS``.
+   * - ``401``
+     - ``invalid_social_token``
+     - The provider rejected the credential, or it names another OAuth client (``client_id_mismatch``).
+   * - ``400``
+     - ``provider_email_unverified``
+     - The provider vouched for no address. See ``JWT_ALLAUTH_SOCIAL_REQUIRE_VERIFIED_EMAIL``.
+   * - ``409``
+     - ``email_already_registered``
+     - The address belongs to somebody and linking is off for this provider.
+   * - ``403``
+     - ``signup_closed``
+     - Registration is closed — ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION``.
+   * - ``400``
+     - ``signup_not_allowed``
+     - ``SOCIALACCOUNT_AUTO_SIGNUP = False``; there is no sign-up form over an API.
+   * - ``403``
+     - ``social_login_rejected``
+     - A ``pre_social_login`` receiver vetoed the login.
+   * - ``401``
+     - ``email_not_verified`` / ``no_active_account``
+     - The account exists but is unconfirmed or inactive — the same answers ``/login/`` gives.
 
 .. note:: Throttled with ``AnonRateThrottle`` on top of the project defaults.
 
@@ -927,6 +960,9 @@ this provider.
    * - Body (JSON)
      - ``code_verifier``
      - PKCE verifier, when the authorization request carried a challenge.
+   * - Body (JSON)
+     - ``client_id``
+     - OAuth client the code was issued for. Optional; needed only when several apps are registered for the provider.
 
 **Response**
 

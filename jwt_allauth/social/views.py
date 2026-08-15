@@ -136,6 +136,7 @@ class SocialCodeLoginView(CodeCredentialMixin, BaseSocialLoginView):
     """
 
 
+@extend_schema(responses={201: SocialAccountSerializer})
 class SocialTokenConnectView(TokenCredentialMixin, BaseSocialConnectView):
     """
     Connect a provider to the account already signed in, from a provider credential.
@@ -145,6 +146,7 @@ class SocialTokenConnectView(TokenCredentialMixin, BaseSocialConnectView):
     """
 
 
+@extend_schema(responses={201: SocialAccountSerializer})
 class SocialCodeConnectView(CodeCredentialMixin, BaseSocialConnectView):
     """
     Connect a provider to the account already signed in, from an authorization code.
@@ -181,7 +183,9 @@ class SocialAccountDisconnectView(ExtraThrottlesMixin, APIView):
     def delete(self, request: Request, pk: int, *args, **kwargs) -> Response:
         # Scoped to the caller before anything else: an id that belongs to somebody else
         # has to be indistinguishable from one that does not exist.
-        accounts = list(SocialAccount.objects.filter(user=request.user.id))
+        # `select_related`: `validate_disconnect` reads `account.user.has_usable_password()`,
+        # and the caller is a stateless `TokenUser` that cannot answer it.
+        accounts = list(SocialAccount.objects.filter(user=request.user.id).select_related('user'))
         account = next((a for a in accounts if a.pk == pk), None)
         if account is None:
             return Response(status=status.HTTP_404_NOT_FOUND)

@@ -194,9 +194,11 @@ If the provider supplies no verified address, the login answers ``400``
 been proved is a dead end here: there is no password to reset it with, and no
 confirmation link worth sending to an address the provider itself would not stand behind.
 
-Setting ``JWT_ALLAUTH_SOCIAL_REQUIRE_VERIFIED_EMAIL = False`` falls back to the
-registration behaviour instead -- the account is created, the session is withheld, and a
-confirmation mail goes out.
+Setting ``JWT_ALLAUTH_SOCIAL_REQUIRE_VERIFIED_EMAIL = False`` lets the account be created
+anyway. It only makes sense under ``EMAIL_VERIFICATION = 'optional'`` or ``'none'``: with
+verification mandatory the account is refused a session right afterwards and the whole
+sign-up rolls back, and no confirmation mail is sent — these flows never call allauth's
+``perform_login``, which is what sends one.
 
 Connecting and disconnecting
 ----------------------------

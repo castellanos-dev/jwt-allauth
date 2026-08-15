@@ -30,6 +30,8 @@ Compatibility
 
 - **New settings**: ``JWT_ALLAUTH_INVITATIONS``, ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING``, ``JWT_ALLAUTH_SOCIAL_REQUIRE_VERIFIED_EMAIL`` and ``JWT_ALLAUTH_SOCIAL_CALLBACK_URLS``. See :doc:`configuration.settings_py`.
 
+- **The** ``social`` **extra requires allauth 65.9**, like the ``mfa`` extra, while the core dependency floor is unchanged at 65.5. A project pinned to allauth 65.5–65.8 that adds ``[social]`` will hit a resolution conflict on upgrade and has to move the pin.
+
 - **No new model and no migration.** Both flows are driven by the client, so there is no OAuth ``state`` for the server to store.
 
 Documentation

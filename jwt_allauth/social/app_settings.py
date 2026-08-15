@@ -44,8 +44,15 @@ def require_verified_email() -> bool:
 
     On by default. An account in this library is identified by its address, so one that
     nobody has vouched for is a dead end: there is no password to reset it with and no
-    confirmation link worth sending to it. Turning it off falls back to the registration
-    behaviour -- the session is withheld and a confirmation mail goes out.
+    confirmation link worth sending to it.
+
+    Turning it off lets the account be created from an address the provider would not
+    stand behind. It has no useful effect while verification is mandatory: the
+    post-authentication gate refuses the unconfirmed account, the transaction rolls back,
+    and no confirmation mail is sent -- these flows never call allauth's ``perform_login``,
+    which is what sends one. Use it only under ``EMAIL_VERIFICATION = 'optional'`` or
+    ``'none'``, where the account is usable from sign-up and the ``email_verified`` claim
+    carries the difference.
     """
     return bool(getattr(settings, 'JWT_ALLAUTH_SOCIAL_REQUIRE_VERIFIED_EMAIL', True))
 
