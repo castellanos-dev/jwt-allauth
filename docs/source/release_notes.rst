@@ -32,6 +32,8 @@ Compatibility
 
 - **New settings**: ``JWT_ALLAUTH_INVITATIONS``, ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING``, ``JWT_ALLAUTH_SOCIAL_REQUIRE_VERIFIED_EMAIL`` and ``JWT_ALLAUTH_SOCIAL_CALLBACK_URLS``. See :doc:`configuration.settings_py`.
 
+- **Address ownership is now resolved against the column as allauth writes it** — lower case — instead of case-insensitively, so the lookup uses the index allauth ships rather than scanning the table on every sign-up and every social login. allauth folds the case on the way in and reads it back the same way, so nothing it wrote is affected. Rows inserted around it, in mixed case (a data import, a hand-written fixture), stop matching: a sign-up for that address is answered as if it were free, which yields a second account rather than taking the first one over. Lower-case them before upgrading if that applies to you.
+
 - **Invitations sent before this release keep working.** They are stored with a purpose of their own from now on; the rows already in the database carry the generic confirmation purpose, and under ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` — the only configuration that could have produced one — they are still accepted until they expire. No migration and no backfill: the rows are short-lived by design (``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS``). They do not reserve their address, which only the new purpose does.
 
 - **The** ``social`` **extra requires allauth 65.9**, like the ``mfa`` extra, while the core dependency floor is unchanged at 65.5. A project pinned to allauth 65.5–65.8 that adds ``[social]`` will hit a resolution conflict on upgrade and has to move the pin.

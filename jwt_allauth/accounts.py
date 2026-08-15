@@ -91,7 +91,13 @@ def resolve_email(email, reserve_invitations=True):
     unordered query may return a different row from the one that reached the verdict.
 
     Args:
-        email (str): Normalized address to resolve.
+        email (str): Address to resolve. Matched against the column as allauth stores
+            it, which is lower case: ``EmailAddress.clean`` and ``add_email`` both fold
+            it on the way in, and allauth's own reverse lookup reads it back the same
+            way. Case-insensitive matching would be correct too, and it is what this
+            used to do, but ``UPPER(email) = UPPER(%s)`` cannot use the index allauth
+            ships on the column, so every call scanned a table that only grows -- on a
+            login path, now that social login asks the same question.
         reserve_invitations (bool): Whether a live invitation counts as ownership. Only
             :class:`~jwt_allauth.registration.serializers.UserRegisterSerializer` passes
             ``False``: the invitation reserves the address against everybody except the
@@ -104,7 +110,7 @@ def resolve_email(email, reserve_invitations=True):
         is free.
     """
     accounts = []
-    for address in EmailAddress.objects.filter(email__iexact=email).select_related('user'):
+    for address in EmailAddress.objects.filter(email=email.lower()).select_related('user'):
         if address.verified or account_is_claimed(address.user, reserve_invitations):
             return address.user, []
         accounts.append(address.user)
