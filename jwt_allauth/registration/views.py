@@ -3,7 +3,6 @@ from uuid import uuid4
 
 from allauth.account import app_settings as allauth_settings
 from allauth.account.utils import complete_signup
-from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status
 from rest_framework.generics import CreateAPIView

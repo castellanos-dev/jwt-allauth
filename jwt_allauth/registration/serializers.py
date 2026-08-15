@@ -72,8 +72,12 @@ class RegisterSerializer(serializers.Serializer):
         return self.prevent_enumeration and enumeration_prevented()
 
     # Both live in `jwt_allauth.accounts` now, because social login has to reach the
-    # same verdict about the same address. Kept as methods so that a subclass which
-    # overrides either one still governs this serializer.
+    # same verdict about the same address.
+    #
+    # `_superseded_accounts` is the override point: it is what this serializer calls, and
+    # what `UserRegisterSerializer` narrows. `_account_is_claimed` is exposed for a
+    # subclass to read, not to override -- the verdict is reached inside
+    # `superseded_accounts`, which calls the module function directly.
     _account_is_claimed = staticmethod(account_is_claimed)
     _superseded_accounts = staticmethod(superseded_accounts)
 
