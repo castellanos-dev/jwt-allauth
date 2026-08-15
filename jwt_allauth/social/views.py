@@ -43,7 +43,12 @@ from jwt_allauth.social.serializers import (
 )
 from jwt_allauth.throttling import ExtraThrottlesMixin
 from jwt_allauth.tokens.app_settings import RefreshToken
-from jwt_allauth.utils import build_token_response, get_user_agent, load_user
+from jwt_allauth.utils import (
+    build_token_response,
+    get_user_agent,
+    load_user,
+    sensitive_post_parameters_m,
+)
 
 
 class _CredentialMixin:
@@ -77,6 +82,10 @@ class BaseSocialLoginView(ExtraThrottlesMixin, APIView):
     permission_classes = (AllowAny,)
     extra_throttle_classes = (AnonRateThrottle,)
 
+    @sensitive_post_parameters_m
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
     @get_user_agent
     def post(self, request: Request, provider: str, *args, **kwargs) -> Response:
         data = self.read_credential(request)
@@ -99,6 +108,10 @@ class BaseSocialConnectView(ExtraThrottlesMixin, APIView):
 
     permission_classes = (IsAuthenticated,)
     extra_throttle_classes = (AnonRateThrottle, UserRateThrottle)
+
+    @sensitive_post_parameters_m
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
     @load_user
     def post(self, request: Request, provider: str, *args, **kwargs) -> Response:

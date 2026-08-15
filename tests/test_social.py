@@ -709,3 +709,37 @@ class SocialQueryCountTests(SocialTestsMixin):
         self.fake_profile(profile(email=self.EMAIL))
         with self.assertNumQueries(15):
             self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_200_OK)
+
+
+class SocialCredentialsAreSensitiveTests(SocialTestsMixin):
+    """
+    A provider's credentials must not reach a traceback.
+
+    Django's error reporter prints the POST parameters into the traceback page, the
+    ``django.request`` log line and the mail to ``ADMINS``. These endpoints accept live
+    provider credentials in that body, so they declare them sensitive the way every other
+    credential-accepting view of the library does.
+    """
+
+    CREDENTIAL_FIELDS = ('id_token', 'access_token', 'code', 'code_verifier')
+
+    def setUp(self):
+        self.init_social()
+
+    def test_every_credential_field_is_declared_sensitive(self):
+        endpoints = {
+            'token login': self.token_login_url,
+            'code login': self.code_login_url,
+            'token connect': self.token_connect_url,
+            'code connect': reverse(
+                'jwt_allauth_social_code_connect', kwargs={'provider': 'dummy'}),
+        }
+        for name, url in endpoints.items():
+            with self.subTest(endpoint=name):
+                # The body is deliberately empty: the declaration is made in `dispatch`,
+                # before anything validates it, which is the point -- it has to hold for
+                # the requests that fail as well as for the ones that work.
+                response = self.client.post(url, data={}, content_type='application/json')
+                declared = getattr(response.wsgi_request, 'sensitive_post_parameters', ())
+                for field in self.CREDENTIAL_FIELDS:
+                    self.assertIn(field, declared)

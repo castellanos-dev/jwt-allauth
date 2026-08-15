@@ -360,7 +360,12 @@ def user_agent_dict(request):
 
 sensitive_post_parameters_m = method_decorator(
     sensitive_post_parameters(
-        'password', 'old_password', 'new_password1', 'new_password2', 'password1', 'password2'
+        'password', 'old_password', 'new_password1', 'new_password2', 'password1', 'password2',
+        # A provider's credentials are credentials too: Django's error reporter prints
+        # the POST parameters into the traceback, the `django.request` log line and the
+        # mail to ADMINS, so an unhandled exception on a form-encoded request would put
+        # a live provider token where all three can be read.
+        'id_token', 'access_token', 'code', 'code_verifier',
     )
 )
 
