@@ -14,7 +14,14 @@ account instead, leaving its password alone, because there the identity provider
 just demonstrated control of the same address (:mod:`jwt_allauth.social.flows`).
 """
 
+from datetime import timedelta
+
+from allauth.account import app_settings as allauth_app_settings
 from allauth.account.models import EmailAddress
+from django.utils import timezone
+
+from jwt_allauth.constants import INVITATION
+from jwt_allauth.tokens.models import GenericTokenModel
 
 
 def account_is_claimed(user) -> bool:
@@ -33,7 +40,32 @@ def account_is_claimed(user) -> bool:
         return True
     if user.last_login is not None:
         return True
-    return EmailAddress.objects.filter(user=user, verified=True).exists()
+    if EmailAddress.objects.filter(user=user, verified=True).exists():
+        return True
+    return _has_open_invitation(user)
+
+
+def _has_open_invitation(user) -> bool:
+    """
+    Whether an administrator created this account and its invitation is still live.
+
+    An invited account looks exactly like an abandoned sign-up -- no password, never
+    used, address unconfirmed -- so without this it was free for anybody to supersede: a
+    stranger posting the invitee's address to the public sign-up destroyed the account,
+    the role granted with it, and the link, and nobody was told. Somebody *did* establish
+    control here; it was the administrator, and the invitation is the record of it.
+
+    Bounded by the life of the link on purpose. Once the invitation expires it stops
+    reserving the address: a dead invitation should not keep an e-mail address hostage.
+    """
+    if user.has_usable_password():
+        # Cheap first: an invited account has no password until it claims one, so this
+        # spares the query on every other unclaimed account.
+        return False
+    cutoff = timezone.now() - timedelta(days=allauth_app_settings.EMAIL_CONFIRMATION_EXPIRE_DAYS)
+    return GenericTokenModel.objects.filter(
+        user=user, purpose=INVITATION, created__gte=cutoff
+    ).exists()
 
 
 def resolve_email(email):

@@ -72,13 +72,18 @@ How an invitation is told apart from a sign-up
 -----------------------------------------------
 
 Both arrive through the same confirmation link, and with ``JWT_ALLAUTH_INVITATIONS`` both
-can be in flight at once. What separates them is the password: an invited account has
-none until it claims one, and a self-service sign-up chose one to register.
+can be in flight at once. What separates them is recorded when the link is sent: the
+invitation is stored with a purpose of its own, and nothing else carries it.
 
-So the password-set capability is issued only to an account that has no password. One
-that already has a password is still confirmed by its link -- that is what the link was
-sent for -- but gets no capability, because issuing one would turn every confirmation
-link into a password reset that bypasses the reset flow and its throttling.
+Guessing it from the shape of the account is not good enough. The obvious tell is the
+password -- an invited account has none until it claims one -- but an account created
+through a social provider has none either, so that reading would let a provider's
+confirmation mail be exchanged for the capability to set a local password on the account.
+
+The capability is still withheld from an account that already has a password, invitation
+or not. Such an account is confirmed by its link -- that is what the link was sent for --
+but gets no capability, because issuing one would turn every confirmation link into a
+password reset that bypasses the reset flow and its throttling.
 
 What the link is worth
 ----------------------
@@ -104,6 +109,17 @@ An address held by a **verified** account is refused with ``400``. One held only
 account that was never confirmed and never used is taken over, and that account is
 removed: nobody had proved it was theirs. It is the same rule self-service registration
 applies, in :func:`jwt_allauth.accounts.superseded_accounts`.
+
+**An invitation in flight is not one of those accounts.** By shape it looks exactly like
+an abandoned sign-up -- no password, never used, address unconfirmed -- so without the
+recorded invitation anybody could post the invitee's address to the public sign-up and
+destroy the account, the role granted with it and the link, with nobody told. Somebody did
+prove that address was worth reserving; it was the administrator who sent the invitation.
+
+The reservation lasts exactly as long as the link. Once the invitation expires
+(``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS``) the account goes back to being an ordinary
+unclaimed one and the address is free again -- a dead invitation must not hold an address
+hostage. Re-inviting the same person issues a fresh link and reserves it anew.
 
 With a second factor required
 -----------------------------

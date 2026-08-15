@@ -21,6 +21,7 @@ from jwt_allauth.constants import (
     SET_PASSWORD_COOKIE,
     EMAIL_CONFIRMATION,
     EMAIL_VERIFICATION_FAILED_TEMPLATE,
+    INVITATION,
 )
 from jwt_allauth.csrf import ensure_csrf_cookie
 from jwt_allauth.registration.email_verification.serializers import VerifyEmailSerializer
@@ -133,21 +134,39 @@ class VerifyEmailView(APIView, ConfirmEmailView):
         set_refresh_token_cookie(response, refresh_token)
 
     @staticmethod
-    def _serves_invitation(user) -> bool:
+    def _serves_invitation(token_entry) -> bool:
         """
-        Whether this confirmation belongs to an invitation rather than to a sign-up.
+        Whether this confirmation is an invitation being claimed.
 
-        With registration closed there is nothing else it can be: every account was
-        created by an admin. With both ways in open, the two arrive through the same
-        link and have to be told apart, and what tells them apart is the password --
-        an invited account has none until it claims one, and a self-service sign-up
-        chose one to register.
+        The purpose written with the token says so. It used to be inferred from the
+        account having no usable password, which an account created through a social
+        provider also satisfies -- so a provider's confirmation link could have been
+        exchanged for the capability to set a password on it.
+
+        The legacy shape is still honoured: invitations issued before the purpose
+        existed carry ``EMAIL_CONFIRMATION``, and only closed registration could produce
+        them, so under it a password-less account with one of those rows is an
+        invitation in flight.
         """
-        if not invitations_enabled():
-            return False
-        if not self_registration_enabled():
+        if token_entry.purpose == INVITATION:
             return True
-        return not user.has_usable_password()
+        return not self_registration_enabled() and not token_entry.user.has_usable_password()
+
+    def _confirm_without_capability(self, request):
+        """
+        Honour a confirmation that is not an invitation.
+
+        ``None`` hands it back to the ordinary flow, which is what an installation with
+        self-service sign-up wants. With registration closed there is no ordinary flow to
+        hand it to -- these endpoints are the only ones routed -- so the address is
+        confirmed here and the browser lands where any confirmation lands, without the
+        password-set capability.
+        """
+        if self_registration_enabled():
+            return None
+        confirmation = self.get_object()
+        confirmation.confirm(self.request)
+        return _verified_response(request)
 
     def _claim_invitation(self, request, key):
         """
@@ -173,9 +192,9 @@ class VerifyEmailView(APIView, ConfirmEmailView):
         # Keys are stored as digests. In-flight confirmations issued by a previous
         # version are still stored in plain text, so they are accepted as well until
         # they expire.
-        token_entry = GenericTokenModel.objects.filter(
+        token_entry = GenericTokenModel.objects.select_related('user').filter(
             token__in=(hash_token(key), key),
-            purpose=EMAIL_CONFIRMATION,
+            purpose__in=(INVITATION, EMAIL_CONFIRMATION),
             created__gte=cutoff,
         ).first()
         if token_entry is None:
@@ -184,8 +203,8 @@ class VerifyEmailView(APIView, ConfirmEmailView):
             return self._verification_failed(request)
 
         user = token_entry.user
-        if not self._serves_invitation(user):
-            return None
+        if not self._serves_invitation(token_entry):
+            return self._confirm_without_capability(request)
 
         # A deactivated account gets no capability: login and refresh both refuse it,
         # and setting the password opens a session.

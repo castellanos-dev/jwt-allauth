@@ -7,7 +7,7 @@ from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
 
-from jwt_allauth.constants import EMAIL_CONFIRMATION, PASSWORD_RESET_REQUEST_URL
+from jwt_allauth.constants import EMAIL_CONFIRMATION, INVITATION, PASSWORD_RESET_REQUEST_URL
 from jwt_allauth.tokens.serializers import GenericTokenModelSerializer
 from jwt_allauth.utils import get_template_path, hash_token, invitations_enabled
 
@@ -179,13 +179,16 @@ class JWTAllAuthAdapter(DefaultAccountAdapter):
         # Written for every confirmation while invitations are on, not only for the
         # invited ones: with registration closed, the verify view turns down a key it
         # finds no row for, and an account that has already set its password still
-        # confirms address changes through the same link.
+        # confirms address changes through the same link. The purpose is what tells the
+        # two apart -- an invitation is the only one that may be exchanged for a
+        # password-set capability, and the only one that reserves the address.
         if invitations_enabled():
+            purpose = INVITATION if (signup and not user.has_usable_password()) else EMAIL_CONFIRMATION
             token_serializer = GenericTokenModelSerializer(
                 data={
                     "token": hash_token(confirmation_key),
                     "user": emailconfirmation.email_address.user.id,
-                    "purpose": EMAIL_CONFIRMATION,
+                    "purpose": purpose,
                 }
             )
             token_serializer.is_valid(raise_exception=True)
