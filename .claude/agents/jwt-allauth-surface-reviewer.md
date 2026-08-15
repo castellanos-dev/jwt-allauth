@@ -266,6 +266,10 @@ and invitations had no row at all.
 - **Do not** report historical release notes as stale: they describe the
   release they belong to and are not updated afterwards. Only the section
   for the release being prepared is in scope.
+- **Do not** report the release date of the section being prepared as wrong
+  because it differs from the dates of the commits. A release is dated for
+  the day it ships, which is somebody's decision, not a drift. The date is
+  a finding only when the section is still marked unreleased.
 - **Do not** report the old `admin_managed_registration` stub page as a
   duplicate: it is `:orphan:` on purpose, keeping inbound links alive.
 - **Do not** report `jwt_allauth/*` being excluded from flake8 in
