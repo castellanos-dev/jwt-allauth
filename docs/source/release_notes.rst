@@ -13,6 +13,11 @@ Security
 
   Two predicates now answer the two questions. :func:`jwt_allauth.accounts.account_is_claimed` is unchanged and still guards registration: ``last_login`` belongs there, because somebody has been working in that account whoever they are. :func:`jwt_allauth.accounts.mailbox_control_proven` is new and is what social login reads: a confirmed address, an invitation in flight, or a staff account — never ``last_login``, which cannot prove control of a mailbox no matter when it is stamped.
 
+Bug Fixes
+~~~~~~~~~
+
+- **Logout works in the default configuration.** ``POST /logout/`` re-read ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` with a default of ``False`` while every endpoint that *issues* a refresh token reads ``jwt_allauth.utils.refresh_token_as_cookie()``, whose default is ``True``. With the setting left undeclared — the case every new project is in — the token went out as an HttpOnly cookie and logout looked for it in the request body, which a browser client cannot fill: the cookie is out of reach of scripts and the login response carries only ``access``. Logout answered ``400 REQUIRED`` on ``refresh`` and closed nothing, leaving the whitelist row and a thirty-day cookie alive on whatever machine the session was opened on. The view now reads the same helper as everyone else, so the two cannot disagree again. Documented behaviour is unchanged — :doc:`api_endpoints` already described the cookie as the default source; it is the code that now matches it.
+
 Compatibility
 ~~~~~~~~~~~~~
 
