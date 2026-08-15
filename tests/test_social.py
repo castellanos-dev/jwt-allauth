@@ -23,8 +23,9 @@ from django.urls import NoReverseMatch, clear_url_caches, reverse
 from rest_framework import status
 from rest_framework_simplejwt.tokens import AccessToken
 
-from jwt_allauth.constants import EMAIL_VERIFIED_CLAIM, REFRESH_TOKEN_COOKIE
-from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
+from jwt_allauth.constants import EMAIL_VERIFIED_CLAIM, INVITATION, REFRESH_TOKEN_COOKIE
+from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
+from jwt_allauth.utils import hash_token
 from tests.mixins import TestsMixin
 from tests.socialprovider.views import ACCESS_TOKEN_URL, USERINFO_URL
 
@@ -293,6 +294,57 @@ class SocialEmailLinkingTests(SocialTestsMixin):
         account = SocialAccount.objects.get(provider='dummy')
         self.assertEqual(account.user.email, SOCIAL_EMAIL)
         self.assertFalse(account.user.has_usable_password())
+
+    def _invite(self):
+        """An invitation in flight for the address the provider vouches for."""
+        invited = get_user_model().objects.create_user('invited_social', email=SOCIAL_EMAIL)
+        invited.set_unusable_password()
+        invited.save()
+        EmailAddress.objects.create(user=invited, email=SOCIAL_EMAIL, verified=False, primary=True)
+        GenericTokenModel.objects.create(
+            user=invited, token=hash_token('a-key'), purpose=INVITATION)
+        return invited
+
+    @responses.activate
+    @override_settings(JWT_ALLAUTH_INVITATIONS=True, EMAIL_VERIFICATION='optional')
+    def test_an_invited_account_is_linked_to_rather_than_superseded(self):
+        """
+        An invitation reserves its address against registration, and the same rule is
+        read here. It reads differently on purpose: registration would have superseded
+        the account and created its own, whereas the provider has just proved control of
+        the very address the invitation was sent to, so the invited account is the one
+        that is signed in -- with the role the administrator granted it.
+
+        Only where verification is not mandatory, which is the point of the next test.
+        """
+        invited = self._invite()
+
+        self.fake_profile()
+        resp = self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_200_OK)
+
+        self.assertIn('access', resp)
+        self.assertTrue(get_user_model().objects.filter(pk=invited.pk).exists())
+        self.assertEqual(SocialAccount.objects.get(provider='dummy').user_id, invited.pk)
+
+    @responses.activate
+    @override_settings(JWT_ALLAUTH_INVITATIONS=True, EMAIL_VERIFICATION='mandatory')
+    def test_an_invited_account_still_owes_a_confirmed_address(self):
+        """
+        Connecting a provider does not confirm the local address -- allauth's ``connect``
+        deliberately leaves it alone -- so under mandatory verification the invitee is
+        refused exactly as a password holder in the same state is, and the invitation
+        link remains the way in. Nothing is written on the way out.
+        """
+        invited = self._invite()
+
+        self.fake_profile()
+        resp = self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_401_UNAUTHORIZED)
+
+        self.assertEqual(resp['code'], 'email_not_verified')
+        self.assertFalse(SocialAccount.objects.exists())
+        self.assertTrue(get_user_model().objects.filter(pk=invited.pk).exists())
+        self.assertTrue(
+            GenericTokenModel.objects.filter(user=invited, purpose=INVITATION).exists())
 
     @responses.activate
     @override_settings(JWT_ALLAUTH_SOCIAL_EMAIL_LINKING=False)

@@ -60,6 +60,14 @@ def _has_open_invitation(user) -> bool:
 
     Bounded by the life of the link on purpose. Once the invitation expires it stops
     reserving the address: a dead invitation should not keep an e-mail address hostage.
+
+    Both callers read this, and they act on it differently because their situations
+    differ. Registration is the one it defends: it must not supersede the account. Social
+    login links to it instead, and signs the invitee in as the account the administrator
+    prepared -- there the provider has just proved control of the very address the
+    invitation was sent to, which is what the link was asking for. The one caller it does
+    not apply to is the endpoint that issues invitations, which has to be able to reissue
+    its own; see the ``reserve_invitations`` argument.
     """
     if user.has_usable_password():
         # Cheap first: an invited account has no password until it claims one, so this
