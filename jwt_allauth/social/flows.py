@@ -43,7 +43,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import exceptions
 from rest_framework_simplejwt.settings import api_settings
 
-from jwt_allauth.accounts import superseded_accounts
+from jwt_allauth.accounts import resolve_email
 from jwt_allauth.exceptions import (
     SocialAccountAlreadyConnected,
     SocialDisconnectNotAllowed,
@@ -288,28 +288,6 @@ def _verified_emails(sociallogin):
     return [e for e in (sociallogin.email_addresses or []) if e.verified]
 
 
-def _link_to_existing_account(sociallogin, email: str):
-    """
-    The account ``email`` already belongs to, when the provider may be linked to it.
-
-    Returns ``None`` when the address is free or only held by sign-ups nobody ever
-    claimed -- those are superseded by the caller, exactly as registration supersedes
-    them -- and the account itself when somebody has established ownership of it.
-    """
-    pending = superseded_accounts(email)
-    if pending is not None:
-        return None
-
-    from allauth.account.models import EmailAddress
-
-    address = EmailAddress.objects.filter(email__iexact=email).select_related('user').first()
-    if address is not None:
-        return address.user
-    # An installation that predates allauth's EmailAddress rows, or one whose user model
-    # was populated by hand, can hold the address on the user alone.
-    return get_user_model().objects.filter(email__iexact=email).first()
-
-
 @transaction.atomic
 def authenticate_social_login(request, sociallogin):
     """
@@ -363,29 +341,32 @@ def authenticate_social_login(request, sociallogin):
     return user
 
 
-def _existing_owner(sociallogin, verified):
+def _resolve_addresses(sociallogin, verified):
     """
-    The established account one of the provider's verified addresses belongs to.
+    Resolve every address the provider vouched for, once.
 
-    ``None`` when no address is held by anyone, or is held only by sign-ups nobody ever
-    claimed -- those are the caller's to supersede.
+    Returns the established owner if one of them has one, and otherwise the unclaimed
+    accounts holding them, which the caller supersedes. Each address costs a single
+    query, and the owner returned is the row that reached the verdict rather than
+    whatever a second lookup would have found.
 
     Raises:
         SocialEmailConflict: An address is somebody's but linking is off for this
             provider, so there is no way to reach that account from here.
     """
     linking = email_linking_enabled(sociallogin.account.provider)
+    superseded = []
     for address in verified:
-        owner = _link_to_existing_account(sociallogin, address.email)
-        if owner is None:
-            continue
-        if not linking:
-            raise SocialEmailConflict()
-        return owner
-    return None
+        owner, pending = resolve_email(address.email)
+        if owner is not None:
+            if not linking:
+                raise SocialEmailConflict()
+            return owner, []
+        superseded.extend(pending)
+    return None, superseded
 
 
-def _signup(request, sociallogin, verified):
+def _signup(request, sociallogin, superseded):
     """Create the account behind a social login that matched nothing."""
     from allauth.socialaccount.adapter import get_adapter as get_social_adapter
 
@@ -397,12 +378,11 @@ def _signup(request, sociallogin, verified):
         # switching auto sign-up off means social sign-ups are off.
         raise SocialSignupNotAllowed()
 
-    for address in verified:
+    for pending in superseded:
         # Unclaimed sign-ups holding the address, removed whole rather than only losing
         # the address -- the same thing `RegisterSerializer._claim_email` does, for the
         # same reason: an account without an address is worse than no account.
-        for pending in (superseded_accounts(address.email) or []):
-            pending.delete()
+        pending.delete()
 
     return adapter.save_user(request, sociallogin)
 
@@ -413,7 +393,7 @@ def _signup_or_link(request, sociallogin):
     if not verified and require_verified_email():
         raise SocialEmailUnverified()
 
-    owner = _existing_owner(sociallogin, verified)
+    owner, superseded = _resolve_addresses(sociallogin, verified)
     if owner is not None:
         # The provider proved control of an address whose owner is already established.
         # Connecting is all that is needed: the local password stays usable, so both
@@ -421,7 +401,7 @@ def _signup_or_link(request, sociallogin):
         sociallogin.connect(request, owner)
         return owner
 
-    return _signup(request, sociallogin, verified)
+    return _signup(request, sociallogin, superseded)
 
 
 def connect_social_login(request, sociallogin, user):

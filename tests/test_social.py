@@ -631,3 +631,29 @@ class SocialAllauthEmailAuthenticationTests(SocialTestsMixin):
 
         self.assertIsNotNone(resp['id'])
         self.assertEqual(SocialAccount.objects.filter(user=self.USER).count(), 1)
+
+
+class SocialQueryCountTests(SocialTestsMixin):
+    """
+    The query cost of a social login, pinned.
+
+    Nothing in the suite counted queries, which is how the address ended up being
+    resolved two and three times per sign-up without anything noticing. These numbers
+    are a ratchet, not a target: raising one is a decision, and it should have to be
+    made deliberately.
+    """
+
+    def setUp(self):
+        self.init_social()
+
+    @responses.activate
+    def test_signing_up_resolves_each_address_once(self):
+        self.fake_profile()
+        with self.assertNumQueries(23):
+            self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_200_OK)
+
+    @responses.activate
+    def test_linking_to_an_established_account_resolves_once(self):
+        self.fake_profile(profile(email=self.EMAIL))
+        with self.assertNumQueries(15):
+            self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_200_OK)
