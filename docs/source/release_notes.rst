@@ -1,6 +1,38 @@
 Release Notes
 =============
 
+Version 1.5.1
+-------------
+
+Released: August 15, 2026
+
+Security
+~~~~~~~~
+
+- **A provider no longer signs in to an account that never confirmed its address.** Deciding whether to hand an existing account to whoever an identity provider vouches for used the same predicate registration uses to decide whether an account may be *destroyed*, and one of its facts is ``last_login``. Under ``EMAIL_VERIFICATION = 'optional'`` the sign-up stamps ``last_login`` itself, so every address anybody had ever typed into ``/registration/`` counted as claimed. That let a stranger register the victim's address with a password of their own choosing and wait: the victim's *Sign in with Google* was connected **into the stranger's account**, whose password stayed usable and whose address stayed unconfirmed, indefinitely. The same pre-hijacking ``JWT_ALLAUTH_INVITATIONS`` closed on the registration side, reopened through the provider.
+
+  Two predicates now answer the two questions. :func:`jwt_allauth.accounts.account_is_claimed` is unchanged and still guards registration: ``last_login`` belongs there, because somebody has been working in that account whoever they are. :func:`jwt_allauth.accounts.mailbox_control_proven` is new and is what social login reads: a confirmed address, an invitation in flight, or a staff account — never ``last_login``, which cannot prove control of a mailbox no matter when it is stamped.
+
+Bug Fixes
+~~~~~~~~~
+
+- **The translations work, and cover the library as it is today.** Two separate faults, and neither was visible from inside the package. The catalogues were inherited from this project's ancestor and never revised: 21 entries, most of them for strings that no longer exist anywhere in the code, while every message the library actually returns — the social errors, the MFA notices, the invitation and password-reset e-mails, the model field names in the admin — had no translation at all. And nothing was ever compiled: Django reads the ``.mo`` and never the ``.po``, ``.mo`` was excluded by ``.gitignore``, and only ``.po`` was declared in the package data, so an installation in any language got English throughout. All eleven languages — Czech, German, Spanish, French, Korean, Polish, Brazilian Portuguese, Russian, Turkish and Chinese (Simplified and Traditional) — are now complete at 85 entries, compiled, and shipped in both the wheel and the sdist. Nothing has to be configured to get them beyond what Django already asks for; see :doc:`installation`.
+
+- **The code flow uses the OAuth2 client the provider's adapter declares.** ``POST /social/<provider>/code/`` instantiated ``OAuth2Client`` by name and ignored ``adapter.client_class``, which allauth sets on the adapters whose exchange is not the generic one. Apple is the case that matters: its ``client_secret`` is not a stored string but an ES256 JWT that has to be signed with the ``.p8`` key on every exchange, so the raw ``SocialApp.secret`` went out and every code was refused — relayed as ``invalid_social_token``, which reads exactly like an expired credential and says nothing about the flow being unusable for that provider. The attribute is now read the way allauth's own callback view reads it, which covers any provider with the same need without naming one.
+
+- **Logout works in the default configuration.** ``POST /logout/`` re-read ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` with a default of ``False`` while every endpoint that *issues* a refresh token reads ``jwt_allauth.utils.refresh_token_as_cookie()``, whose default is ``True``. With the setting left undeclared — the case every new project is in — the token went out as an HttpOnly cookie and logout looked for it in the request body, which a browser client cannot fill: the cookie is out of reach of scripts and the login response carries only ``access``. Logout answered ``400 REQUIRED`` on ``refresh`` and closed nothing, leaving the whitelist row and a thirty-day cookie alive on whatever machine the session was opened on. The view now reads the same helper as everyone else, so the two cannot disagree again. Documented behaviour is unchanged — :doc:`api_endpoints` already described the cookie as the default source; it is the code that now matches it.
+
+Compatibility
+~~~~~~~~~~~~~
+
+- **A social login against a local account that is in use and unconfirmed now answers** ``409`` ``local_account_unverified`` instead of linking. Only reachable where verification is not mandatory. Installations that relied — without knowing it — on such an account being linked will see the refusal; the way through is for the account to confirm the address it already has the mail for, after which the same login links as before. The account is deliberately **not** superseded: under ``'optional'`` and ``'none'`` an unconfirmed account is an ordinary, fully usable one, and deleting it would trade an account takeover for a data loss. Nothing is created or removed on the refusal. See :doc:`social_login`.
+
+- **Everything else about linking is unchanged.** A confirmed address still links and still keeps its password; an invited account still links, as the invitation asked; an account nobody ever claimed is still superseded; ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING`` still narrows all of it per provider.
+
+- **New public function** :func:`jwt_allauth.accounts.resolve_email_for_provider`, alongside the existing :func:`~jwt_allauth.accounts.resolve_email`, which is untouched — including the ``_superseded_accounts`` override point on the registration serializers.
+
+- **No new model and no migration.**
+
 Version 1.5.0
 -------------
 

@@ -44,10 +44,17 @@ class DummyProvider(OAuth2Provider):
         )
 
     def extract_email_addresses(self, data):
+        # ``emails`` is this provider's own extension, so that a test can hand over more
+        # than one vouched-for address -- which real providers do, and which is what
+        # makes the order the resolver reaches its verdict in observable.
+        addresses = [
+            EmailAddress(email=entry['email'], verified=bool(entry.get('email_verified')))
+            for entry in data.get('emails', [])
+        ]
         email = data.get('email')
-        if not email:
-            return []
-        return [EmailAddress(email=email, verified=bool(data.get('email_verified')), primary=True)]
+        if email:
+            addresses.insert(0, EmailAddress(email=email, verified=bool(data.get('email_verified')), primary=True))
+        return addresses
 
     def verify_token(self, request, token):
         credential = token.get('id_token') or token.get('access_token')

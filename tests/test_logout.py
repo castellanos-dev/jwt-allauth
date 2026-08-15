@@ -1,5 +1,6 @@
 import time
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 
@@ -202,3 +203,34 @@ class LogoutTests(TestsMixin):
 
         # Request data token should remain untouched
         self.assertTrue(RefreshTokenWhitelistModel.objects.filter(jti=different_token.payload['jti']).exists())
+
+
+class LogoutDefaultDeliveryTests(TestsMixin):
+    """
+    Logout has to agree with the endpoints that hand the refresh token out.
+
+    It is the only consumer of the token, and it used to re-read
+    ``JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE`` with a default of its own. The rest of the
+    library reads ``utils.refresh_token_as_cookie()``, whose default is ``True``, so with
+    the setting left undeclared -- the case every new project is in -- the token went out
+    as an HttpOnly cookie and this view looked for it in the body. The frontend could
+    fill neither: the cookie is out of reach of scripts and the login response carries
+    only ``access``. Logout answered ``400`` and closed nothing, leaving the whitelist row
+    and a thirty-day cookie behind on whatever machine the session was opened on.
+    """
+
+    def setUp(self):
+        self.init()
+
+    def test_the_default_matches_the_endpoints_that_issue_the_token(self):
+        with override_settings():
+            del settings.JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE
+
+            self.token = self.ACCESS
+            self.client.cookies[REFRESH_TOKEN_COOKIE] = str(self.TOKEN)
+
+            # No `refresh` in the body, because a browser client cannot put one there.
+            resp = self.post(self.logout_url, data={}, status_code=200)
+
+        self.assertEqual(resp['detail'], 'Successfully logged out.')
+        self.assertFalse(RefreshTokenWhitelistModel.objects.filter(jti=self.TOKEN.payload['jti']).exists())

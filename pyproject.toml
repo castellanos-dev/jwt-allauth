@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-jwt-allauth"
-version = "1.5.0"
+version = "1.5.1"
 authors = [
     {name = "Fernando Castellanos", email = "fcastellanos.dev@gmail.com"},
 ]
@@ -88,7 +88,10 @@ mfa = ["django-allauth[mfa]>=65.9"]
 # cannot pull a project in opposite directions.
 social = ["django-allauth[socialaccount]>=65.9"]
 schema = ["drf-spectacular>=0.27,<1.0"]
-test = ["responses>=0.5.0"]
+# `polib` reads the `.po` catalogues in tests/test_translations.py, which checks the
+# compiled `.mo` against its source by content. Test-only, pure Python, no
+# dependencies of its own; nothing in the library imports it.
+test = ["responses>=0.5.0", "polib>=1.2"]
 
 [project.urls]
 Homepage = "https://github.com/castellanos-dev/jwt-allauth"
@@ -110,4 +113,6 @@ jwt_allauth = [
     "templates/**/*.html",
     "templates/**/*.txt",
     "locale/**/*.po",
+    # The compiled catalogue is the one gettext reads; the source stays for translators.
+    "locale/**/*.mo",
 ]

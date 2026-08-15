@@ -69,9 +69,10 @@ token here."* The rows marked — follow from that: there is no token implementa
 ³ `allauth.usersessions` lists Django sessions, not JWT sessions.
 
 ⁴ Provider token and authorization code with PKCE, one generic endpoint per flow. The
-server-initiated redirect flow is not covered. A provider that vouches for an address an
-established account already holds signs that account in and leaves its password usable,
-rather than wiping it as allauth's e-mail authentication does. See
+server-initiated redirect flow is not covered. A provider that vouches for an address
+whose control an account has already demonstrated — it was confirmed, or invited — signs
+that account in and leaves its password usable, rather than wiping it as allauth's
+e-mail authentication does. See
 [Social login](https://jwt-allauth.readthedocs.io/en/latest/social_login.html).
 
 ⁵ allauth's documentation states that *"handling invitations is not supported by allauth"*

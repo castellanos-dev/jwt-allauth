@@ -106,6 +106,28 @@ class SocialEmailConflict(SocialAPIException):
     default_code = "email_already_registered"
 
 
+class SocialLocalAccountUnverified(SocialAPIException):
+    """
+    A local account holds the address, is in use, and never confirmed it.
+
+    Neither of the other two answers is available. Signing the provider into it would
+    hand over an account nothing ties to this mailbox -- anybody can type an address into
+    a sign-up form, and the password guarding what they created is one they chose
+    themselves. Superseding it would delete an account somebody has been working in,
+    which under ``ACCOUNT_EMAIL_VERIFICATION = 'optional'`` or ``'none'`` is an ordinary,
+    fully usable account.
+
+    So the flow refuses and says which one it is. The caller controls the mailbox -- the
+    provider just proved it -- so the way through is the confirmation link already sent
+    to it: once the address is confirmed the same login links. That is the one door the
+    occupant cannot walk through. No enumeration is given away either: the answer is only
+    ever about an address the caller has just been vouched for.
+    """
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = _("Confirm this e-mail address on the existing account before connecting a provider.")
+    default_code = "local_account_unverified"
+
+
 class SocialSignupClosed(SocialAPIException):
     status_code = status.HTTP_403_FORBIDDEN
     default_detail = _("Registration is closed.")

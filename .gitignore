@@ -53,6 +53,12 @@ coverage.xml
 # Translations
 *.mo
 *.pot
+# ...except the package's own compiled catalogues. Django reads `.mo`, never `.po`, and
+# nothing compiles them on the way to PyPI -- the release workflow runs `python -m build`
+# and no more -- so a `.mo` that is not committed is a translation that never reaches an
+# installation. They are build products in every other project; here they are the
+# deliverable.
+!jwt_allauth/locale/**/*.mo
 
 # Django stuff:
 *.log

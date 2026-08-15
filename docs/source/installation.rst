@@ -100,6 +100,39 @@ it actually uses. Each is installed from this package; nothing has to be install
 They combine: ``pip install "django-jwt-allauth[mfa,social]"``.
 
 
+Languages
+=========
+
+Every message the library returns — the errors, the notices, and the e-mails it sends —
+is translated into Czech, German, Spanish, French, Korean, Polish, Brazilian Portuguese,
+Russian, Turkish and Chinese (Simplified and Traditional). Compiled catalogues ship in
+the package, so nothing has to be built after installing.
+
+Django decides which one is used, and it needs two things beyond the defaults:
+
+.. code-block:: python
+
+    USE_I18N = True                 # on by default
+    LANGUAGE_CODE = 'es'            # the fallback when no language is negotiated
+
+    MIDDLEWARE = [
+        # ...
+        'django.middleware.locale.LocaleMiddleware',   # honours Accept-Language per request
+        # ...
+    ]
+
+Without ``LocaleMiddleware`` every response comes back in ``LANGUAGE_CODE``, which is
+what an API serving one locale wants. With it, each request is answered in the language
+its ``Accept-Language`` header asks for, falling back to ``LANGUAGE_CODE``.
+
+The error ``code`` beside each ``detail`` is never translated — it is what a client
+branches on, and ``detail`` is what a person reads.
+
+A language that is missing, or a phrasing that is wrong for your users: the source
+catalogues are in ``jwt_allauth/locale/<code>/LC_MESSAGES/django.po`` and pull requests
+are welcome. See ``CONTRIBUTING.md`` for the two commands involved.
+
+
 Installation for existing projects
 ==================================
 

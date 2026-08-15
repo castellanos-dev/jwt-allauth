@@ -1,17 +1,26 @@
 """
 Whether an e-mail address is really somebody's.
 
-Registration and social login both have to answer it, and they must answer it the same
-way. An address that appears in the database is not proof of anything on its own: a
-sign-up that was never confirmed and never used can have been made by anyone, with
-anyone's address. What settles it is whether somebody has demonstrated control -- by
-confirming the address, or by having used the account.
+Registration and social login both have to ask about an address, and they are **not**
+asking the same thing -- which is the correction this module carries, because one
+predicate used to answer both:
 
-The two callers do different things with the answer. Registration supersedes the
-unclaimed accounts and creates its own (:meth:`~jwt_allauth.registration.serializers.
-RegisterSerializer._claim_email`). Social login links the provider to the claimed
-account instead, leaving its password alone, because there the identity provider has
-just demonstrated control of the same address (:mod:`jwt_allauth.social.flows`).
+* Registration asks *may I destroy this account to make room for a new sign-up?*
+  Anything short of an abandoned sign-up must answer yes-it-is-taken, ``last_login``
+  included: somebody has been working in there, whoever they are.
+  (:meth:`~jwt_allauth.registration.serializers.RegisterSerializer._claim_email`.)
+* Social login asks *may I hand this account to whoever a provider vouches for?* Only
+  proof of control of the mailbox justifies that, and ``last_login`` is not such proof
+  -- see :func:`mailbox_control_proven`. (:mod:`jwt_allauth.social.flows`.)
+
+Answering the second question with the first one was an account-takeover: under
+``ACCOUNT_EMAIL_VERIFICATION = 'optional'`` a sign-up stamps its own ``last_login``, so
+every address anybody had ever typed into the form counted as proven, and the provider
+handed the owner's session to whoever had typed it first.
+
+Hence the two predicates below. :func:`account_is_claimed` is the weaker one and is
+literally the stronger one plus ``last_login``, so the two cannot drift apart: a fact
+added to :func:`mailbox_control_proven` reaches both.
 """
 
 from datetime import timedelta
@@ -24,28 +33,74 @@ from jwt_allauth.constants import INVITATION
 from jwt_allauth.tokens.models import GenericTokenModel
 
 
-def account_is_claimed(user, reserve_invitations=True) -> bool:
+def mailbox_control_proven(user, reserve_invitations=True) -> bool:
     """
-    Whether somebody has already established ownership of ``user``.
+    Whether somebody has demonstrated control of the **address itself**.
+
+    The question social login has to ask, and the only one that justifies handing an
+    account that already exists to whoever an identity provider vouches for.
+
+    ``last_login`` is deliberately absent, and no amount of fixing *when* it is stamped
+    would earn it a place here. Signing up stamps it -- ``complete_signup`` logs the new
+    account in under ``ACCOUNT_EMAIL_VERIFICATION = 'optional'`` -- and even a genuine
+    password login proves only that somebody knows a password, which for an account
+    created by a stranger is a password that stranger chose. Neither says anything about
+    the mailbox. What does: the address was confirmed, an administrator provisioned the
+    account for that address, or the account is a privileged one nobody self-serviced
+    into existence.
 
     Args:
         user (AbstractBaseUser): Owner of the address under evaluation.
-        reserve_invitations (bool): Whether a live invitation counts as ownership. It
-            does for everybody except the endpoint that issues invitations, which is
-            also the one that reissues them -- see :func:`resolve_email`.
+        reserve_invitations (bool): Whether a live invitation counts as proof. It does
+            for everybody except the endpoint that issues invitations, which is also the
+            one that reissues them -- see :func:`resolve_email`.
+
+    Returns:
+        bool: ``True`` when control of the address has been demonstrated.
+    """
+    if user is None:
+        # Fail closed in the direction that matters here: nothing is handed over.
+        return False
+    if user.is_staff or user.is_superuser:
+        # Not something anybody talked their way into: an operator created it with this
+        # address on purpose, which is a record of control in the same way an invitation
+        # is. It also has to be here rather than only in `account_is_claimed`, or a
+        # freshly provisioned superuser would read as an abandoned sign-up and be
+        # superseded by the first social sign-up for its address.
+        return True
+    if EmailAddress.objects.filter(user=user, verified=True).exists():
+        return True
+    # An open invitation stays on purpose: the administrator sent the link to THIS
+    # address, and the provider has just proved control of it, which is precisely what
+    # the invitation was asking for.
+    return reserve_invitations and _has_open_invitation(user)
+
+
+def account_is_claimed(user, reserve_invitations=True) -> bool:
+    """
+    Whether the account is in use and must not be destroyed.
+
+    The question registration asks before superseding a sign-up. It is
+    :func:`mailbox_control_proven` plus ``last_login``, and expressed that way on
+    purpose: the weaker predicate must never be *narrower* than the stronger one, or an
+    account social login refuses to touch could still be destroyed by a registration.
+
+    ``last_login`` belongs here and nowhere else. It cannot say whose account this is,
+    but it does say the account has been worked in, and that is enough to refuse to
+    delete it.
+
+    Args:
+        user (AbstractBaseUser): Owner of the address under evaluation.
+        reserve_invitations (bool): See :func:`mailbox_control_proven`.
 
     Returns:
         bool: ``True`` unless the account is a sign-up that was never confirmed.
     """
     if user is None:
         return True
-    if user.is_staff or user.is_superuser:
-        return True
     if user.last_login is not None:
         return True
-    if EmailAddress.objects.filter(user=user, verified=True).exists():
-        return True
-    return reserve_invitations and _has_open_invitation(user)
+    return mailbox_control_proven(user, reserve_invitations)
 
 
 def _has_open_invitation(user) -> bool:
@@ -115,6 +170,44 @@ def resolve_email(email, reserve_invitations=True):
             return address.user, []
         accounts.append(address.user)
     return None, accounts
+
+
+def resolve_email_for_provider(email):
+    """
+    Who holds ``email``, for a caller an identity provider has just proved control of it to.
+
+    :func:`resolve_email` with a stronger predicate is not enough, because this caller
+    has **three** outcomes to tell apart rather than two, and the third one is the whole
+    point: an account that has been used but whose address was never confirmed is
+    neither somebody the provider may be signed into (nothing proves it is the same
+    person) nor an abandoned sign-up that may be deleted (somebody has been working in
+    it). Folding it into either bucket trades one loss for the other.
+
+    Args:
+        email (str): Address to resolve. Matched as :func:`resolve_email` matches it.
+
+    Returns:
+        tuple: ``(owner, occupied, abandoned)``, one query per address.
+
+        * ``owner`` -- control of the address was demonstrated. The provider is the same
+          person; connect to this account.
+        * ``occupied`` -- accounts in use whose address is unconfirmed. Neither linkable
+          nor removable: refuse, and let the owner confirm the address they already have
+          the mail for. Whoever merely typed the address into a sign-up form cannot.
+        * ``abandoned`` -- never confirmed and never used. Free to supersede, exactly as
+          registration supersedes them.
+
+        The last two are empty whenever ``owner`` is set.
+    """
+    occupied, abandoned = [], []
+    for address in EmailAddress.objects.filter(email=email.lower()).select_related('user'):
+        user = address.user
+        if address.verified or mailbox_control_proven(user):
+            return user, [], []
+        # Control is unproven, so `account_is_claimed` is what is left to ask -- and by
+        # its own definition all that remains of it here is `last_login`.
+        (occupied if user.last_login is not None else abandoned).append(user)
+    return None, occupied, abandoned
 
 
 def superseded_accounts(email, reserve_invitations=True):
