@@ -50,7 +50,12 @@ keywords = [
     "session-management",
     "security",
     "mfa",
-    "totp"
+    "totp",
+    "social-login",
+    "oauth2",
+    "openid-connect",
+    "sso",
+    "invitations"
 ]
 # No upper bounds, by policy: a cap in a library propagates a conflict to every project
 # downstream and blocks the capped package's security releases. The majors each release

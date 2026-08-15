@@ -74,8 +74,10 @@ established account already holds signs that account in and leaves its password 
 rather than wiping it as allauth's e-mail authentication does. See
 [Social login](https://jwt-allauth.readthedocs.io/en/latest/social_login.html).
 
-⁵ allauth states that invitation handling is out of its scope and points at a separate
-app. [django-invitations](https://github.com/jazzband/django-invitations) is that app, and
+⁵ allauth's documentation states that *"handling invitations is not supported by allauth"*
+and points at a separate app
+([Advanced usage](https://docs.allauth.org/en/latest/account/advanced.html)).
+[django-invitations](https://github.com/jazzband/django-invitations) is that app, and
 it models a different thing: it stores an invitation, and the invitee then signs up
 themselves — with any address they like, not necessarily the one invited. Here the admin
 creates the account and fixes the identity; the invitee only proves the mailbox and
@@ -99,6 +101,14 @@ Quick Start
 Install using `pip`:
 
     pip install django-jwt-allauth
+
+Optional features ship as extras, so nothing you do not use is installed:
+
+    pip install "django-jwt-allauth[social]"   # sign in through a provider
+    pip install "django-jwt-allauth[mfa]"      # TOTP second factor
+    pip install "django-jwt-allauth[schema]"   # OpenAPI schema and Swagger UI
+
+See [Optional features](https://jwt-allauth.readthedocs.io/en/latest/installation.html#optional-features).
 
 You can start a new Django project with JWT Allauth pre-configured:
 

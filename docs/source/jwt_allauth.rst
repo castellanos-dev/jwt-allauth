@@ -20,6 +20,14 @@ Modules
 Submodules
 ----------
 
+jwt\_allauth.accounts module
+----------------------------
+
+.. automodule:: jwt_allauth.accounts
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 jwt\_allauth.adapter module
 ---------------------------
 

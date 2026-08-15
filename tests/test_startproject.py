@@ -68,6 +68,11 @@ MIDDLEWARE = [
         self.assertIn("# JWT_ALLAUTH_SOCIAL_EMAIL_LINKING = True", content)
         self.assertNotIn("\nSOCIALACCOUNT_PROVIDERS", content)
 
+        # Invitations are offered the same way, in the same block.
+        self.assertIn("# JWT_ALLAUTH_INVITATIONS = True", content)
+        self.assertIn("# PASSWORD_SET_REDIRECT = ", content)
+        self.assertNotIn("\nJWT_ALLAUTH_INVITATIONS", content)
+
         # Check if authentication backends are added
         self.assertIn("AUTHENTICATION_BACKENDS", content)
         self.assertIn("django.contrib.auth.backends.ModelBackend", content)

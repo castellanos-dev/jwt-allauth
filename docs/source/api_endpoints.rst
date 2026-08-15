@@ -907,9 +907,6 @@ Error codes, all in the ``code`` field beside ``detail``:
    * - ``400``
      - ``flow_not_supported``
      - The provider cannot verify a token out of band, or does not speak OAuth2.
-   * - ``400``
-     - ``callback_url_not_allowed``
-     - The ``callback_url`` is outside ``JWT_ALLAUTH_SOCIAL_CALLBACK_URLS``.
    * - ``401``
      - ``invalid_social_token``
      - The provider rejected the credential, or it names another OAuth client (``client_id_mismatch``).
@@ -966,7 +963,19 @@ Error codes, all in the ``code`` field beside ``detail``:
 
 **Response**
 
-Same as ``/social/<provider>/token/``.
+Same as ``/social/<provider>/token/``, and the same error codes, plus one this flow alone
+can raise:
+
+.. list-table::
+   :widths: 12 30 58
+   :header-rows: 1
+
+   * - Status
+     - Code
+     - When
+   * - ``400``
+     - ``callback_url_not_allowed``
+     - The ``callback_url`` is outside ``JWT_ALLAUTH_SOCIAL_CALLBACK_URLS``.
 
 .. note:: Throttled with ``AnonRateThrottle`` on top of the project defaults.
 
@@ -1002,12 +1011,16 @@ Answers ``409`` ``social_account_in_use`` when the provider account belongs to a
 
 As above, from an authorization code. Request fields as in ``/social/<provider>/code/``.
 
+.. note:: Throttled with ``AnonRateThrottle`` and ``UserRateThrottle`` on top of the project defaults.
+
 **URL Name:** ``jwt_allauth_social_code_connect``
 
 **/social/accounts/** (GET)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The caller's provider connections. Requires a bearer token.
+
+.. note:: Throttled with ``AnonRateThrottle`` and ``UserRateThrottle`` on top of the project defaults.
 
 **URL Name:** ``jwt_allauth_social_accounts``
 
@@ -1018,6 +1031,8 @@ Removes one connection, answering ``204``. An id that is not the caller's answer
 Removing the last connection of an account with no usable password answers ``400``
 ``disconnect_not_allowed``: there would be nothing left to sign in with.
 
+.. note:: Throttled with ``AnonRateThrottle`` and ``UserRateThrottle`` on top of the project defaults.
+
 **URL Name:** ``jwt_allauth_social_disconnect``
 
 **/social/providers/** (GET)
@@ -1025,6 +1040,8 @@ Removing the last connection of an account with no usable password answers ``400
 
 The configured providers, each with ``id``, ``name`` and ``client_id``, so a frontend can build
 its authorization requests. The app secret is never included.
+
+.. note:: Throttled with ``AnonRateThrottle`` on top of the project defaults.
 
 **URL Name:** ``jwt_allauth_social_providers``
 
