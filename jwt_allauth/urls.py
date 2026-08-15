@@ -3,6 +3,8 @@ from django.urls import path, include
 from django.conf import settings
 from django.views.generic import TemplateView
 
+from jwt_allauth.utils import socialaccount_stack_available
+
 from jwt_allauth.login.views import LoginView
 from jwt_allauth.logout.views import LogoutView, LogoutAllView
 from jwt_allauth.password_change.views import PasswordChangeView
@@ -35,23 +37,23 @@ urlpatterns = [
     path('mfa/', include(mfa_urls)),
 ]
 
-# Social urls. Routed only when the project installs allauth's socialaccount app, whose
-# HTTP stack (`requests`, `pyjwt[crypto]`) sits behind an extra: importing the views
-# unconditionally would make that extra a hard dependency of every installation.
+# Social urls. Routed only when the project installs allauth's socialaccount app *and*
+# the HTTP stack its flows need, which sits behind the `social` extra.
 #
-# Having the app installed is not enough, because the two can come apart: `startproject`
-# has always written `allauth.socialaccount` into INSTALLED_APPS, and until these
-# endpoints existed nothing imported its HTTP stack -- so a project generated before
-# them can be running happily today without the extra. Raising on it at import time
-# would break that project on upgrade over a feature it never asked for.
-# `jwt_allauth.checks.check_social_providers` reports the shortfall instead.
-if apps.is_installed('allauth.socialaccount'):
-    try:
-        from jwt_allauth.social import urls as social_urls
-    except ImportError:  # pragma: no cover - exercised by installations without the extra
-        pass
-    else:
-        urlpatterns.append(path('social/', include(social_urls)))
+# The two come apart in practice: `startproject` has always written
+# `allauth.socialaccount` into INSTALLED_APPS, and until these endpoints existed nothing
+# imported that stack -- so a project generated before them runs happily today without
+# the extra, and must keep running after an upgrade it never asked for.
+#
+# The availability is probed rather than inferred from an ImportError. Importing these
+# modules does *not* fail without the extra: allauth defers `import requests` into a
+# method and `jwt_allauth.social.flows` defers its own imports into functions, so a
+# `try/except ImportError` here would never fire and the endpoints would route into a
+# 500 at request time. `jwt_allauth.checks.check_social_providers` reports the shortfall.
+if apps.is_installed('allauth.socialaccount') and socialaccount_stack_available():
+    from jwt_allauth.social import urls as social_urls
+
+    urlpatterns.append(path('social/', include(social_urls)))
 
 if getattr(settings, 'PASSWORD_RESET_REDIRECT', None) is None:
     urlpatterns.append(

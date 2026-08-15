@@ -3,6 +3,7 @@ import warnings
 from contextlib import contextmanager
 from datetime import timedelta
 from importlib import import_module
+from importlib.util import find_spec
 from typing import Any, Dict, Optional
 
 from allauth.account import app_settings as allauth_settings
@@ -136,6 +137,21 @@ def verification_is_mandatory() -> bool:
         allauth_settings.EMAIL_VERIFICATION
         == allauth_settings.EmailVerificationMethod.MANDATORY
     )
+
+
+def socialaccount_stack_available() -> bool:
+    """Whether the dependencies the social flows need are installed.
+
+    ``allauth.socialaccount`` imports without them -- it defers ``requests`` into a
+    method -- so the question cannot be answered by catching an ``ImportError`` around
+    the import. It is asked of the module finder instead, which is what makes the
+    difference between "the extra is missing" and "no provider is configured" reportable
+    at startup rather than as a 500 on the first request.
+
+    Returns:
+        bool: ``True`` when ``pip install django-jwt-allauth[social]`` has been run.
+    """
+    return find_spec('requests') is not None
 
 
 def invitations_enabled() -> bool:
