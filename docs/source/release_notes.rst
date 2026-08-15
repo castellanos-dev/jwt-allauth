@@ -1,6 +1,29 @@
 Release Notes
 =============
 
+Version 1.5.1
+-------------
+
+Released: August 15, 2026
+
+Security
+~~~~~~~~
+
+- **A provider no longer signs in to an account that never confirmed its address.** Deciding whether to hand an existing account to whoever an identity provider vouches for used the same predicate registration uses to decide whether an account may be *destroyed*, and one of its facts is ``last_login``. Under ``EMAIL_VERIFICATION = 'optional'`` the sign-up stamps ``last_login`` itself, so every address anybody had ever typed into ``/registration/`` counted as claimed. That let a stranger register the victim's address with a password of their own choosing and wait: the victim's *Sign in with Google* was connected **into the stranger's account**, whose password stayed usable and whose address stayed unconfirmed, indefinitely. The same pre-hijacking ``JWT_ALLAUTH_INVITATIONS`` closed on the registration side, reopened through the provider.
+
+  Two predicates now answer the two questions. :func:`jwt_allauth.accounts.account_is_claimed` is unchanged and still guards registration: ``last_login`` belongs there, because somebody has been working in that account whoever they are. :func:`jwt_allauth.accounts.mailbox_control_proven` is new and is what social login reads: a confirmed address, an invitation in flight, or a staff account — never ``last_login``, which cannot prove control of a mailbox no matter when it is stamped.
+
+Compatibility
+~~~~~~~~~~~~~
+
+- **A social login against a local account that is in use and unconfirmed now answers** ``409`` ``local_account_unverified`` instead of linking. Only reachable where verification is not mandatory. Installations that relied — without knowing it — on such an account being linked will see the refusal; the way through is for the account to confirm the address it already has the mail for, after which the same login links as before. The account is deliberately **not** superseded: under ``'optional'`` and ``'none'`` an unconfirmed account is an ordinary, fully usable one, and deleting it would trade an account takeover for a data loss. Nothing is created or removed on the refusal. See :doc:`social_login`.
+
+- **Everything else about linking is unchanged.** A confirmed address still links and still keeps its password; an invited account still links, as the invitation asked; an account nobody ever claimed is still superseded; ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING`` still narrows all of it per provider.
+
+- **New public function** :func:`jwt_allauth.accounts.resolve_email_for_provider`, alongside the existing :func:`~jwt_allauth.accounts.resolve_email`, which is untouched — including the ``_superseded_accounts`` override point on the registration serializers.
+
+- **No new model and no migration.**
+
 Version 1.5.0
 -------------
 

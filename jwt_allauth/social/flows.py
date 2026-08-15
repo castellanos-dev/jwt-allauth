@@ -21,16 +21,24 @@ local password every time it does. That is the right call when the local account
 somebody else's, and the wrong one for the case this library cares about most -- an
 account whose address was confirmed long ago, whose owner now wants to add Google and
 keep signing in with their password too. So the verdict comes from
-:func:`jwt_allauth.accounts.superseded_accounts`, the same rule registration uses, and
-the two outcomes are told apart:
+:func:`jwt_allauth.accounts.resolve_email_for_provider`, and it has three outcomes, not
+two:
 
-    * The address is **claimed** -- confirmed, or belonging to an account that has been
-      used. Its owner is established, the provider has just proved control of the same
-      mailbox, and the two are the same person. The provider is connected and nothing
-      else about the account is touched.
+    * Control of the address was **demonstrated** -- it was confirmed, an administrator
+      provisioned the account for it, or the account is a privileged one. The provider
+      has just proved control of the same mailbox, so the two are the same person: the
+      provider is connected and nothing else about the account is touched.
     * The address is **unclaimed** -- never confirmed, on an account that was never
       used. Anybody could have typed it in. Those accounts are superseded exactly as
       registration supersedes them, and the provider account is created fresh.
+    * The account is **in use but its address was never confirmed** -- possible whenever
+      verification is not mandatory. Refused, because neither of the other two answers
+      is safe here; see
+      :class:`~jwt_allauth.exceptions.SocialLocalAccountUnverified`.
+
+Registration's own predicate, :func:`jwt_allauth.accounts.account_is_claimed`, is
+deliberately **not** the one read here. It answers "is this account in use", which is the
+right guard against destroying one and no guard at all against handing one over.
 
 All allauth imports are made inside the functions: ``allauth.socialaccount`` pulls in
 ``requests`` and ``pyjwt[crypto]`` through allauth's own extra, and ``jwt_allauth`` has
@@ -47,7 +55,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import exceptions
 from rest_framework_simplejwt.settings import api_settings
 
-from jwt_allauth.accounts import resolve_email
+from jwt_allauth.accounts import resolve_email_for_provider
 from jwt_allauth.exceptions import (
     NotVerifiedEmail,
     SocialAccountAlreadyConnected,
@@ -55,6 +63,7 @@ from jwt_allauth.exceptions import (
     SocialEmailConflict,
     SocialEmailUnverified,
     SocialFlowNotSupported,
+    SocialLocalAccountUnverified,
     SocialLoginRejected,
     SocialProviderNotConfigured,
     SocialSecondFactorPending,
@@ -330,6 +339,8 @@ def authenticate_social_login(request, sociallogin):
     Raises:
         SocialEmailUnverified: The provider vouched for no address.
         SocialEmailConflict: The address is somebody's and linking is off for this provider.
+        SocialLocalAccountUnverified: The address belongs to an account that is in use and
+            has never confirmed it, so it can be neither linked to nor superseded.
         SocialSignupClosed: Registration is closed to this login.
         SocialSignupNotAllowed: ``SOCIALACCOUNT_AUTO_SIGNUP`` is off, and an API has no
             sign-up form to fall back to.
@@ -363,24 +374,43 @@ def _resolve_addresses(sociallogin, verified):
     """
     Resolve every address the provider vouched for, once.
 
-    Returns the established owner if one of them has one, and otherwise the unclaimed
-    accounts holding them, which the caller supersedes. Each address costs a single
-    query, and the owner returned is the row that reached the verdict rather than
-    whatever a second lookup would have found.
+    Returns the account whose owner is established if one of the addresses has one, and
+    otherwise the abandoned accounts holding them, which the caller supersedes. Each
+    address costs a single query, and the owner returned is the row that reached the
+    verdict rather than whatever a second lookup would have found.
+
+    The predicate is :func:`~jwt_allauth.accounts.resolve_email_for_provider` and not
+    registration's: what earns an account here is proof of control of the mailbox, not
+    proof that somebody has been using the account. A password login -- or, under
+    ``ACCOUNT_EMAIL_VERIFICATION = 'optional'``, the sign-up itself -- is the second and
+    never the first.
 
     Raises:
         SocialEmailConflict: An address is somebody's but linking is off for this
             provider, so there is no way to reach that account from here.
+        SocialLocalAccountUnverified: An address belongs to an account that is in use and
+            has never confirmed it.
     """
     linking = email_linking_enabled(sociallogin.account.provider)
-    superseded = []
+    superseded, blocked = [], []
     for address in verified:
-        owner, pending = resolve_email(address.email)
+        owner, occupied, abandoned = resolve_email_for_provider(address.email)
         if owner is not None:
             if not linking:
                 raise SocialEmailConflict()
             return owner, []
-        superseded.extend(pending)
+        blocked.extend(occupied)
+        superseded.extend(abandoned)
+
+    # Only once every address has been looked at, because a provider may vouch for
+    # several and an established owner among the later ones is still the right answer.
+    # Refusing on the first blocked address would have hidden it.
+    if blocked:
+        # With linking off every account holding the address is out of reach from here
+        # anyway, so the caller gets the one answer that is theirs to have.
+        if not linking:
+            raise SocialEmailConflict()
+        raise SocialLocalAccountUnverified()
     return None, superseded
 
 
@@ -413,9 +443,9 @@ def _signup_or_link(request, sociallogin):
 
     owner, superseded = _resolve_addresses(sociallogin, verified)
     if owner is not None:
-        # The provider proved control of an address whose owner is already established.
-        # Connecting is all that is needed: the local password stays usable, so both
-        # ways in keep working.
+        # Somebody had already demonstrated control of this address, and the provider has
+        # just demonstrated it again: same mailbox, same person. Connecting is all that
+        # is needed -- the local password stays usable, so both ways in keep working.
         #
         # But a provider only proves the *first* factor, and connecting is a durable
         # change to somebody else's established account -- one that outlives this

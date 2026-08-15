@@ -916,6 +916,9 @@ Error codes, all in the ``code`` field beside ``detail``:
    * - ``409``
      - ``email_already_registered``
      - The address belongs to somebody and linking is off for this provider.
+   * - ``409``
+     - ``local_account_unverified``
+     - The address belongs to a local account that is in use and has never confirmed it. Confirm it on that account first; nothing was created or removed.
    * - ``403``
      - ``signup_closed``
      - Registration is closed — ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION``.
