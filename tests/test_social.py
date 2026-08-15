@@ -701,13 +701,13 @@ class SocialQueryCountTests(SocialTestsMixin):
     @responses.activate
     def test_signing_up_resolves_each_address_once(self):
         self.fake_profile()
-        with self.assertNumQueries(23):
+        with self.assertNumQueries(22):
             self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_200_OK)
 
     @responses.activate
     def test_linking_to_an_established_account_resolves_once(self):
         self.fake_profile(profile(email=self.EMAIL))
-        with self.assertNumQueries(15):
+        with self.assertNumQueries(14):
             self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_200_OK)
 
 

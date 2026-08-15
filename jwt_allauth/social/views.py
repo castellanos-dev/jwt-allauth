@@ -91,7 +91,7 @@ class BaseSocialLoginView(ExtraThrottlesMixin, APIView):
         data = self.read_credential(request)
         prov = get_provider(request, provider, data.get('client_id'))
         sociallogin = self.build_sociallogin(request, prov, data)
-        user = authenticate_social_login(request, sociallogin)
+        user, email_verified = authenticate_social_login(request, sociallogin)
 
         # A provider is a way of proving the first factor, not a substitute for the
         # second: whoever takes over the identity provider account would otherwise walk
@@ -100,7 +100,8 @@ class BaseSocialLoginView(ExtraThrottlesMixin, APIView):
         if challenge is not None:
             return Response(challenge, status=status.HTTP_200_OK)
 
-        return build_token_response(RefreshToken.for_user(user, request))
+        return build_token_response(
+            RefreshToken.for_user(user, request, email_verified=email_verified))
 
 
 class BaseSocialConnectView(ExtraThrottlesMixin, APIView):

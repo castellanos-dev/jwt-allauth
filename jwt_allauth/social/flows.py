@@ -45,6 +45,7 @@ from rest_framework_simplejwt.settings import api_settings
 
 from jwt_allauth.accounts import resolve_email
 from jwt_allauth.exceptions import (
+    NotVerifiedEmail,
     SocialAccountAlreadyConnected,
     SocialDisconnectNotAllowed,
     SocialEmailConflict,
@@ -308,7 +309,10 @@ def authenticate_social_login(request, sociallogin):
         sociallogin (SocialLogin): Built by one of the ``sociallogin_from_*`` functions.
 
     Returns:
-        User: The account to open a session for.
+        tuple: ``(user, email_verified)``. The second half is the answer to the question
+        the verification gate below has just asked, handed to
+        :meth:`~jwt_allauth.tokens.tokens.RefreshToken.for_user` so that minting the
+        session does not ask the database the same thing again.
 
     Raises:
         SocialEmailUnverified: The provider vouched for no address.
@@ -332,13 +336,14 @@ def authenticate_social_login(request, sociallogin):
             _("No active account found with the given credentials"),
             "no_active_account",
         )
-    if verification_is_mandatory():
-        is_email_verified(user, raise_exception=True)
+    email_verified = is_email_verified(user)
+    if verification_is_mandatory() and not email_verified:
+        raise NotVerifiedEmail()
 
     if api_settings.UPDATE_LAST_LOGIN:
         update_last_login(None, user)
 
-    return user
+    return user, email_verified
 
 
 def _resolve_addresses(sociallogin, verified):
