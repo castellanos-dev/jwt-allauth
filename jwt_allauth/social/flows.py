@@ -216,7 +216,17 @@ def sociallogin_from_code(request, provider, data: Dict[str, Any]):
         raise SocialFlowNotSupported()
 
     app = provider.app
-    client = OAuth2Client(
+    # The adapter names the client class, and for some providers it has to: Apple's
+    # `client_secret` is not a stored string but an ES256 JWT that must be signed with
+    # the `.p8` key on every single exchange, which is the whole reason
+    # `AppleOAuth2Adapter.client_class` exists. Hard-coding `OAuth2Client` here sent
+    # `app.secret` raw, the provider refused the code, and the refusal was relayed as
+    # `invalid_social_token` -- indistinguishable from an expired credential, so nothing
+    # about the answer said that the flow could never work for that provider at all.
+    # allauth's own callback view reads the attribute for the same reason, and the
+    # constructor signature is the base class's, so every such client is a drop-in.
+    client_class = getattr(adapter, 'client_class', OAuth2Client)
+    client = client_class(
         request,
         app.client_id,
         app.secret,

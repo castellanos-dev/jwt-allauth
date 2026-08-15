@@ -11,10 +11,12 @@ an unconfirmed address.
 import json
 import sys
 from importlib import reload
+from unittest.mock import patch
 
 import responses
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.models import SocialAccount
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.core.cache import cache
@@ -28,7 +30,7 @@ from jwt_allauth.constants import EMAIL_VERIFIED_CLAIM, INVITATION, REFRESH_TOKE
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.utils import hash_token
 from tests.mixins import TestsMixin
-from tests.socialprovider.views import ACCESS_TOKEN_URL, USERINFO_URL
+from tests.socialprovider.views import ACCESS_TOKEN_URL, USERINFO_URL, DummyOAuth2Adapter
 
 SOCIAL_EMAIL = 'social.person@world.com'
 
@@ -544,6 +546,32 @@ class SocialCodeLoginTests(SocialTestsMixin):
     def test_code_is_required(self):
         self.post(self.code_login_url, data={'callback_url': 'https://app.test/callback'},
                   status_code=status.HTTP_400_BAD_REQUEST)
+
+    @responses.activate
+    def test_the_adapter_decides_which_client_exchanges_the_code(self):
+        """
+        allauth declares the OAuth2 client on the adapter, and for some providers that
+        is not decoration: Apple's ``client_secret`` is an ES256 JWT that has to be
+        signed with the ``.p8`` key on every exchange, which is what
+        ``AppleOAuth2Adapter.client_class`` is for. Instantiating ``OAuth2Client`` by
+        name here sent the stored secret raw and the provider refused the code -- and
+        the refusal arrived as ``invalid_social_token``, indistinguishable from an
+        expired credential, so nothing said the flow was unusable for that provider.
+        """
+        instantiated = []
+
+        class RecordingClient(OAuth2Client):
+            def __init__(self, *args, **kwargs):
+                instantiated.append(self)
+                super().__init__(*args, **kwargs)
+
+        self.fake_token_exchange()
+        self.fake_profile()
+
+        with patch.object(DummyOAuth2Adapter, 'client_class', RecordingClient):
+            self.post(self.code_login_url, data=self.code_payload(), status_code=status.HTTP_200_OK)
+
+        self.assertEqual(len(instantiated), 1, 'the adapter\'s client is the one that ran')
 
 
 class SocialConnectTests(SocialTestsMixin):

@@ -119,6 +119,13 @@ secret never reaches the frontend.
 byte, or the provider refuses the exchange. ``code_verifier`` is the PKCE verifier and is
 passed straight through; send it whenever the authorization request carried a challenge.
 
+The exchange is made with the client the provider's own allauth adapter declares
+(``client_class``), not with a fixed one. Some providers need theirs: Apple's
+``client_secret`` is not a stored string but an ES256 JWT signed with the ``.p8`` key on
+every exchange, and only its client builds one. Before 1.5.1 the generic client was used
+for everybody, so those providers rejected every code with an error indistinguishable
+from an expired credential.
+
 The response
 ~~~~~~~~~~~~
 
