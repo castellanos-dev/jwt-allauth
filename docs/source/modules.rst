@@ -22,12 +22,17 @@
 .. toctree::
    :maxdepth: 1
 
-   admin_managed_registration
+   invitations
 
 .. toctree::
    :maxdepth: 1
 
    mfa_totp
+
+.. toctree::
+   :maxdepth: 1
+
+   social_login
 
 .. toctree::
    :maxdepth: 1

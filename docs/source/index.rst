@@ -19,8 +19,8 @@ detection.**
 JWT Allauth gives every login its own tracked session, rotates the refresh token on each
 use, and -- when a rotated token is presented a second time -- revokes the entire session
 rather than just rejecting the replayed credential. Around that it ships the endpoints an
-API needs to be usable on day one: login, sign-up, e-mail verification, password reset,
-MFA and role-based permissions.
+API needs to be usable on day one: login, social login, sign-up, invitations, e-mail
+verification, password reset, MFA and role-based permissions.
 
 Built on Django REST Framework, django-allauth and Simple JWT.
 
@@ -46,12 +46,6 @@ and it is the reason this library exists.
 :doc:`refresh_token_theft` works through the whole argument, including the four ways an
 implementation of it fails silently.
 
-.. note::
-
-    Social authentication is the one thing JWT Allauth does not do. If a project needs it
-    today, `dj-rest-auth <https://github.com/iMerica/dj-rest-auth>`_ and
-    `allauth.headless <https://docs.allauth.org/en/latest/headless/index.html>`_ cover it.
-
 
 Features
 --------
@@ -64,7 +58,9 @@ Features
 - **Revocation on credential change**: setting a password drops every session, every outstanding capability (unused reset links, MFA challenges) and every unconfirmed secondary address.
 - **Role-based permissions**: authorization from a JWT claim, with no user table lookup, on any user model.
 - **Refresh tokens as HttpOnly cookies** by default, keeping the longest-lived credential out of reach of JavaScript.
-- **The rest of the flows**: e-mail verification, password reset and change, MFA over TOTP with recovery codes, admin-managed registration, session logout.
+- **Social login**: sign in through any provider ``django-allauth`` registers, by provider token or by authorization code with PKCE, with one generic endpoint per flow. An address a provider vouches for signs in the account that already holds it, without wiping the password that account still uses.
+- **User invitations**: an admin creates the account, the invitee proves the mailbox and chooses their own password. Alongside a public sign-up, or instead of one.
+- **The rest of the flows**: e-mail verification, password reset and change, MFA over TOTP with recovery codes, session logout.
 - **Effortless setup**: get a project running with a single command.
 
 
@@ -95,6 +91,14 @@ Install using ``pip``...
 .. code-block:: bash
 
     pip install django-jwt-allauth
+
+Optional features ship as extras, so nothing you do not use is installed::
+
+    pip install "django-jwt-allauth[social]"   # sign in through a provider
+    pip install "django-jwt-allauth[mfa]"      # TOTP second factor
+    pip install "django-jwt-allauth[schema]"   # OpenAPI schema and Swagger UI
+
+See :ref:`optional-features`.
 
 You can quickly start a new Django project with JWT Allauth pre-configured using the ``startproject`` command:
 

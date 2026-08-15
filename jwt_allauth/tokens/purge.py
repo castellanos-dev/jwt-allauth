@@ -34,6 +34,7 @@ from rest_framework_simplejwt.settings import api_settings as jwt_settings
 
 from jwt_allauth.constants import (
     EMAIL_CONFIRMATION,
+    INVITATION,
     MFA_LOCKOUT_SECONDS,
     MFA_PURPOSE_LOGIN_ATTEMPT,
     MFA_PURPOSE_LOGIN_CHALLENGE,
@@ -103,6 +104,7 @@ def retentions() -> Dict[str, timedelta]:
         PASS_RESET_ACCESS: capability,
         PASS_SET_ACCESS: capability,
         EMAIL_CONFIRMATION: confirmation,
+        INVITATION: confirmation,
         MFA_PURPOSE_SETUP_CHALLENGE: mfa_token,
         MFA_PURPOSE_LOGIN_CHALLENGE: mfa_token,
         MFA_PURPOSE_SETUP_SECRET: mfa_token,

@@ -1,6 +1,68 @@
 Release Notes
 =============
 
+Version 1.5.0
+-------------
+
+Released: August 15, 2026
+
+New Features
+~~~~~~~~~~~~
+
+- **Social login**: sign in through any provider ``django-allauth`` registers, either with a credential the client obtained from the provider (``POST /social/<provider>/token/``) or with an authorization code exchanged server side, PKCE included (``POST /social/<provider>/code/``). One generic endpoint per flow serves every provider — the provider id travels in the URL — so there is no view to subclass and no adapter to name. Providers can also be connected to and disconnected from an existing account, and listed. The session is minted the way every other session is, so it carries its device, appears on the whitelist and answers to ``/logout/``, rotation and replay detection. Install the new ``social`` extra: ``pip install "django-jwt-allauth[social]"``. See :doc:`social_login`.
+
+- **A provider signs in the account that already holds the address, without wiping its password.** When a provider vouches for an address an established local account holds — one whose address was confirmed, or which has been used — the two are taken to be the same person: the provider is connected and the password stays usable, so both ways in keep working. An address held only by a sign-up that was never confirmed and never used is superseded instead, exactly as a duplicate registration supersedes it. This is deliberately not allauth's behaviour: ``SOCIALACCOUNT_EMAIL_AUTHENTICATION`` wipes the local password every time it matches an account by address; the match it makes is **discarded** here, so this rule is the one that decides. Use ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING`` (default ``True``, or a list of provider ids) instead.
+
+- **A social login does not skip the second factor.** An account with an authenticator gets the same ``mfa_required`` challenge ``/login/`` returns, completed at the same ``/mfa/verify/``, and ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` bootstraps enrolment for a social sign-up as it does for any other.
+
+- **Invitations without closing the public sign-up**: ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` has always meant two things at once — an admin can create accounts, *and* nobody can create their own — which ruled out the ordinary arrangement of customers signing themselves up while staff are invited. ``JWT_ALLAUTH_INVITATIONS = True`` asks for the first half only: ``/registration/user-register/`` and ``/registration/set-password/`` are served and ``/registration/`` keeps answering, as does social sign-up. Both ways in share the confirmation link, and an invitation is recorded as such when it is sent, so only an invitation can be exchanged for the capability to set a first password. See :doc:`invitations`.
+
+- **An invitation in flight holds on to its address.** An invited account looks exactly like an abandoned sign-up — no password, never used, address unconfirmed — which is what the public sign-up is allowed to supersede. It is now excluded from that while the link lives: posting an invitee's address to ``/registration/`` no longer destroys the account, the role granted with it and the link, silently. The reservation ends with the link (``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS``): an expired invitation frees the address, so a dead invitation cannot hold one hostage.
+
+- **Two new startup checks**: ``jwt_allauth.W004`` when a provider is configured but the installation cannot serve it — the ``social`` extra missing, so the endpoints are not routed, or no provider app carrying credentials, so they answer ``404`` — and ``jwt_allauth.W005`` when ``SOCIALACCOUNT_EMAIL_AUTHENTICATION`` is declared, globally or per provider, and these endpoints override it. Neither says anything until the project asks for a provider.
+
+Compatibility
+~~~~~~~~~~~~~
+
+- **The social endpoints are routed only when** ``allauth.socialaccount`` **is in** ``INSTALLED_APPS`` **and its dependencies are importable.** ``jwt-allauth startproject`` has always written that app into generated projects, so an installation can have the app without the extra; it keeps working untouched, the endpoints stay unrouted rather than failing on the first request, and ``jwt_allauth.W004`` reports the shortfall — but only once the project configures a provider, so a generated project that never asked for social login boots silently.
+
+- **A default** ``SOCIALACCOUNT_ADAPTER`` **is installed** when ``allauth.socialaccount`` is present and the project declares none. It closes social sign-up under ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION``, and refuses to disconnect the last provider of an account with no usable password — allauth's default allows it, which locks the owner out for good. A project with an adapter of its own is left alone.
+
+- **``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` is unchanged** and now implies ``JWT_ALLAUTH_INVITATIONS``. A project already using it needs to do nothing: closed registration still refuses ``/registration/``, still shuts social sign-up, and still turns down a confirmation key with no invitation behind it.
+
+- **New settings**: ``JWT_ALLAUTH_INVITATIONS``, ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING``, ``JWT_ALLAUTH_SOCIAL_REQUIRE_VERIFIED_EMAIL`` and ``JWT_ALLAUTH_SOCIAL_CALLBACK_URLS``. See :doc:`configuration.settings_py`.
+
+- **Address ownership is now resolved against the column as allauth writes it** — lower case — instead of case-insensitively, so the lookup uses the index allauth ships rather than scanning the table on every sign-up and every social login. allauth folds the case on the way in and reads it back the same way, so nothing it wrote is affected. Rows inserted around it, in mixed case (a data import, a hand-written fixture), stop matching: a sign-up for that address is answered as if it were free, which yields a second account rather than taking the first one over. Lower-case them before upgrading if that applies to you.
+
+- **Invitations sent before this release keep working.** They are stored with a purpose of their own from now on; the rows already in the database carry the generic confirmation purpose, and under ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION`` — the only configuration that could have produced one — they are still accepted until they expire. No migration and no backfill: the rows are short-lived by design (``ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS``). They do not reserve their address, which only the new purpose does.
+
+- **The confirmation link is steadier under** ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION``. A link opened twice — a scanner, a browser prefetch, a forwarded mail — lands on the same page both times instead of a bare ``404`` on the second, and a deactivated account no longer has its address confirmed by a link the flow already refuses to do anything else with. Neither ever granted a session or a capability.
+
+- **A provider is not connected to an existing account until its second factor is in.** Signing in through a provider already returned an ``mfa_required`` challenge instead of a session, but the ``SocialAccount`` row and ``last_login`` were written first — on the strength of the first factor alone, and durably: once the row exists the provider reaches that account by uid with no address check at all. The connection is now withheld until the challenge is answered. A social **sign-up** is unchanged: there is no established account to attach to, and the enrolment challenge ``JWT_ALLAUTH_MFA_TOTP_MODE = 'required'`` hands a new account needs that account to exist.
+
+- **``POST /registration/user-register/`` is throttled** with ``UserRateThrottle`` on top of the project defaults. The role check bounds who may invite, not how fast; the request sends mail to an address of its choosing and reports whether that address is in use.
+
+- **The** ``social`` **extra is probed by everything it installs** — ``requests``, ``oauthlib`` and ``cryptography`` — not by ``requests`` alone. A host carrying ``requests`` for unrelated reasons used to route the endpoints, keep ``jwt_allauth.W004`` quiet, and fail with ``ModuleNotFoundError`` on the first credential.
+
+- **``jwt-allauth startproject`` writes the RS256 signing key readable only by its owner.** It was created at the process umask — ``0644`` on most hosts, inside a ``0755`` directory — and it signs every access token the project issues; authentication is stateless by default, so a token minted with that key is accepted without a query. Existing projects are not touched by an upgrade: run ``chmod 700 keys && chmod 600 keys/private.pem``, and rotate the key if the directory was ever readable by anyone you would not hand it to.
+
+- **Provider credentials are declared sensitive.** ``id_token``, ``access_token``, ``code`` and ``code_verifier`` are masked in tracebacks, the ``django.request`` log and the mail to ``ADMINS``, as passwords already were.
+
+- **``RefreshToken.for_user`` accepts an optional** ``email_verified``. It is additive — omitted, the token asks the database as before — and lets a caller that has just checked hand the answer on instead of paying for the query twice. ``jwt_allauth.social.flows.authenticate_social_login`` now returns ``(user, email_verified)`` for that reason; it is new in this release, so nothing depended on the old shape. ``RefreshToken.set_email_verified`` takes the same optional argument, and is called with it only when a caller supplied one — so a subclass that overrides the one-argument form keeps working.
+
+- **The** ``social`` **extra requires allauth 65.9**, like the ``mfa`` extra, while the core dependency floor is unchanged at 65.5. A project pinned to allauth 65.5–65.8 that adds ``[social]`` will hit a resolution conflict on upgrade and has to move the pin.
+
+- **No new model and no migration.** Both flows are driven by the client, so there is no OAuth ``state`` for the server to store.
+
+Documentation
+~~~~~~~~~~~~~
+
+- **New page** — :doc:`invitations`, replacing *Admin-managed registration*: the flow under the name people look for, what the confirmation link is worth, and how an invitation is told apart from a sign-up. The old page is kept as a pointer.
+
+- **New page** — :doc:`social_login`: the two flows, the linking decision and the trust it places in the provider, and what the feature deliberately does not cover.
+
+- The README and the documentation index no longer say social authentication is unimplemented.
+
 Version 1.4.1
 -------------
 

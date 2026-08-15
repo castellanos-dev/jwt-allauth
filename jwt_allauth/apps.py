@@ -4,7 +4,7 @@ from importlib import reload
 
 import allauth.app_settings
 import rest_framework_simplejwt.settings
-from django.apps import AppConfig
+from django.apps import AppConfig, apps
 from django.core.exceptions import ImproperlyConfigured
 
 #: The three states e-mail verification can be in, in allauth's vocabulary.
@@ -150,6 +150,23 @@ class JWTAllauthAppConfig(AppConfig):
         # Importing the module registers the checks it declares.
         from jwt_allauth import checks  # noqa: F401
 
+        self._reject_unsupported(settings)
+        self._default_allauth(settings)
+        self._default_simplejwt(settings)
+        self._default_rest_framework(settings)
+
+        reload(rest_framework_simplejwt.settings)
+        reload(allauth.app_settings)
+
+    @staticmethod
+    def _reject_unsupported(settings):
+        """
+        Refuse a configuration this library cannot honour, before anything reads it.
+
+        These are not defaults being filled in: each one describes a session model that
+        contradicts this library's -- rotation is what makes the whitelist work, and a
+        blacklist is what it exists instead of.
+        """
         if not getattr(settings, 'ROTATE_REFRESH_TOKENS', True):
             raise ValueError('Refresh token rotation is compulsory.')
         if getattr(settings, 'BLACKLIST_AFTER_ROTATION', False):
@@ -159,6 +176,8 @@ class JWTAllauthAppConfig(AppConfig):
         if session_lifetime is not None and not isinstance(session_lifetime, timedelta):
             raise ValueError('JWT_ALLAUTH_SESSION_LIFETIME must be a datetime.timedelta or None.')
 
+    def _default_allauth(self, settings):
+        """Fill in what allauth needs, leaving anything the project declared alone."""
         # Both settings end up saying the same thing: a boolean EMAIL_VERIFICATION for
         # everything that only asks whether the feature is on -- the confirmation URL,
         # the auto-confirmation at sign-up -- and the method itself in allauth's setting.
@@ -170,6 +189,13 @@ class JWTAllauthAppConfig(AppConfig):
             settings.ACCOUNT_ADAPTER = 'jwt_allauth.adapter.JWTAllAuthAdapter'
         if not hasattr(settings, 'MFA_ADAPTER'):
             settings.MFA_ADAPTER = 'jwt_allauth.mfa.adapter.JWTAllAuthMFAAdapter'
+        if apps.is_installed('allauth.socialaccount') and not hasattr(settings, 'SOCIALACCOUNT_ADAPTER'):
+            settings.SOCIALACCOUNT_ADAPTER = 'jwt_allauth.social.adapter.JWTAllAuthSocialAccountAdapter'
+        # The two guards below are about the local sign-up form, which the social flow
+        # never renders: `save_user` takes its `form is None` branch, so an account
+        # created through a provider needs no password field. What they do reach is
+        # `SOCIALACCOUNT_EMAIL_REQUIRED`, which allauth derives from ACCOUNT_SIGNUP_FIELDS
+        # and which comes out `True` -- which is what this library wants anyway.
         if hasattr(settings, 'ACCOUNT_LOGIN_METHODS') and settings.ACCOUNT_LOGIN_METHODS != {'email'}:
             raise ValueError('Only login email is supported.')
         settings.ACCOUNT_LOGIN_METHODS = {'email'}
@@ -187,6 +213,8 @@ class JWTAllauthAppConfig(AppConfig):
         if not hasattr(settings, 'ACCOUNT_EMAIL_SUBJECT_PREFIX'):
             settings.ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
 
+    def _default_simplejwt(self, settings):
+        """Fill in ``SIMPLE_JWT``, key by key, so a partial declaration still works."""
         simple_jwt_settings = {
             "BLACKLIST_AFTER_ROTATION": False,
             "UPDATE_LAST_LOGIN": True,
@@ -224,6 +252,9 @@ class JWTAllauthAppConfig(AppConfig):
                 if k not in settings.SIMPLE_JWT:
                     settings.SIMPLE_JWT[k] = simple_jwt_settings[k]
 
+    @staticmethod
+    def _default_rest_framework(settings):
+        """Wire the authentication class, the backends and the middleware allauth needs."""
         if not hasattr(settings, 'REST_FRAMEWORK'):
             settings.REST_FRAMEWORK = {
                 'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -245,6 +276,3 @@ class JWTAllauthAppConfig(AppConfig):
 
         if "allauth.account.middleware.AccountMiddleware" not in settings.MIDDLEWARE:
             settings.MIDDLEWARE += ["allauth.account.middleware.AccountMiddleware"]
-
-        reload(rest_framework_simplejwt.settings)
-        reload(allauth.app_settings)

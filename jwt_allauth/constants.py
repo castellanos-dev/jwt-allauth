@@ -35,6 +35,13 @@ PASS_SET_ACCESS = 'PASS_SET_ACCESS'
 PASSWORD_SET_REDIRECT = 'PASSWORD_SET_REDIRECT'
 SET_PASSWORD_COOKIE = 'set_password_access_token'
 EMAIL_CONFIRMATION = 'EMAIL_CONFIRMATION'
+# Purpose of the confirmation token written for an invitation, as opposed to an ordinary
+# address confirmation. It is what says "an administrator created this account and
+# somebody is expected to claim it" -- a fact nothing else in the schema records, and
+# which both the registration endpoint and the confirmation link have to know: without
+# it an invitation looks like an abandoned sign-up to one and like a social account to
+# the other. It expires with the link, so a stale invitation stops reserving the address.
+INVITATION = 'INVITATION'
 EMAIL_VERIFICATION_FAILED_TEMPLATE = 'EMAIL_VERIFICATION_FAILED_TEMPLATE'
 
 # MFA

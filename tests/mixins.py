@@ -123,13 +123,6 @@ class TestsMixin(TransactionTestCase):
         except NoReverseMatch:
             self.verify_email_url = None
         self.refresh_url = reverse('token_refresh')
-        # self.fb_login_url = reverse('fb_login')
-        # self.tw_login_url = reverse('tw_login')
-        # self.tw_login_no_view_url = reverse('tw_login_no_view')
-        # self.tw_login_no_adapter_url = reverse('tw_login_no_adapter')
-        # self.fb_connect_url = reverse('fb_connect')
-        # self.tw_connect_url = reverse('tw_connect')
-        # self.social_account_list_url = reverse('social_account_list')
 
         # user creation
         self.USER = get_user_model().objects.create_user(self.USERNAME, email=self.EMAIL, password=self.PASS)

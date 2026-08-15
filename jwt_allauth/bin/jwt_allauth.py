@@ -272,6 +272,38 @@ CACHES = {
 """
         settings_content += mfa_settings
 
+    # Social authentication. Written commented out on purpose: the endpoints answer 404
+    # until a provider is configured, and a project that does not want social login
+    # should not have to remove settings it never asked for.
+    social_settings = """
+
+# Social authentication
+# The endpoints live under /jwt-allauth/social/ and need `pip install
+# django-jwt-allauth[social]`. Fill in a provider to switch them on. Read the client id
+# and secret from the environment; never commit them.
+# SOCIALACCOUNT_PROVIDERS = {
+#     'google': {
+#         'APPS': [{
+#             'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
+#             'secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+#         }],
+#     },
+# }
+
+# A provider that vouches for an address already held by an established local account
+# signs that account in, keeping its password. Set to False to refuse instead, or to a
+# list of provider ids to allow it only for the providers you trust.
+# JWT_ALLAUTH_SOCIAL_EMAIL_LINKING = True
+
+# User invitations
+# An admin creates the account and the invitee sets their own password. This adds the
+# endpoints and leaves the public sign-up alone; use
+# JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION instead to have invitations *replace* it.
+# JWT_ALLAUTH_INVITATIONS = True
+# PASSWORD_SET_REDIRECT = '/set-password/'  # your UI; omit to use the built-in form
+"""
+    settings_content += social_settings
+
     # Add email configuration if requested
     if email_config:
         email_settings = """
@@ -303,9 +335,49 @@ MIGRATION_MODULES = {{
     with open(settings_path, 'w') as f:
         f.write(settings_content)
 
+def _write_private_key(path, data):
+    """
+    Write a signing key readable only by its owner.
+
+    The mode is set at creation rather than with a ``chmod`` afterwards: between the two
+    there is a window in which the key sits world-readable, and this key signs every
+    access token the project will ever issue. Authentication here is stateless by
+    default, so a token minted with a stolen key is accepted without a single query.
+
+    Args:
+        path (str): Destination of the PEM.
+        data (bytes): Encoded private key.
+    """
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'wb') as f:
+        f.write(data)
+
+
+def _restrict(path, mode):
+    """
+    Narrow a path's permissions, tolerating a filesystem that does not carry them.
+
+    Windows and most network mounts ignore the POSIX bits; the call is best effort there
+    and the key is still written, because refusing to scaffold a project over it would
+    help nobody.
+
+    Args:
+        path (str): File or directory to restrict.
+        mode (int): Octal mode to apply.
+    """
+    try:
+        os.chmod(path, mode)
+    except OSError:
+        pass
+
+
 def _generate_rsa_keys(keys_dir):
     """Generate RSA 4096-bit key pair for RS256 JWT signing."""
     os.makedirs(keys_dir, exist_ok=True)
+    # `makedirs` applies the umask, and does nothing at all when the directory already
+    # exists, so the mode is set explicitly either way.
+    _restrict(keys_dir, 0o700)
+    private_path = os.path.join(keys_dir, 'private.pem')
 
     try:
         from cryptography.hazmat.primitives import serialization
@@ -316,13 +388,13 @@ def _generate_rsa_keys(keys_dir):
             key_size=4096,
         )
 
-        with open(os.path.join(keys_dir, 'private.pem'), 'wb') as f:
-            f.write(private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption(),
-            ))
+        _write_private_key(private_path, private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        ))
 
+        # The public half is meant to be read and copied around; it is left alone.
         with open(os.path.join(keys_dir, 'public.pem'), 'wb') as f:
             f.write(private_key.public_key().public_bytes(
                 encoding=serialization.Encoding.PEM,
@@ -331,16 +403,18 @@ def _generate_rsa_keys(keys_dir):
     except ImportError:
         try:
             subprocess.run(
-                ['openssl', 'genrsa', '-out', os.path.join(keys_dir, 'private.pem'), '4096'],
+                ['openssl', 'genrsa', '-out', private_path, '4096'],
                 capture_output=True, check=True,
             )
             subprocess.run(
-                ['openssl', 'rsa', '-in', os.path.join(keys_dir, 'private.pem'),
+                ['openssl', 'rsa', '-in', private_path,
                  '-pubout', '-out', os.path.join(keys_dir, 'public.pem')],
                 capture_output=True, check=True,
             )
         except (FileNotFoundError, subprocess.CalledProcessError):
             return False
+        # openssl creates the file itself, so this one is a narrowing after the fact.
+        _restrict(private_path, 0o600)
 
     # Prevent keys from being committed to version control
     with open(os.path.join(keys_dir, '.gitignore'), 'w') as f:

@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-jwt-allauth"
-version = "1.4.1"
+version = "1.5.0"
 authors = [
     {name = "Fernando Castellanos", email = "fcastellanos.dev@gmail.com"},
 ]
@@ -50,7 +50,12 @@ keywords = [
     "session-management",
     "security",
     "mfa",
-    "totp"
+    "totp",
+    "social-login",
+    "oauth2",
+    "openid-connect",
+    "sso",
+    "invitations"
 ]
 # No upper bounds, by policy: a cap in a library propagates a conflict to every project
 # downstream and blocks the capped package's security releases. The majors each release
@@ -71,6 +76,17 @@ dependencies = [
 # that pair raises AttributeError on any request touching allauth.mfa. 65.9 is the first
 # allauth that bounds fido2 itself. Do not lower this floor.
 mfa = ["django-allauth[mfa]>=65.9"]
+# `allauth.socialaccount` ships with django-allauth, but the HTTP stack it needs does
+# not: requests, the OAuth client and pyjwt[crypto] sit behind allauth's own
+# `socialaccount` extra. Without them the app is importable and the endpoints are not.
+# pyjwt is not a second JWT library -- simplejwt already depends on it. What the extra
+# adds is `cryptography`, which PyJWT needs for the RS256/ES256 signatures an id_token
+# carries; simplejwt signs with HS256 by default and never needed it.
+# 65.9 rather than the 65.5 core floor: it is the oldest allauth this suite runs
+# against, and the flows here need `get_provider(..., client_id=)` and
+# `Provider.supports_token_authentication`. Same floor as the `mfa` extra, so the two
+# cannot pull a project in opposite directions.
+social = ["django-allauth[socialaccount]>=65.9"]
 schema = ["drf-spectacular>=0.27,<1.0"]
 test = ["responses>=0.5.0"]
 

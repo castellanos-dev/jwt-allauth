@@ -435,7 +435,7 @@ Registration
 
 **URL Name:** ``rest_register``
 
-.. note:: Disabled when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True`` (the open registration endpoint is removed in admin-managed mode).
+.. note:: Removed when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``, which serves invitations *instead of* self-service registration. ``JWT_ALLAUTH_INVITATIONS`` adds invitations without removing this endpoint. See :doc:`invitations`.
 
 .. note::
 
@@ -494,7 +494,7 @@ Registration
 
 **URL Name:** ``rest_user_register``
 
-.. note:: Enabled when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. Keeps the default ``/registration/`` endpoint unchanged unless you enable this setting.
+.. note:: Served when ``JWT_ALLAUTH_INVITATIONS = True`` or ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. Only the second one also removes ``/registration/``. See :doc:`invitations`.
 
 **/registration/verification/<str:key>/** (GET)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -568,7 +568,7 @@ Registration
 
 **URL Name:** ``rest_set_password``
 
-.. note:: Only available when ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. This endpoint is reached after the invited user clicks the verification link. The GET verification drops a one-time access token in the ``set_password_access_token`` cookie and redirects to the UI configured by ``PASSWORD_SET_REDIRECT``. Throttled with ``UserRateThrottle`` by default, in addition to the throttles configured by the project.
+.. note:: Served when ``JWT_ALLAUTH_INVITATIONS = True`` or ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION = True``. This endpoint is reached after the invited user clicks the verification link. The GET verification drops a one-time access token in the ``set_password_access_token`` cookie and redirects to the UI configured by ``PASSWORD_SET_REDIRECT``. Throttled with ``UserRateThrottle`` by default, in addition to the throttles configured by the project.
 
 **/registration/account_email_verification_sent/** (GET)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -835,6 +835,218 @@ Recovery code failures share the same budgets as ``/mfa/verify/`` and answer ``4
    - ``'disabled'`` (default): MFA endpoints return 403 Forbidden when accessed.
    - ``'optional'``: Users can set up MFA but it's not required during login.
    - ``'required'``: Users must set up MFA and provide TOTP code during login. Deactivation is blocked.
+
+Social login
+------------
+
+Routed under ``/social/`` once this package is installed with its ``social`` extra
+(``pip install "django-jwt-allauth[social]"``) **and** ``allauth.socialaccount`` is in
+``INSTALLED_APPS``. Both halves are required; with a provider configured and either one
+missing, ``jwt_allauth.W004`` says which at startup. The provider id travels in the path, e.g. ``/social/google/token/``.
+See :doc:`social_login`.
+
+**/social/<provider>/token/** (POST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Request**
+
+.. list-table::
+   :widths: 20 20 60
+   :header-rows: 1
+
+   * - Location
+     - Field
+     - Description
+   * - Path
+     - ``provider``
+     - Provider id as registered with allauth, e.g. ``google``.
+   * - Body (JSON)
+     - ``id_token``
+     - Credential issued by the provider. Either this or ``access_token`` is required.
+   * - Body (JSON)
+     - ``access_token``
+     - Provider access token, when the provider verifies one.
+   * - Body (JSON)
+     - ``client_id``
+     - OAuth client the credential was issued for. Required, so that the provider can check the credential against it.
+
+**Response**
+
+.. list-table::
+   :widths: 20 20 60
+   :header-rows: 1
+
+   * - Location
+     - Field
+     - Description
+   * - Body (JSON)
+     - ``access``
+     - JWT access token. Absent when a second factor is outstanding.
+   * - Body (JSON)
+     - ``mfa_required``
+     - Present when the account has an authenticator; complete at ``/mfa/verify/``.
+   * - Body (JSON)
+     - ``challenge_id``
+     - Challenge to verify the code against, alongside ``mfa_required``.
+   * - Cookie (HTTP-only)
+     - ``refresh_token``
+     - JWT refresh token set in the ``refresh_token`` cookie (by default).
+
+Error codes, all in the ``code`` field beside ``detail``:
+
+.. list-table::
+   :widths: 12 30 58
+   :header-rows: 1
+
+   * - Status
+     - Code
+     - When
+   * - ``404``
+     - ``provider_not_configured``
+     - Unknown provider, or none registered for it.
+   * - ``400``
+     - ``flow_not_supported``
+     - The provider cannot verify a token out of band, or does not speak OAuth2.
+   * - ``401``
+     - ``invalid_social_token``
+     - The provider rejected the credential, or it names another OAuth client (``client_id_mismatch``).
+   * - ``400``
+     - ``provider_email_unverified``
+     - The provider vouched for no address. See ``JWT_ALLAUTH_SOCIAL_REQUIRE_VERIFIED_EMAIL``.
+   * - ``409``
+     - ``email_already_registered``
+     - The address belongs to somebody and linking is off for this provider.
+   * - ``403``
+     - ``signup_closed``
+     - Registration is closed — ``JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION``.
+   * - ``400``
+     - ``signup_not_allowed``
+     - ``SOCIALACCOUNT_AUTO_SIGNUP = False``; there is no sign-up form over an API.
+   * - ``403``
+     - ``social_login_rejected``
+     - A ``pre_social_login`` receiver vetoed the login.
+   * - ``401``
+     - ``email_not_verified`` / ``no_active_account``
+     - The account exists but is unconfirmed or inactive — the same answers ``/login/`` gives.
+   * - ``401``
+     - ``mfa_required``
+     - The account owes a second factor and the challenge could not be issued. The ordinary answer is a ``200`` carrying ``mfa_required`` and ``challenge_id``; this code appears only when that failed.
+
+.. note:: Throttled with ``AnonRateThrottle`` on top of the project defaults.
+
+**URL Name:** ``jwt_allauth_social_token_login``
+
+**/social/<provider>/code/** (POST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Request**
+
+.. list-table::
+   :widths: 20 20 60
+   :header-rows: 1
+
+   * - Location
+     - Field
+     - Description
+   * - Path
+     - ``provider``
+     - Provider id as registered with allauth.
+   * - Body (JSON)
+     - ``code``
+     - Authorization code returned by the provider.
+   * - Body (JSON)
+     - ``callback_url``
+     - The ``redirect_uri`` of the authorization request, byte for byte.
+   * - Body (JSON)
+     - ``code_verifier``
+     - PKCE verifier, when the authorization request carried a challenge.
+   * - Body (JSON)
+     - ``client_id``
+     - OAuth client the code was issued for. Optional; needed only when several apps are registered for the provider.
+
+**Response**
+
+Same as ``/social/<provider>/token/``, and the same error codes, plus one this flow alone
+can raise:
+
+.. list-table::
+   :widths: 12 30 58
+   :header-rows: 1
+
+   * - Status
+     - Code
+     - When
+   * - ``400``
+     - ``callback_url_not_allowed``
+     - The ``callback_url`` is outside ``JWT_ALLAUTH_SOCIAL_CALLBACK_URLS``.
+
+.. note:: Throttled with ``AnonRateThrottle`` on top of the project defaults.
+
+**URL Name:** ``jwt_allauth_social_code_login``
+
+**/social/<provider>/connect/token/** (POST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Connects the provider to the authenticated caller. Requires a bearer token. Opens no session
+and closes none, and does not add the provider's addresses to the account.
+
+**Response**
+
+.. list-table::
+   :widths: 20 20 60
+   :header-rows: 1
+
+   * - Location
+     - Field
+     - Description
+   * - Body (JSON)
+     - ``id``, ``provider``, ``uid``, ``last_login``, ``date_joined``
+     - The connection, at ``201``.
+
+Answers ``409`` ``social_account_in_use`` when the provider account belongs to another user.
+
+.. note:: Throttled with ``AnonRateThrottle`` and ``UserRateThrottle`` on top of the project defaults.
+
+**URL Name:** ``jwt_allauth_social_token_connect``
+
+**/social/<provider>/connect/code/** (POST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As above, from an authorization code. Request fields as in ``/social/<provider>/code/``.
+
+.. note:: Throttled with ``AnonRateThrottle`` and ``UserRateThrottle`` on top of the project defaults.
+
+**URL Name:** ``jwt_allauth_social_code_connect``
+
+**/social/accounts/** (GET)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The caller's provider connections. Requires a bearer token.
+
+.. note:: Throttled with ``AnonRateThrottle`` and ``UserRateThrottle`` on top of the project defaults.
+
+**URL Name:** ``jwt_allauth_social_accounts``
+
+**/social/accounts/<id>/** (DELETE)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Removes one connection, answering ``204``. An id that is not the caller's answers ``404``.
+Removing the last connection of an account with no usable password answers ``400``
+``disconnect_not_allowed``: there would be nothing left to sign in with.
+
+.. note:: Throttled with ``AnonRateThrottle`` and ``UserRateThrottle`` on top of the project defaults.
+
+**URL Name:** ``jwt_allauth_social_disconnect``
+
+**/social/providers/** (GET)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The configured providers, each with ``id``, ``name`` and ``client_id``, so a frontend can build
+its authorization requests. The app secret is never included.
+
+.. note:: Throttled with ``AnonRateThrottle`` on top of the project defaults.
+
+**URL Name:** ``jwt_allauth_social_providers``
 
 OpenAPI schema
 --------------

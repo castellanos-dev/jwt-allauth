@@ -21,6 +21,7 @@ from jwt_allauth.constants import (
     SET_PASSWORD_COOKIE,
     EMAIL_CONFIRMATION,
     EMAIL_VERIFICATION_FAILED_TEMPLATE,
+    INVITATION,
 )
 from jwt_allauth.csrf import ensure_csrf_cookie
 from jwt_allauth.registration.email_verification.serializers import VerifyEmailSerializer
@@ -31,7 +32,9 @@ from jwt_allauth.utils import (
     get_template_path,
     get_user_agent,
     hash_token,
+    invitations_enabled,
     refresh_token_as_cookie,
+    self_registration_enabled,
     set_refresh_token_cookie,
 )
 
@@ -130,99 +133,174 @@ class VerifyEmailView(APIView, ConfirmEmailView):
         refresh_token = RefreshToken.for_user(user, request, enabled=True)
         set_refresh_token_cookie(response, refresh_token)
 
+    @staticmethod
+    def _serves_invitation(token_entry) -> bool:
+        """
+        Whether this confirmation is an invitation being claimed.
+
+        The purpose written with the token says so. It used to be inferred from the
+        account having no usable password, which an account created through a social
+        provider also satisfies -- so a provider's confirmation link could have been
+        exchanged for the capability to set a password on it.
+
+        The legacy shape is still honoured: invitations issued before the purpose
+        existed carry ``EMAIL_CONFIRMATION``, and only closed registration could produce
+        them, so under it a password-less account with one of those rows is an
+        invitation in flight.
+        """
+        if token_entry.purpose == INVITATION:
+            return True
+        return not self_registration_enabled() and not token_entry.user.has_usable_password()
+
+    def _confirm_key(self, request, user):
+        """
+        Confirm the address the key names, tolerating a link that is opened twice.
+
+        Args:
+            request (HttpRequest): Request being served.
+            user (AbstractBaseUser): Owner recorded with the key, which is known good
+                even when allauth turns the key itself down.
+
+        Returns:
+            HttpResponse|None: The failure page when the key is genuinely bad, ``None``
+            once the address is confirmed.
+        """
+        try:
+            confirmation = self.get_object()
+            confirmation.confirm(self.request)
+        except (Http404, InvalidToken):
+            # allauth rejects the key once the address has been confirmed, so a second
+            # click on the same link lands here (multi-use) -- and so does a link
+            # scanner or a browser prefetch, on a URL an end user opens. Expiration is
+            # already covered by the caller's cutoff; anything else is a genuine error.
+            if not EmailAddress.objects.filter(user=user, verified=True).exists():
+                return self._verification_failed(request)
+        return None
+
+    def _confirm_without_capability(self, request, user):
+        """
+        Honour a confirmation that is not an invitation.
+
+        ``None`` hands it back to the ordinary flow, which is what an installation with
+        self-service sign-up wants -- and keeps this identical to an installation with no
+        invitations at all, where the key never reaches this method. With registration
+        closed there is no ordinary flow to hand it to -- these endpoints are the only
+        ones routed -- so the address is confirmed here and the browser lands where any
+        confirmation lands, without the password-set capability.
+        """
+        if self_registration_enabled():
+            return None
+        # Nothing comes of this link for a deactivated account, the confirmation
+        # included: it is the same guard the invitation path applies, and this branch is
+        # the only other one that confirms on its own.
+        if not user.is_active:
+            return self._verification_failed(request)
+        return self._confirm_key(request, user) or _verified_response(request)
+
+    def _claim_invitation(self, request, key):
+        """
+        Exchange an invitation's confirmation key for the password-set capability.
+
+        Returns ``None`` when the key does not belong to an invitation, which is only
+        possible while self-service sign-up is also open: the caller then carries on
+        with the ordinary confirmation. With registration closed there is no such case,
+        and a key with no invitation behind it is turned down as it always was.
+        """
+        # Ensure PASSWORD_SET_REDIRECT has been configured
+        if self.form_url is None:
+            raise NotImplementedError('`PASSWORD_SET_REDIRECT` must be configured in settings.py')
+
+        # Check that the email confirmation token exists and is still within allauth's
+        # confirmation window. Note: For an invitation, we allow multi-use
+        # until password is set, but never beyond the expiration of the confirmation
+        # itself: allauth's own expiry check is bypassed by the `except` clause below,
+        # so the age of the key has to be enforced here as well.
+        cutoff = timezone.now() - timedelta(
+            days=allauth_app_settings.EMAIL_CONFIRMATION_EXPIRE_DAYS
+        )
+        # Keys are stored as digests. In-flight confirmations issued by a previous
+        # version are still stored in plain text, so they are accepted as well until
+        # they expire.
+        token_entry = GenericTokenModel.objects.select_related('user').filter(
+            token__in=(hash_token(key), key),
+            purpose__in=(INVITATION, EMAIL_CONFIRMATION),
+            created__gte=cutoff,
+        ).first()
+        if token_entry is None:
+            if self_registration_enabled():
+                return None
+            return self._verification_failed(request)
+
+        user = token_entry.user
+        if not self._serves_invitation(token_entry):
+            return self._confirm_without_capability(request, user)
+
+        # A deactivated account gets no capability: login and refresh both refuse it,
+        # and setting the password opens a session.
+        if not user.is_active:
+            return self._verification_failed(request)
+
+        failed = self._confirm_key(request, user)
+        if failed is not None:
+            return failed
+
+        # The password-set capability only makes sense for an invited account that has
+        # not chosen a password yet. Issuing it for an account that already has one
+        # would turn any confirmation link into a password reset link, bypassing the
+        # reset flow and its throttling.
+        #
+        # Only the capability is withheld: the address is confirmed above either way,
+        # which is what the link was sent for. Refusing that as well would leave the
+        # account with no way forward -- login and the password reset flow both require
+        # a verified address, so the link is the only thing that can hand it one -- and
+        # it is not what closes the takeover. What was replayed is the capability.
+        if user.has_usable_password():
+            return _verified_response(request)
+
+        # Create one-time access token to allow setting the password
+        refresh_token = RefreshToken()
+        refresh_token[FOR_USER] = user.id
+        refresh_token[ONE_TIME_PERMISSION] = PASS_SET_ACCESS
+        access_token = refresh_token.access_token
+
+        response = HttpResponseRedirect(self.form_url)
+        # The form this redirects to has to send a CSRF token back with the new
+        # password, so the cookie holding it goes out together with the capability.
+        ensure_csrf_cookie(request)
+        response.set_cookie(
+            key=SET_PASSWORD_COOKIE,
+            value=str(access_token),
+            httponly=getattr(settings, 'PASSWORD_SET_COOKIE_HTTP_ONLY', True),
+            secure=getattr(settings, 'PASSWORD_SET_COOKIE_SECURE', not settings.DEBUG),
+            samesite=getattr(settings, 'PASSWORD_SET_COOKIE_SAME_SITE', 'Lax'),
+            max_age=getattr(settings, 'PASSWORD_SET_COOKIE_MAX_AGE', 3600 * 24),
+        )
+
+        # Re-clicking the verification link is allowed until the password is set, but
+        # only the capability handed out by the latest click stays valid.
+        GenericTokenModel.objects.filter(user=user, purpose=PASS_SET_ACCESS).delete()
+
+        token_serializer = GenericTokenModelSerializer(
+            data={
+                'token': access_token['jti'],
+                'user': user.id,
+                'purpose': PASS_SET_ACCESS,
+            }
+        )
+        token_serializer.is_valid(raise_exception=True)
+        token_serializer.save()
+
+        return response
+
     @get_user_agent
     def get(self, request, *args, **kwargs):
-        # If admin-managed registration is enabled, validate the confirmation key and
-        # issue a one-time token to allow the user to set their password.
-        if getattr(settings, 'JWT_ALLAUTH_ADMIN_MANAGED_REGISTRATION', False):
-            # Ensure PASSWORD_SET_REDIRECT has been configured
-            if self.form_url is None:
-                raise NotImplementedError('`PASSWORD_SET_REDIRECT` must be configured in settings.py')
-
-            # Check that the email confirmation token exists and is still within allauth's
-            # confirmation window. Note: For admin-managed registration, we allow multi-use
-            # until password is set, but never beyond the expiration of the confirmation
-            # itself: allauth's own expiry check is bypassed by the `except` clause below,
-            # so the age of the key has to be enforced here as well.
-            cutoff = timezone.now() - timedelta(
-                days=allauth_app_settings.EMAIL_CONFIRMATION_EXPIRE_DAYS
-            )
-            # Keys are stored as digests. In-flight confirmations issued by a previous
-            # version are still stored in plain text, so they are accepted as well until
-            # they expire.
-            token_entry = GenericTokenModel.objects.filter(
-                token__in=(hash_token(kwargs['key']), kwargs['key']),
-                purpose=EMAIL_CONFIRMATION,
-                created__gte=cutoff,
-            ).first()
-            if token_entry is None:
-                return self._verification_failed(request)
-
-            user = token_entry.user
-
-            # A deactivated account gets no capability: login and refresh both refuse it,
-            # and setting the password opens a session.
-            if not user.is_active:
-                return self._verification_failed(request)
-
-            try:
-                confirmation = self.get_object()
-                confirmation.confirm(self.request)
-            except (Http404, InvalidToken):
-                # allauth rejects the key once the address has been confirmed, so a second
-                # click on the same link lands here (multi-use). Expiration is already
-                # covered by `cutoff` above; anything else is a genuine error.
-                # Note: We use the user from our GenericTokenModel which we know is valid.
-                if not EmailAddress.objects.filter(user=user, verified=True).exists():
-                    return self._verification_failed(request)
-
-            # The password-set capability only makes sense for an invited account that has
-            # not chosen a password yet. Issuing it for an account that already has one
-            # would turn any confirmation link into a password reset link, bypassing the
-            # reset flow and its throttling.
-            #
-            # Only the capability is withheld: the address is confirmed above either way,
-            # which is what the link was sent for. Refusing that as well would leave the
-            # account with no way forward -- login and the password reset flow both require
-            # a verified address, so the link is the only thing that can hand it one -- and
-            # it is not what closes the takeover. What was replayed is the capability.
-            if user.has_usable_password():
-                return _verified_response(request)
-
-            # Create one-time access token to allow setting the password
-            refresh_token = RefreshToken()
-            refresh_token[FOR_USER] = user.id
-            refresh_token[ONE_TIME_PERMISSION] = PASS_SET_ACCESS
-            access_token = refresh_token.access_token
-
-            response = HttpResponseRedirect(self.form_url)
-            # The form this redirects to has to send a CSRF token back with the new
-            # password, so the cookie holding it goes out together with the capability.
-            ensure_csrf_cookie(request)
-            response.set_cookie(
-                key=SET_PASSWORD_COOKIE,
-                value=str(access_token),
-                httponly=getattr(settings, 'PASSWORD_SET_COOKIE_HTTP_ONLY', True),
-                secure=getattr(settings, 'PASSWORD_SET_COOKIE_SECURE', not settings.DEBUG),
-                samesite=getattr(settings, 'PASSWORD_SET_COOKIE_SAME_SITE', 'Lax'),
-                max_age=getattr(settings, 'PASSWORD_SET_COOKIE_MAX_AGE', 3600 * 24),
-            )
-
-            # Re-clicking the verification link is allowed until the password is set, but
-            # only the capability handed out by the latest click stays valid.
-            GenericTokenModel.objects.filter(user=user, purpose=PASS_SET_ACCESS).delete()
-
-            token_serializer = GenericTokenModelSerializer(
-                data={
-                    'token': access_token['jti'],
-                    'user': user.id,
-                    'purpose': PASS_SET_ACCESS,
-                }
-            )
-            token_serializer.is_valid(raise_exception=True)
-            token_serializer.save()
-
-            return response
+        # An invitation is claimed here: the confirmation key is exchanged for the
+        # one-time capability that lets the account set its first password. A key that
+        # confirms an ordinary sign-up falls through to the flow below.
+        if invitations_enabled():
+            claimed = self._claim_invitation(request, kwargs['key'])
+            if claimed is not None:
+                return claimed
 
         # Default flow: just confirm the email and enable refresh tokens
         confirmation = self.get_object()

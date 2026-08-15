@@ -12,8 +12,8 @@ JWT Allauth
 JWT Allauth gives every login its own tracked session, rotates the refresh token on each
 use, and — when a rotated token is presented a second time — revokes the entire session
 rather than just rejecting the replayed credential. Around that it ships the endpoints an
-API needs to be usable on day one: login, sign-up, e-mail verification, password reset,
-MFA and role-based permissions.
+API needs to be usable on day one: login, social login, sign-up, invitations, e-mail
+verification, password reset, MFA and role-based permissions.
 
 Built on Django REST Framework, django-allauth and Simple JWT.
 
@@ -56,7 +56,8 @@ REST API:
 | **Role and claims re-read from the DB on rotation**  |       ✗        |       ✗        |             —                  | **✓**                 |
 | Login, sign-up, e-mail verification, password reset  |       ✓        |       ✓        |             ✓                  | ✓                     |
 | Second factor                                        | TOTP, passkeys |    WebAuthn    | TOTP, recovery codes, WebAuthn | TOTP, recovery codes  |
-| **Social authentication**                            |     **✓**      |     **✓**      |           **✓**                | **not yet**           |
+| Social authentication                                |       ✓        |       ✓        |             ✓                  | ✓&nbsp;⁴              |
+| **User invitations** (admin creates, invitee sets password) | **✗** |    **✗**    |          **✗**&nbsp;⁵           | **✓**                 |
 
 ¹ dj-rest-auth authenticates with DRF's own tokens by default. JWT means installing Simple
 JWT yourself and setting `USE_JWT = True`; it is not a dependency of the package.
@@ -67,8 +68,21 @@ token here."* The rows marked — follow from that: there is no token implementa
 
 ³ `allauth.usersessions` lists Django sessions, not JWT sessions.
 
-**Social authentication is not implemented.** If a project needs it today, dj-rest-auth
-and allauth headless cover it.
+⁴ Provider token and authorization code with PKCE, one generic endpoint per flow. The
+server-initiated redirect flow is not covered. A provider that vouches for an address an
+established account already holds signs that account in and leaves its password usable,
+rather than wiping it as allauth's e-mail authentication does. See
+[Social login](https://jwt-allauth.readthedocs.io/en/latest/social_login.html).
+
+⁵ allauth's documentation states that *"handling invitations is not supported by allauth"*
+and points at a separate app
+([Advanced usage](https://docs.allauth.org/en/latest/account/advanced.html)).
+[django-invitations](https://github.com/jazzband/django-invitations) is that app, and
+it models a different thing: it stores an invitation, and the invitee then signs up
+themselves — with any address they like, not necessarily the one invited. Here the admin
+creates the account and fixes the identity; the invitee only proves the mailbox and
+chooses a password. Available alongside a public sign-up, or instead of one. See
+[User invitations](https://jwt-allauth.readthedocs.io/en/latest/invitations.html).
 
 
 Requirements
@@ -87,6 +101,14 @@ Quick Start
 Install using `pip`:
 
     pip install django-jwt-allauth
+
+Optional features ship as extras, so nothing you do not use is installed:
+
+    pip install "django-jwt-allauth[social]"   # sign in through a provider
+    pip install "django-jwt-allauth[mfa]"      # TOTP second factor
+    pip install "django-jwt-allauth[schema]"   # OpenAPI schema and Swagger UI
+
+See [Optional features](https://jwt-allauth.readthedocs.io/en/latest/installation.html#optional-features).
 
 You can start a new Django project with JWT Allauth pre-configured:
 
@@ -148,8 +170,14 @@ Features
   outstanding capability (unused reset links, MFA challenges) and every unconfirmed
   secondary address.
 - **Role-based permissions**: authorization from a JWT claim, with no user table lookup.
+- **User invitations**: an admin creates the account, the invitee proves the mailbox and
+  chooses their own password. Alongside a public sign-up, or instead of one.
+- **Social login**: sign in through any provider `django-allauth` registers, by provider
+  token or by authorization code with PKCE, with one generic endpoint per flow. An address
+  a provider vouches for signs in the account that already holds it, without wiping the
+  password that account still uses.
 - **The rest of the flows**: e-mail verification, password reset and change, MFA over
-  TOTP with recovery codes, admin-managed registration, session logout.
+  TOTP with recovery codes, session logout.
 - **Effortless setup**: get a project running with a single command.
 
 

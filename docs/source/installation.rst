@@ -34,6 +34,9 @@ Install using ``pip``...
 
     pip install django-jwt-allauth
 
+Three features ship behind extras and are not installed by that command; see
+:ref:`optional-features`.
+
 You can quickly start a new Django project with JWT Allauth pre-configured using the ``startproject`` command:
 
 .. code-block:: bash
@@ -66,6 +69,35 @@ Available options:
 
 - ``--email=True`` - Enables email configuration in the project
 - ``--template=PATH`` - Uses a custom template directory for project creation
+
+
+.. _optional-features:
+
+Optional features
+=================
+
+Three features ship behind extras, so that a project only carries the dependencies of what
+it actually uses. Each is installed from this package; nothing has to be installed from
+``django-allauth`` by hand.
+
+.. list-table::
+   :widths: 15 42 43
+   :header-rows: 1
+
+   * - Extra
+     - Install
+     - What it adds
+   * - ``mfa``
+     - ``pip install "django-jwt-allauth[mfa]"``
+     - TOTP second factor with recovery codes. See :doc:`mfa_totp`.
+   * - ``social``
+     - ``pip install "django-jwt-allauth[social]"``
+     - Sign-in through an identity provider. See :doc:`social_login`.
+   * - ``schema``
+     - ``pip install "django-jwt-allauth[schema]"``
+     - OpenAPI annotations through drf-spectacular. See :doc:`api_endpoints`.
+
+They combine: ``pip install "django-jwt-allauth[mfa,social]"``.
 
 
 Installation for existing projects
