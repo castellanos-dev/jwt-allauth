@@ -1,104 +1,382 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Translations for django-jwt-allauth.
+# Copyright (C) Fernando Castellanos.
+# This file is distributed under the same license as the django-jwt-allauth package.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-10-28 11:41+0800\n"
-"PO-Revision-Date: 2018-10-28 11:45+0806\n"
-"Last-Translator: b'  <admin@xx.com>'\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"Project-Id-Version: django-jwt-allauth 1.5.1\n"
+"Report-Msgid-Bugs-To: https://github.com/castellanos-dev/jwt-allauth/issues\n"
+"POT-Creation-Date: 2026-08-15 14:54+0000\n"
+"PO-Revision-Date: 2026-08-15 14:54+0000\n"
+"Last-Translator: JWT Allauth <fcastellanos.dev@gmail.com>\n"
+"Language-Team: Simplified Chinese <fcastellanos.dev@gmail.com>\n"
+"Language: zh_Hans\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Translated-Using: django-rosetta 0.9.0\n"
+"\n"
 
-#: registration/serializers.py:67
-msgid "View is not defined, pass it as a context variable"
-msgstr "View未定义，请通过context变量传入"
+#: authentication.py:70
+msgid "Session is no longer active."
+msgstr "会话已不再有效。"
 
-#: registration/serializers.py:72
-msgid "Define adapter_class in view"
-msgstr "请在View中定义adapter_class"
+#: exceptions.py:10
+msgid "User email is not verified"
+msgstr "用户的电子邮件地址尚未验证"
 
-#: registration/serializers.py:91
-msgid "Define callback_url in view"
-msgstr "请在view中定义callback_url"
+#: exceptions.py:16
+msgid "Session reached its maximum lifetime. Please log in again"
+msgstr "会话已达到最长有效期，请重新登录"
 
-#: registration/serializers.py:95
-msgid "Define client_class in view"
-msgstr "请在view中定义client_class"
+#: exceptions.py:22
+msgid "Incorrect credentials"
+msgstr "凭据不正确"
 
-#: registration/serializers.py:116
-msgid "Incorrect input. access_token or code is required."
-msgstr "输入错误。access_token或code是必填项。"
+#: exceptions.py:53
+msgid "This account requires a second factor."
+msgstr "此账户需要第二重验证。"
 
-#: registration/serializers.py:125
-msgid "Incorrect value"
-msgstr "错误的值"
+#: exceptions.py:63
+msgid "This provider is not configured."
+msgstr "尚未配置此提供方。"
 
-#: registration/serializers.py:139
-msgid "User is already registered with this e-mail address."
-msgstr "该邮箱地址已被注册。"
+#: exceptions.py:69
+msgid "This provider does not support this authentication flow."
+msgstr "此提供方不支持该认证流程。"
 
-#: registration/serializers.py:185
+#: exceptions.py:75 social/flows.py:251
+msgid "The provider rejected the credential."
+msgstr "提供方拒绝了该凭据。"
+
+#: exceptions.py:87
+msgid "The provider did not supply a verified e-mail address."
+msgstr "提供方未提供已验证的电子邮件地址。"
+
+#: exceptions.py:93
+msgid "This provider account is already connected to another user."
+msgstr "该提供方账户已关联到其他用户。"
+
+#: exceptions.py:105 registration/serializers.py:22
 msgid "A user is already registered with this e-mail address."
-msgstr "该邮箱地址已被注册。"
+msgstr "已有用户使用该电子邮件地址注册。"
 
-#: registration/serializers.py:193
-msgid "The two password fields didn't match."
-msgstr "两次输入的密码不相同"
+#: exceptions.py:127
+msgid "Confirm this e-mail address on the existing account before connecting a provider."
+msgstr "关联提供方之前，请先在现有账户中验证该电子邮件地址。"
 
-#: registration/views.py:51
+#: exceptions.py:133
+msgid "Registration is closed."
+msgstr "注册已关闭。"
+
+#: exceptions.py:139
+msgid "Signing up through a provider is not allowed."
+msgstr "不允许通过提供方注册。"
+
+#: exceptions.py:145
+msgid "This social login was rejected."
+msgstr "此第三方登录已被拒绝。"
+
+#: exceptions.py:151
+msgid "This provider cannot be disconnected."
+msgstr "无法解除此提供方的关联。"
+
+#: logout/views.py:47
+msgid "Refresh token cookie not found."
+msgstr "未找到刷新令牌 Cookie。"
+
+#: logout/views.py:57
+msgid "Successfully logged out."
+msgstr "已成功退出登录。"
+
+#: logout/views.py:62
+msgid "Invalid token."
+msgstr "无效的令牌。"
+
+#: logout/views.py:89
+msgid "Successfully logged out from all devices."
+msgstr "已成功从所有设备退出登录。"
+
+#: mfa/views.py:202 registration/views.py:87 registration/views.py:146
 msgid "Verification e-mail sent."
 msgstr "验证邮件已发送。"
 
-#: registration/views.py:98
-msgid "ok"
-msgstr "好的"
+#: password_change/serializers.py:39
+msgid "Your old password was entered incorrectly. Please enter it again."
+msgstr "原密码输入有误，请重新输入。"
 
-#: serializers.py:33
-msgid "Must include \"email\" and \"password\"."
-msgstr "比如包含\"email\"和\"password\"。"
+#: password_change/views.py:49
+msgid "New password has been saved."
+msgstr "新密码已保存。"
 
-#: serializers.py:44
-msgid "Must include \"username\" and \"password\"."
-msgstr "比如包含\"username\"和\"password\"。"
+#: password_reset/views.py:108
+msgid "Too many password reset requests for this e-mail address."
+msgstr "该电子邮件地址的密码重置请求过于频繁。"
 
-#: serializers.py:57
-msgid "Must include either \"username\" or \"email\" and \"password\"."
-msgstr "比如包含\"username\"，\"email\"，\"password\"其中一个。"
-
-#: serializers.py:98
-msgid "User account is disabled."
-msgstr "用户账号已被禁用。"
-
-#: serializers.py:101
-msgid "Unable to log in with provided credentials."
-msgstr "无法使用提供的信息登录。"
-
-#: serializers.py:110
-msgid "E-mail is not verified."
-msgstr "邮箱未验证。"
-
-#: views.py:127
-msgid "Successfully logged out."
-msgstr "已成功登出。"
-
-#: views.py:175
+#: password_reset/views.py:113
 msgid "Password reset e-mail has been sent."
 msgstr "密码重置邮件已发送。"
 
-#: views.py:201
-msgid "Password has been reset with the new password."
-msgstr "密码重置成功。"
+#: password_reset/views.py:266
+msgid "Password reset."
+msgstr "密码已重置。"
 
-#: views.py:223
-msgid "New password has been saved."
-msgstr "新密码已设置成功。"
+#: password_reset/views.py:321
+msgid "Password set. Please configure MFA to complete registration."
+msgstr "密码已设置。请配置 MFA 以完成注册。"
+
+#: password_reset/views.py:329
+msgid "Password set."
+msgstr "密码已设置。"
+
+#: permissions.py:144
+msgid "E-mail address is not verified."
+msgstr "电子邮件地址尚未验证。"
+
+#: registration/serializers.py:164
+msgid "The two password fields didn't match."
+msgstr "两次输入的密码不一致。"
+
+#: registration/serializers.py:255
+msgid "Role is required"
+msgstr "角色为必填项"
+
+#: social/adapter.py:61
+msgid "This is the only way to sign in to this account."
+msgstr "这是登录此账户的唯一方式。"
+
+#: social/flows.py:124 social/flows.py:167
+msgid "The credential was not issued for this application."
+msgstr "该凭据并非为此应用签发。"
+
+#: social/flows.py:154 social/serializers.py:23
+msgid "Either an id_token or an access_token is required."
+msgstr "需要提供 id_token 或 access_token。"
+
+#: social/flows.py:209
+msgid "This callback_url is not allowed."
+msgstr "不允许使用此 callback_url。"
+
+#: social/flows.py:370
+msgid "No active account found with the given credentials"
+msgstr "未找到与所给凭据匹配的有效账户"
+
+#: templates/email/account_exists/email_message.html:8 templates/email/account_exists/email_message.html:69 templates/email/account_exists/email_subject.txt:2
+msgid "You already have an account"
+msgstr "您已经有一个账户"
+
+#: templates/email/account_exists/email_message.html:74
+msgid "Somebody just tried to sign up with this email address, but an account already exists for it. No new account has been created and nothing has changed."
+msgstr "刚刚有人尝试用此电子邮件地址注册，但该地址已存在账户。系统没有创建新账户，也没有任何改动。"
+
+#: templates/email/account_exists/email_message.html:76
+msgid "If it was you, sign in with your usual credentials. If you do not remember your password, request a password reset instead of signing up again."
+msgstr "如果这是您本人，请使用您平常的凭据登录。如果忘记了密码，请申请重置密码，而不要重新注册。"
+
+#: templates/email/account_exists/email_message.html:79
+msgid "If it was not you and this address is yours, somebody else may be using it on an account you never created. Reset the password to take control of the account: doing so signs out everybody who is currently using it."
+msgstr "如果这不是您本人，而该地址属于您，可能有其他人正在一个您从未创建过的账户中使用它。请重置密码以夺回账户控制权：这样做会让当前正在使用该账户的所有人退出登录。"
+
+#: templates/email/account_exists/email_message.html:84 templates/email/password/reset_email_message.html:82
+msgid "Reset Password"
+msgstr "重置密码"
+
+#: templates/email/account_exists/email_message.html:87 templates/email/password/reset_email_message.html:85 templates/email/signup/email_message.html:76
+msgid "If the button above doesn't work, you can also copy and paste the following link into your browser:"
+msgstr "如果上面的按钮无法使用，您也可以复制以下链接并粘贴到浏览器中："
+
+#: templates/email/account_exists/email_message.html:93 templates/email/admin_invite/email_message.html:99 templates/email/password/reset_email_message.html:91 templates/email/signup/email_message.html:83
+msgid "This is an automated message, please do not reply to this email."
+msgstr "这是一封自动发送的邮件，请勿回复。"
+
+#: templates/email/account_exists/email_message.html:94 templates/email/admin_invite/email_message.html:100 templates/email/password/reset_email_message.html:92 templates/email/signup/email_message.html:84
+msgid "If you have any questions, please contact our support team."
+msgstr "如有任何疑问，请联系我们的支持团队。"
+
+#: templates/email/admin_invite/email_message.html:8
+msgid "You're invited"
+msgstr "您受邀了"
+
+#: templates/email/admin_invite/email_message.html:61 templates/email/admin_invite/email_subject.txt:2
+msgid "You've been invited to join our platform"
+msgstr "您受邀加入我们的平台"
+
+#: templates/email/admin_invite/email_message.html:66
+msgid ""
+"\n"
+"                An administrator has created an account for you using this email address.\n"
+"                To activate your account and set your password, please confirm your email address.\n"
+"                "
+msgstr ""
+"\n"
+"                管理员已使用此电子邮件地址为您创建了账户。\n"
+"                若要激活账户并设置密码，请验证您的电子邮件地址。\n"
+"                "
+
+#: templates/email/admin_invite/email_message.html:74
+msgid "Confirm email and set password"
+msgstr "验证邮箱并设置密码"
+
+#: templates/email/admin_invite/email_message.html:79
+msgid ""
+"\n"
+"                If the button above does not work, you can also copy and paste the following link\n"
+"                into your browser:\n"
+"                "
+msgstr ""
+"\n"
+"                如果上面的按钮无法使用，您也可以复制以下链接\n"
+"                并粘贴到浏览器中：\n"
+"                "
+
+#: templates/email/admin_invite/email_message.html:87
+msgid ""
+"\n"
+"                After confirming your email, you will be redirected to a secure page where you can\n"
+"                choose your password and finish activating your account.\n"
+"                "
+msgstr ""
+"\n"
+"                验证电子邮件后，您将进入一个安全页面，在那里选择密码并\n"
+"                完成账户激活。\n"
+"                "
+
+#: templates/email/admin_invite/email_message.html:94
+msgid "If you did not expect this invitation, you can safely ignore this email."
+msgstr "如果您并未预期收到此邀请，可以放心忽略这封邮件。"
+
+#: templates/email/password/reset_email_message.html:8
+msgid "Password Reset"
+msgstr "密码重置"
+
+#: templates/email/password/reset_email_message.html:73
+msgid "Password Reset Request"
+msgstr "密码重置请求"
+
+#: templates/email/password/reset_email_message.html:77
+msgid "Hello"
+msgstr "您好"
+
+#: templates/email/password/reset_email_message.html:79
+msgid "You're receiving this email because you requested a password reset for your account. Please click the button below to set a new password:"
+msgstr "您收到这封邮件，是因为您申请重置账户密码。请点击下方按钮设置新密码："
+
+#: templates/email/password/reset_email_subject.txt:2
+msgid "Password reset"
+msgstr "密码重置"
+
+#: templates/email/signup/email_message.html:8
+msgid "Email Verification"
+msgstr "电子邮件验证"
+
+#: templates/email/signup/email_message.html:65
+msgid "Welcome to our platform!"
+msgstr "欢迎加入我们的平台！"
+
+#: templates/email/signup/email_message.html:70
+msgid "Thank you for signing up on our website. To complete your registration, please click the button below to verify your email address:"
+msgstr "感谢您在我们网站注册。若要完成注册，请点击下方按钮验证您的电子邮件地址："
+
+#: templates/email/signup/email_message.html:73
+msgid "Verify Email Address"
+msgstr "验证电子邮件地址"
+
+#: templates/email/signup/email_message.html:79
+msgid "If you did not request this email, you can safely ignore it."
+msgstr "如果您并未申请这封邮件，可以放心忽略。"
+
+#: templates/email/signup/email_subject.txt:2
+msgid "Welcome"
+msgstr "欢迎"
+
+#: tokens/models.py:14
+msgid "created"
+msgstr "创建时间"
+
+#: tokens/models.py:15
+msgid "ip"
+msgstr "IP"
+
+#: tokens/models.py:16
+msgid "is mobile"
+msgstr "是否手机"
+
+#: tokens/models.py:17
+msgid "is tablet"
+msgstr "是否平板"
+
+#: tokens/models.py:18
+msgid "is pc"
+msgstr "是否电脑"
+
+#: tokens/models.py:19
+msgid "is bot"
+msgstr "是否机器人"
+
+#: tokens/models.py:20
+msgid "browser"
+msgstr "浏览器"
+
+#: tokens/models.py:21
+msgid "browser version"
+msgstr "浏览器版本"
+
+#: tokens/models.py:22
+msgid "os"
+msgstr "操作系统"
+
+#: tokens/models.py:23
+msgid "os version"
+msgstr "操作系统版本"
+
+#: tokens/models.py:24
+msgid "device"
+msgstr "设备"
+
+#: tokens/models.py:25
+msgid "device brand"
+msgstr "设备品牌"
+
+#: tokens/models.py:26
+msgid "device model"
+msgstr "设备型号"
+
+#: tokens/models.py:30 tokens/models.py:46
+msgid "refresh token"
+msgstr "刷新令牌"
+
+#: tokens/models.py:31 tokens/models.py:47
+msgid "refresh tokens"
+msgstr "刷新令牌"
+
+#: tokens/models.py:40
+msgid "jti"
+msgstr "jti"
+
+#: tokens/models.py:41
+msgid "enabled"
+msgstr "已启用"
+
+#: tokens/models.py:42
+msgid "session"
+msgstr "会话"
+
+#: tokens/models.py:55 tokens/models.py:64
+msgid "user"
+msgstr "用户"
+
+#: tokens/models.py:66
+msgid "token"
+msgstr "令牌"
+
+#: tokens/models.py:67
+msgid "purpose"
+msgstr "用途"
+
+#: tokens/models.py:70
+msgid "generic token"
+msgstr "通用令牌"
+
+#: tokens/models.py:71
+msgid "generic tokens"
+msgstr "通用令牌"

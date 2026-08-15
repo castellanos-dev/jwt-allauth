@@ -1,99 +1,382 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Translations for django-jwt-allauth.
+# Copyright (C) Fernando Castellanos.
+# This file is distributed under the same license as the django-jwt-allauth package.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: \n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-05 21:56-0800\n"
-"PO-Revision-Date: 2017-03-11 12:10+0100\n"
+"Project-Id-Version: django-jwt-allauth 1.5.1\n"
+"Report-Msgid-Bugs-To: https://github.com/castellanos-dev/jwt-allauth/issues\n"
+"POT-Creation-Date: 2026-08-15 14:54+0000\n"
+"PO-Revision-Date: 2026-08-15 14:54+0000\n"
+"Last-Translator: JWT Allauth <fcastellanos.dev@gmail.com>\n"
+"Language-Team: Polish <fcastellanos.dev@gmail.com>\n"
+"Language: pl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
-"Language-Team: \n"
-"X-Generator: Poedit 1.8.11\n"
-"Last-Translator: \n"
-"Language: pl\n"
+"\n"
 
-#: registration/serializers.py:53
-msgid "View is not defined, pass it as a context variable"
-msgstr "Widok nie został zdefiniowany, przekaż go przez zmienną \"context\""
+#: authentication.py:70
+msgid "Session is no longer active."
+msgstr "Sesja nie jest już aktywna."
 
-#: registration/serializers.py:58
-msgid "Define adapter_class in view"
-msgstr "Zdefiniuj \"adapter_class\" w widoku"
+#: exceptions.py:10
+msgid "User email is not verified"
+msgstr "Adres e-mail użytkownika nie został zweryfikowany"
 
-#: registration/serializers.py:77
-msgid "Define callback_url in view"
-msgstr "Zdefiniuj \"callback_url\" w widoku"
+#: exceptions.py:16
+msgid "Session reached its maximum lifetime. Please log in again"
+msgstr "Sesja osiągnęła maksymalny czas życia. Zaloguj się ponownie"
 
-#: registration/serializers.py:81
-msgid "Define client_class in view"
-msgstr "Zdefiniuj \"client_class\" w widoku"
+#: exceptions.py:22
+msgid "Incorrect credentials"
+msgstr "Nieprawidłowe dane logowania"
 
-#: registration/serializers.py:102
-msgid "Incorrect input. access_token or code is required."
-msgstr "Podano błędne dane. \"access_token\" lub \"code\" są wymagne."
+#: exceptions.py:53
+msgid "This account requires a second factor."
+msgstr "To konto wymaga drugiego składnika."
 
-#: registration/serializers.py:111
-msgid "Incorrect value"
-msgstr "Niepoprawna wartość."
+#: exceptions.py:63
+msgid "This provider is not configured."
+msgstr "Ten dostawca nie jest skonfigurowany."
 
-#: registration/serializers.py:140
+#: exceptions.py:69
+msgid "This provider does not support this authentication flow."
+msgstr "Ten dostawca nie obsługuje tego sposobu uwierzytelniania."
+
+#: exceptions.py:75 social/flows.py:251
+msgid "The provider rejected the credential."
+msgstr "Dostawca odrzucił dane uwierzytelniające."
+
+#: exceptions.py:87
+msgid "The provider did not supply a verified e-mail address."
+msgstr "Dostawca nie przekazał zweryfikowanego adresu e-mail."
+
+#: exceptions.py:93
+msgid "This provider account is already connected to another user."
+msgstr "To konto dostawcy jest już połączone z innym użytkownikiem."
+
+#: exceptions.py:105 registration/serializers.py:22
 msgid "A user is already registered with this e-mail address."
-msgstr "Istnieje już użytkownik z takim adresem email."
+msgstr "Użytkownik z tym adresem e-mail jest już zarejestrowany."
 
-#: registration/serializers.py:148
-msgid "The two password fields didn't match."
-msgstr "Hasła nie są identyczne."
+#: exceptions.py:127
+msgid "Confirm this e-mail address on the existing account before connecting a provider."
+msgstr "Zanim połączysz dostawcę, potwierdź ten adres e-mail na istniejącym koncie."
 
-#: registration/views.py:44
-msgid "Verification e-mail sent."
-msgstr "Email weryfikacyjny został wysłany."
+#: exceptions.py:133
+msgid "Registration is closed."
+msgstr "Rejestracja jest zamknięta."
 
-#: registration/views.py:91
-msgid "ok"
-msgstr "ok"
+#: exceptions.py:139
+msgid "Signing up through a provider is not allowed."
+msgstr "Rejestracja przez dostawcę nie jest dozwolona."
 
-#: serializers.py:30
-msgid "Must include \"email\" and \"password\"."
-msgstr "Musisz podać email i hasło."
+#: exceptions.py:145
+msgid "This social login was rejected."
+msgstr "To logowanie przez dostawcę zostało odrzucone."
 
-#: serializers.py:41
-msgid "Must include \"username\" and \"password\"."
-msgstr "Musisz podać nazwę użytkownika i hasło."
+#: exceptions.py:151
+msgid "This provider cannot be disconnected."
+msgstr "Tego dostawcy nie można odłączyć."
 
-#: serializers.py:54
-msgid "Must include either \"username\" or \"email\" and \"password\"."
-msgstr "Musisz podać nazwę użytkownika (lub email) i hasło."
+#: logout/views.py:47
+msgid "Refresh token cookie not found."
+msgstr "Nie znaleziono ciasteczka z tokenem odświeżania."
 
-#: serializers.py:95
-msgid "User account is disabled."
-msgstr "Konto użytkownika zostało wyłączone."
-
-#: serializers.py:98
-msgid "Unable to log in with provided credentials."
-msgstr "Podane dane do logowania są niepoprawne."
-
-#: serializers.py:107
-msgid "E-mail is not verified."
-msgstr "Email nie został zweryfikowany."
-
-#: views.py:126
+#: logout/views.py:57
 msgid "Successfully logged out."
-msgstr "Wylogowano."
+msgstr "Wylogowano pomyślnie."
 
-#: views.py:174
-msgid "Password reset e-mail has been sent."
-msgstr "Email z linkiem do resetu hasła został wysłany."
+#: logout/views.py:62
+msgid "Invalid token."
+msgstr "Nieprawidłowy token."
 
-#: views.py:200
-msgid "Password has been reset with the new password."
-msgstr "Hasło zostało zresetowane."
+#: logout/views.py:89
+msgid "Successfully logged out from all devices."
+msgstr "Wylogowano pomyślnie ze wszystkich urządzeń."
 
-#: views.py:222
+#: mfa/views.py:202 registration/views.py:87 registration/views.py:146
+msgid "Verification e-mail sent."
+msgstr "Wysłano e-mail weryfikacyjny."
+
+#: password_change/serializers.py:39
+msgid "Your old password was entered incorrectly. Please enter it again."
+msgstr "Dotychczasowe hasło zostało wpisane niepoprawnie. Wpisz je ponownie."
+
+#: password_change/views.py:49
 msgid "New password has been saved."
 msgstr "Nowe hasło zostało zapisane."
+
+#: password_reset/views.py:108
+msgid "Too many password reset requests for this e-mail address."
+msgstr "Zbyt wiele próśb o zresetowanie hasła dla tego adresu e-mail."
+
+#: password_reset/views.py:113
+msgid "Password reset e-mail has been sent."
+msgstr "Wysłano e-mail umożliwiający zresetowanie hasła."
+
+#: password_reset/views.py:266
+msgid "Password reset."
+msgstr "Hasło zresetowane."
+
+#: password_reset/views.py:321
+msgid "Password set. Please configure MFA to complete registration."
+msgstr "Hasło ustawione. Skonfiguruj MFA, aby dokończyć rejestrację."
+
+#: password_reset/views.py:329
+msgid "Password set."
+msgstr "Hasło ustawione."
+
+#: permissions.py:144
+msgid "E-mail address is not verified."
+msgstr "Adres e-mail nie został zweryfikowany."
+
+#: registration/serializers.py:164
+msgid "The two password fields didn't match."
+msgstr "Hasła nie są takie same."
+
+#: registration/serializers.py:255
+msgid "Role is required"
+msgstr "Rola jest wymagana"
+
+#: social/adapter.py:61
+msgid "This is the only way to sign in to this account."
+msgstr "To jedyny sposób zalogowania się na to konto."
+
+#: social/flows.py:124 social/flows.py:167
+msgid "The credential was not issued for this application."
+msgstr "Te dane uwierzytelniające nie zostały wydane dla tej aplikacji."
+
+#: social/flows.py:154 social/serializers.py:23
+msgid "Either an id_token or an access_token is required."
+msgstr "Wymagany jest id_token lub access_token."
+
+#: social/flows.py:209
+msgid "This callback_url is not allowed."
+msgstr "Ten callback_url nie jest dozwolony."
+
+#: social/flows.py:370
+msgid "No active account found with the given credentials"
+msgstr "Nie znaleziono aktywnego konta o podanych danych logowania"
+
+#: templates/email/account_exists/email_message.html:8 templates/email/account_exists/email_message.html:69 templates/email/account_exists/email_subject.txt:2
+msgid "You already have an account"
+msgstr "Masz już konto"
+
+#: templates/email/account_exists/email_message.html:74
+msgid "Somebody just tried to sign up with this email address, but an account already exists for it. No new account has been created and nothing has changed."
+msgstr "Ktoś właśnie próbował zarejestrować się z tym adresem e-mail, ale konto dla niego już istnieje. Nowe konto nie zostało utworzone i nic się nie zmieniło."
+
+#: templates/email/account_exists/email_message.html:76
+msgid "If it was you, sign in with your usual credentials. If you do not remember your password, request a password reset instead of signing up again."
+msgstr "Jeśli to byłaś/byłeś Ty, zaloguj się swoimi zwykłymi danymi. Jeśli nie pamiętasz hasła, poproś o jego zresetowanie zamiast rejestrować się ponownie."
+
+#: templates/email/account_exists/email_message.html:79
+msgid "If it was not you and this address is yours, somebody else may be using it on an account you never created. Reset the password to take control of the account: doing so signs out everybody who is currently using it."
+msgstr "Jeśli to nie byłaś/byłeś Ty, a ten adres należy do Ciebie, ktoś inny może go używać na koncie, którego nigdy nie zakładałaś/zakładałeś. Zresetuj hasło, aby przejąć kontrolę nad kontem: spowoduje to wylogowanie wszystkich, którzy właśnie z niego korzystają."
+
+#: templates/email/account_exists/email_message.html:84 templates/email/password/reset_email_message.html:82
+msgid "Reset Password"
+msgstr "Zresetuj hasło"
+
+#: templates/email/account_exists/email_message.html:87 templates/email/password/reset_email_message.html:85 templates/email/signup/email_message.html:76
+msgid "If the button above doesn't work, you can also copy and paste the following link into your browser:"
+msgstr "Jeśli powyższy przycisk nie działa, możesz też skopiować i wkleić do przeglądarki poniższy odnośnik:"
+
+#: templates/email/account_exists/email_message.html:93 templates/email/admin_invite/email_message.html:99 templates/email/password/reset_email_message.html:91 templates/email/signup/email_message.html:83
+msgid "This is an automated message, please do not reply to this email."
+msgstr "To jest wiadomość automatyczna, prosimy na nią nie odpowiadać."
+
+#: templates/email/account_exists/email_message.html:94 templates/email/admin_invite/email_message.html:100 templates/email/password/reset_email_message.html:92 templates/email/signup/email_message.html:84
+msgid "If you have any questions, please contact our support team."
+msgstr "W razie pytań skontaktuj się z naszym zespołem wsparcia."
+
+#: templates/email/admin_invite/email_message.html:8
+msgid "You're invited"
+msgstr "Masz zaproszenie"
+
+#: templates/email/admin_invite/email_message.html:61 templates/email/admin_invite/email_subject.txt:2
+msgid "You've been invited to join our platform"
+msgstr "Zaproszono Cię do naszej platformy"
+
+#: templates/email/admin_invite/email_message.html:66
+msgid ""
+"\n"
+"                An administrator has created an account for you using this email address.\n"
+"                To activate your account and set your password, please confirm your email address.\n"
+"                "
+msgstr ""
+"\n"
+"                Administrator utworzył dla Ciebie konto z tym adresem e-mail.\n"
+"                Aby je aktywować i ustawić hasło, potwierdź swój adres e-mail.\n"
+"                "
+
+#: templates/email/admin_invite/email_message.html:74
+msgid "Confirm email and set password"
+msgstr "Potwierdź e-mail i ustaw hasło"
+
+#: templates/email/admin_invite/email_message.html:79
+msgid ""
+"\n"
+"                If the button above does not work, you can also copy and paste the following link\n"
+"                into your browser:\n"
+"                "
+msgstr ""
+"\n"
+"                Jeśli powyższy przycisk nie działa, możesz też skopiować i wkleić poniższy odnośnik\n"
+"                do swojej przeglądarki:\n"
+"                "
+
+#: templates/email/admin_invite/email_message.html:87
+msgid ""
+"\n"
+"                After confirming your email, you will be redirected to a secure page where you can\n"
+"                choose your password and finish activating your account.\n"
+"                "
+msgstr ""
+"\n"
+"                Po potwierdzeniu adresu e-mail trafisz na bezpieczną stronę, na której wybierzesz\n"
+"                hasło i dokończysz aktywację konta.\n"
+"                "
+
+#: templates/email/admin_invite/email_message.html:94
+msgid "If you did not expect this invitation, you can safely ignore this email."
+msgstr "Jeśli nie spodziewałaś/spodziewałeś się tego zaproszenia, możesz spokojnie zignorować tę wiadomość."
+
+#: templates/email/password/reset_email_message.html:8
+msgid "Password Reset"
+msgstr "Resetowanie hasła"
+
+#: templates/email/password/reset_email_message.html:73
+msgid "Password Reset Request"
+msgstr "Prośba o zresetowanie hasła"
+
+#: templates/email/password/reset_email_message.html:77
+msgid "Hello"
+msgstr "Cześć"
+
+#: templates/email/password/reset_email_message.html:79
+msgid "You're receiving this email because you requested a password reset for your account. Please click the button below to set a new password:"
+msgstr "Otrzymujesz tę wiadomość, ponieważ poproszono o zresetowanie hasła do Twojego konta. Kliknij poniższy przycisk, aby ustawić nowe hasło:"
+
+#: templates/email/password/reset_email_subject.txt:2
+msgid "Password reset"
+msgstr "Resetowanie hasła"
+
+#: templates/email/signup/email_message.html:8
+msgid "Email Verification"
+msgstr "Weryfikacja adresu e-mail"
+
+#: templates/email/signup/email_message.html:65
+msgid "Welcome to our platform!"
+msgstr "Witamy na naszej platformie!"
+
+#: templates/email/signup/email_message.html:70
+msgid "Thank you for signing up on our website. To complete your registration, please click the button below to verify your email address:"
+msgstr "Dziękujemy za rejestrację w naszym serwisie. Aby ją dokończyć, kliknij poniższy przycisk i zweryfikuj swój adres e-mail:"
+
+#: templates/email/signup/email_message.html:73
+msgid "Verify Email Address"
+msgstr "Zweryfikuj adres e-mail"
+
+#: templates/email/signup/email_message.html:79
+msgid "If you did not request this email, you can safely ignore it."
+msgstr "Jeśli nie prosiłaś/prosiłeś o tę wiadomość, możesz ją spokojnie zignorować."
+
+#: templates/email/signup/email_subject.txt:2
+msgid "Welcome"
+msgstr "Witamy"
+
+#: tokens/models.py:14
+msgid "created"
+msgstr "utworzono"
+
+#: tokens/models.py:15
+msgid "ip"
+msgstr "IP"
+
+#: tokens/models.py:16
+msgid "is mobile"
+msgstr "czy telefon"
+
+#: tokens/models.py:17
+msgid "is tablet"
+msgstr "czy tablet"
+
+#: tokens/models.py:18
+msgid "is pc"
+msgstr "czy komputer"
+
+#: tokens/models.py:19
+msgid "is bot"
+msgstr "czy bot"
+
+#: tokens/models.py:20
+msgid "browser"
+msgstr "przeglądarka"
+
+#: tokens/models.py:21
+msgid "browser version"
+msgstr "wersja przeglądarki"
+
+#: tokens/models.py:22
+msgid "os"
+msgstr "system operacyjny"
+
+#: tokens/models.py:23
+msgid "os version"
+msgstr "wersja systemu operacyjnego"
+
+#: tokens/models.py:24
+msgid "device"
+msgstr "urządzenie"
+
+#: tokens/models.py:25
+msgid "device brand"
+msgstr "marka urządzenia"
+
+#: tokens/models.py:26
+msgid "device model"
+msgstr "model urządzenia"
+
+#: tokens/models.py:30 tokens/models.py:46
+msgid "refresh token"
+msgstr "token odświeżania"
+
+#: tokens/models.py:31 tokens/models.py:47
+msgid "refresh tokens"
+msgstr "tokeny odświeżania"
+
+#: tokens/models.py:40
+msgid "jti"
+msgstr "jti"
+
+#: tokens/models.py:41
+msgid "enabled"
+msgstr "włączony"
+
+#: tokens/models.py:42
+msgid "session"
+msgstr "sesja"
+
+#: tokens/models.py:55 tokens/models.py:64
+msgid "user"
+msgstr "użytkownik"
+
+#: tokens/models.py:66
+msgid "token"
+msgstr "token"
+
+#: tokens/models.py:67
+msgid "purpose"
+msgstr "przeznaczenie"
+
+#: tokens/models.py:70
+msgid "generic token"
+msgstr "token ogólny"
+
+#: tokens/models.py:71
+msgid "generic tokens"
+msgstr "tokeny ogólne"

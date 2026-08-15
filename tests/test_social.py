@@ -11,14 +11,17 @@ an unconfirmed address.
 import json
 import sys
 from importlib import reload
+from unittest.mock import patch
 
 import responses
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.models import SocialAccount
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.core.cache import cache
 from django.test import SimpleTestCase, override_settings
+from django.utils import timezone
 from django.urls import NoReverseMatch, clear_url_caches, reverse
 from rest_framework import status
 from rest_framework_simplejwt.tokens import AccessToken
@@ -27,7 +30,7 @@ from jwt_allauth.constants import EMAIL_VERIFIED_CLAIM, INVITATION, REFRESH_TOKE
 from jwt_allauth.tokens.models import GenericTokenModel, RefreshTokenWhitelistModel
 from jwt_allauth.utils import hash_token
 from tests.mixins import TestsMixin
-from tests.socialprovider.views import ACCESS_TOKEN_URL, USERINFO_URL
+from tests.socialprovider.views import ACCESS_TOKEN_URL, USERINFO_URL, DummyOAuth2Adapter
 
 SOCIAL_EMAIL = 'social.person@world.com'
 
@@ -368,6 +371,114 @@ class SocialEmailLinkingTests(SocialTestsMixin):
         self.post(second_url, data=self.token_payload(client_id='second-client'), status_code=status.HTTP_200_OK)
 
     @responses.activate
+    @override_settings(ACCOUNT_EMAIL_VERIFICATION='optional')
+    def test_a_sign_up_that_never_confirmed_the_address_is_not_handed_over(self):
+        """
+        The pre-hijacking this rule exists to close.
+
+        Somebody posts the victim's address to ``/registration/`` with a password of
+        their own choosing. Under optional verification that sign-up is completed on the
+        spot, which stamps ``last_login`` -- so for as long as "has been used" was the
+        test, the account counted as claimed and the victim's *Sign in with Google* was
+        signed straight into the squatter's account, password intact, indefinitely.
+        """
+        self.post(
+            self.register_url,
+            data={'email': SOCIAL_EMAIL, 'password1': 'Val1dPasw0rd', 'password2': 'Val1dPasw0rd',
+                  'first_name': 'Squat', 'last_name': 'Ter'},
+            status_code=status.HTTP_201_CREATED,
+        )
+        squatter = get_user_model().objects.get(email=SOCIAL_EMAIL)
+        self.assertIsNotNone(squatter.last_login, 'the sign-up itself stamps it')
+
+        self.fake_profile()
+        resp = self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_409_CONFLICT)
+
+        self.assertEqual(resp['code'], 'local_account_unverified')
+        # Neither taken over nor destroyed: the squatter's account is untouched and no
+        # connection was recorded.
+        self.assertFalse(SocialAccount.objects.exists())
+        squatter.refresh_from_db()
+        self.assertTrue(squatter.has_usable_password())
+
+    @responses.activate
+    @override_settings(ACCOUNT_EMAIL_VERIFICATION='optional')
+    def test_confirming_the_address_is_the_way_through(self):
+        """
+        The refusal above is recoverable by exactly one person: whoever reads the
+        mailbox. The confirmation link was already sent there by the sign-up.
+        """
+        user = get_user_model().objects.create_user('pending', email=SOCIAL_EMAIL, password='Val1dPasw0rd')
+        user.last_login = timezone.now()
+        user.save()
+        address = EmailAddress.objects.create(user=user, email=SOCIAL_EMAIL, verified=False, primary=True)
+
+        self.fake_profile()
+        self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_409_CONFLICT)
+
+        address.verified = True
+        address.save()
+
+        self.fake_profile()
+        self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_200_OK)
+        self.assertEqual(SocialAccount.objects.get(provider='dummy').user_id, user.pk)
+        user.refresh_from_db()
+        self.assertTrue(user.has_usable_password())
+
+    @responses.activate
+    @override_settings(ACCOUNT_EMAIL_VERIFICATION='optional')
+    def test_an_established_owner_on_a_later_address_still_wins(self):
+        """
+        A provider may vouch for several addresses. Refusing on the first one that is
+        blocked would hide an account further down the list that has genuinely proved
+        control -- so every address is resolved before the refusal is raised.
+        """
+        squatter = get_user_model().objects.create_user('pending', email=SOCIAL_EMAIL, password='Val1dPasw0rd')
+        squatter.last_login = timezone.now()
+        squatter.save()
+        EmailAddress.objects.create(user=squatter, email=SOCIAL_EMAIL, verified=False, primary=True)
+
+        self.fake_profile(profile(emails=[{'email': self.EMAIL, 'email_verified': True}]))
+        self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_200_OK)
+
+        self.assertEqual(SocialAccount.objects.get(provider='dummy').user_id, self.USER.id)
+        self.assertTrue(get_user_model().objects.filter(pk=squatter.pk).exists())
+
+    @responses.activate
+    @override_settings(ACCOUNT_EMAIL_VERIFICATION='optional', JWT_ALLAUTH_SOCIAL_EMAIL_LINKING=False)
+    def test_an_unconfirmed_account_in_use_reports_the_plain_conflict_when_linking_is_off(self):
+        """With linking off the account is out of reach either way, and the caller is
+        told only what it is entitled to: the address is taken."""
+        user = get_user_model().objects.create_user('pending', email=SOCIAL_EMAIL, password='Val1dPasw0rd')
+        user.last_login = timezone.now()
+        user.save()
+        EmailAddress.objects.create(user=user, email=SOCIAL_EMAIL, verified=False, primary=True)
+
+        self.fake_profile()
+        resp = self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_409_CONFLICT)
+        self.assertEqual(resp['code'], 'email_already_registered')
+
+    @responses.activate
+    @override_settings(EMAIL_VERIFICATION=False, ACCOUNT_EMAIL_VERIFICATION='none')
+    def test_verification_off_neither_hands_over_nor_destroys_an_account_in_use(self):
+        """
+        With verification off no address is ever confirmed, so this is not a corner: it
+        is every account in the installation. Superseding here would have turned the
+        takeover into a silent data loss the first time an owner clicked *Sign in with
+        Google*.
+        """
+        user = get_user_model().objects.create_user('resident', email=SOCIAL_EMAIL, password='Val1dPasw0rd')
+        user.last_login = timezone.now()
+        user.save()
+        EmailAddress.objects.create(user=user, email=SOCIAL_EMAIL, verified=False, primary=True)
+
+        self.fake_profile()
+        resp = self.post(self.token_login_url, data=self.token_payload(), status_code=status.HTTP_409_CONFLICT)
+
+        self.assertEqual(resp['code'], 'local_account_unverified')
+        self.assertTrue(get_user_model().objects.filter(pk=user.pk).exists())
+
+    @responses.activate
     @override_settings(EMAIL_VERIFICATION='mandatory')
     def test_unconfirmed_local_account_is_refused_as_it_would_be_with_a_password(self):
         user = get_user_model().objects.create_user('pending', email=SOCIAL_EMAIL, password='Val1dPasw0rd')
@@ -435,6 +546,32 @@ class SocialCodeLoginTests(SocialTestsMixin):
     def test_code_is_required(self):
         self.post(self.code_login_url, data={'callback_url': 'https://app.test/callback'},
                   status_code=status.HTTP_400_BAD_REQUEST)
+
+    @responses.activate
+    def test_the_adapter_decides_which_client_exchanges_the_code(self):
+        """
+        allauth declares the OAuth2 client on the adapter, and for some providers that
+        is not decoration: Apple's ``client_secret`` is an ES256 JWT that has to be
+        signed with the ``.p8`` key on every exchange, which is what
+        ``AppleOAuth2Adapter.client_class`` is for. Instantiating ``OAuth2Client`` by
+        name here sent the stored secret raw and the provider refused the code -- and
+        the refusal arrived as ``invalid_social_token``, indistinguishable from an
+        expired credential, so nothing said the flow was unusable for that provider.
+        """
+        instantiated = []
+
+        class RecordingClient(OAuth2Client):
+            def __init__(self, *args, **kwargs):
+                instantiated.append(self)
+                super().__init__(*args, **kwargs)
+
+        self.fake_token_exchange()
+        self.fake_profile()
+
+        with patch.object(DummyOAuth2Adapter, 'client_class', RecordingClient):
+            self.post(self.code_login_url, data=self.code_payload(), status_code=status.HTTP_200_OK)
+
+        self.assertEqual(len(instantiated), 1, 'the adapter\'s client is the one that ran')
 
 
 class SocialConnectTests(SocialTestsMixin):

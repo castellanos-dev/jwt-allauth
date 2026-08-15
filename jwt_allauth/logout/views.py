@@ -1,5 +1,4 @@
 from django.utils.translation import gettext_lazy as _
-from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -9,7 +8,7 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from jwt_allauth.logout.serializers import RemoveRefreshTokenSerializer
 from jwt_allauth.tokens.models import RefreshTokenWhitelistModel
 from jwt_allauth.constants import REFRESH_TOKEN_COOKIE
-from jwt_allauth.utils import user_sessions_lock
+from jwt_allauth.utils import refresh_token_as_cookie, user_sessions_lock
 
 
 class LogoutView(APIView):
@@ -30,8 +29,16 @@ class LogoutView(APIView):
     @staticmethod
     def logout(request):
         data = request.data.copy()
-        
-        if getattr(settings, 'JWT_ALLAUTH_REFRESH_TOKEN_AS_COOKIE', False):
+
+        # Through the helper, never by re-reading the setting here. This endpoint is the
+        # only one that *consumes* the refresh token; every endpoint that issues one goes
+        # through `refresh_token_as_cookie()`, which defaults to True. Reading the setting
+        # again with a default of its own made the two disagree wherever the project had
+        # not declared it -- the default case: the token went out as an HttpOnly cookie
+        # and this view looked for it in a body the frontend had no way to fill, so
+        # `refresh` came back "required" and logout closed nothing at all. One reader
+        # cannot drift from itself.
+        if refresh_token_as_cookie():
             refresh_token = request.COOKIES.get(REFRESH_TOKEN_COOKIE)
             if refresh_token:
                 data['refresh'] = refresh_token

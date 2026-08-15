@@ -119,6 +119,13 @@ secret never reaches the frontend.
 byte, or the provider refuses the exchange. ``code_verifier`` is the PKCE verifier and is
 passed straight through; send it whenever the authorization request carried a challenge.
 
+The exchange is made with the client the provider's own allauth adapter declares
+(``client_class``), not with a fixed one. Some providers need theirs: Apple's
+``client_secret`` is not a stored string but an ES256 JWT signed with the ``.p8`` key on
+every exchange, and only its client builds one. Before 1.5.1 the generic client was used
+for everybody, so those providers rejected every code with an error indistinguishable
+from an expired credential.
+
 The response
 ~~~~~~~~~~~~
 
@@ -147,21 +154,37 @@ part ways.
 
 An account here is identified by its e-mail address. So when a provider vouches for
 ``ana@example.com`` and a local account already holds it, the question is whether they
-are the same person. JWT Allauth answers it with the rule registration already uses --
-:func:`jwt_allauth.accounts.superseded_accounts` -- and treats the two answers
-differently:
+are the same person. What settles it is **proof of control of the mailbox**, and nothing
+else: :func:`jwt_allauth.accounts.resolve_email_for_provider` sorts the answer into
+three.
 
-**The address is claimed.** It has been confirmed, or the account has been used, or it is
-a staff account. Somebody established ownership of it, the provider has just proved
-control of the same mailbox, and they are the same person. The provider is connected and
-**the password is left alone**: from then on either one signs the account in. This is
-what makes "I registered with a password in March and clicked *Sign in with Google* in
-November" work, and keep working.
+**Control of the address was demonstrated.** It was confirmed, an administrator
+provisioned the account for it (:doc:`invitations`), or it is a staff account. The
+provider has just demonstrated control of the same mailbox, so they are the same person.
+The provider is connected and **the password is left alone**: from then on either one
+signs the account in. This is what makes "I registered with a password in March and
+clicked *Sign in with Google* in November" work, and keep working.
 
-**The address is unclaimed.** Never confirmed, on an account that was never used. Anybody
-could have typed it into a sign-up form, including somebody who does not own it. Those
-accounts are superseded -- removed whole -- exactly as a duplicate registration
+**Nobody ever claimed the address.** Never confirmed, on an account that was never used.
+Anybody could have typed it into a sign-up form, including somebody who does not own it.
+Those accounts are superseded -- removed whole -- exactly as a duplicate registration
 supersedes them, and the provider account is created fresh.
+
+**The account is in use but never confirmed the address.** Possible whenever verification
+is not mandatory, where a sign-up is usable from the moment it is made. The login is
+refused with ``409`` ``local_account_unverified``, because neither of the other two
+answers is safe: signing the provider in would hand over an account nothing ties to this
+mailbox, and superseding it would delete an account somebody has been working in. The way
+through belongs to exactly one person -- confirm the address using the link the sign-up
+already sent to that mailbox, and the same login links.
+
+.. note::
+
+    Until 1.5.1 the second question was answered with the first one's rule, "has this
+    account been used". It cannot be: under ``EMAIL_VERIFICATION = 'optional'`` the
+    sign-up itself stamps ``last_login``, and a password login only proves somebody knows
+    a password, which on an account created by a stranger is the password *that stranger
+    chose*. See :doc:`release_notes`.
 
 allauth's own path, ``SOCIALACCOUNT_EMAIL_AUTHENTICATION``, does not draw that line: it
 wipes the local password whenever it matches an account by address. That is the safe
