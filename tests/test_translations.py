@@ -14,9 +14,10 @@ catalogues cover the strings the code really uses, and a translation actually co
 out of ``gettext`` under a language the package claims to support.
 """
 
-import os
+import gettext
 from pathlib import Path
 
+import polib
 from django.test import SimpleTestCase
 from django.utils import translation
 
@@ -27,6 +28,14 @@ LOCALE_DIR = Path(jwt_allauth.__file__).parent / 'locale'
 LANGUAGES = sorted(p.name for p in LOCALE_DIR.iterdir() if p.is_dir())
 
 
+def _source(code):
+    return LOCALE_DIR / code / 'LC_MESSAGES' / 'django.po'
+
+
+def _compiled(code):
+    return LOCALE_DIR / code / 'LC_MESSAGES' / 'django.mo'
+
+
 class CompiledCatalogueTests(SimpleTestCase):
     """``.po`` is for translators; ``.mo`` is the file gettext opens."""
 
@@ -34,22 +43,49 @@ class CompiledCatalogueTests(SimpleTestCase):
         # Nothing on the way to PyPI compiles these -- the release workflow runs
         # `python -m build` and no more -- so an uncompiled language is a language whose
         # translations never leave the repository.
-        missing = [
-            code for code in LANGUAGES
-            if not (LOCALE_DIR / code / 'LC_MESSAGES' / 'django.mo').exists()
-        ]
+        missing = [code for code in LANGUAGES if not _compiled(code).exists()]
         self.assertEqual(missing, [], 'run `django-admin compilemessages` and commit the result')
 
-    def test_no_compiled_catalogue_is_older_than_its_source(self):
-        # A `.mo` left behind by an edit to the `.po` is the failure mode that looks like
-        # a translation that simply did not take.
-        stale = []
+    def test_every_compiled_catalogue_carries_what_its_source_says(self):
+        """
+        The guard against a ``.po`` edited without recompiling, which is the failure that
+        looks like a translation simply not taking.
+
+        Compared by **content**, deliberately, and not by comparing modification times:
+        git does not record them, so on a fresh clone every file carries the checkout
+        time in whatever order the files landed, and a perfectly current ``.mo`` reads as
+        older than its source about half the time. That check passed here and failed for
+        all eleven languages on CI.
+        """
         for code in LANGUAGES:
-            source = LOCALE_DIR / code / 'LC_MESSAGES' / 'django.po'
-            compiled = LOCALE_DIR / code / 'LC_MESSAGES' / 'django.mo'
-            if compiled.exists() and os.path.getmtime(compiled) < os.path.getmtime(source):
-                stale.append(code)
-        self.assertEqual(stale, [], 'recompile these catalogues')
+            with self.subTest(code):
+                with open(_compiled(code), 'rb') as fh:
+                    compiled = gettext.GNUTranslations(fh)
+                for entry in polib.pofile(str(_source(code))):
+                    self.assertEqual(
+                        compiled.gettext(entry.msgid), entry.msgstr,
+                        f'{code}: {entry.msgid!r} differs between the source and the compiled catalogue',
+                    )
+
+    def test_every_language_is_complete(self):
+        # A half-translated catalogue answers part of a request in one language and the
+        # rest in another, which is worse than answering all of it in English.
+        for code in LANGUAGES:
+            with self.subTest(code):
+                po = polib.pofile(str(_source(code)))
+                self.assertEqual([e.msgid for e in po.untranslated_entries()], [])
+                self.assertEqual([e.msgid for e in po.fuzzy_entries()], [])
+
+    def test_every_language_covers_the_same_strings(self):
+        # Catches the language left out of a `makemessages` run: it keeps working and
+        # silently stops covering whatever was added.
+        reference = None
+        for code in LANGUAGES:
+            msgids = sorted(e.msgid for e in polib.pofile(str(_source(code))))
+            if reference is None:
+                reference, reference_code = msgids, code
+            with self.subTest(code):
+                self.assertEqual(msgids, reference, f'{code} and {reference_code} cover different strings')
 
 
 class TranslationsAreActuallyAppliedTests(SimpleTestCase):
