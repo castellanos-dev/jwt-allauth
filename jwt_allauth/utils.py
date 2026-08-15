@@ -143,15 +143,22 @@ def socialaccount_stack_available() -> bool:
     """Whether the dependencies the social flows need are installed.
 
     ``allauth.socialaccount`` imports without them -- it defers ``requests`` into a
-    method -- so the question cannot be answered by catching an ``ImportError`` around
-    the import. It is asked of the module finder instead, which is what makes the
-    difference between "the extra is missing" and "no provider is configured" reportable
-    at startup rather than as a 500 on the first request.
+    method, and ``jwt``/``cryptography`` behind ``allauth.core.internal.deferred`` -- so
+    the question cannot be answered by catching an ``ImportError`` around the import. It
+    is asked of the module finder instead, which is what makes the difference between
+    "the extra is missing" and "no provider is configured" reportable at startup rather
+    than as a 500 on the first request.
+
+    All three are checked, not just ``requests``: a host that happens to carry ``requests``
+    for unrelated reasons but no ``cryptography`` would otherwise route the endpoints, keep
+    ``jwt_allauth.W004`` quiet, and raise ``ModuleNotFoundError`` from allauth's JWT kit on
+    the first credential -- exactly the 500 this check exists to forestall.
 
     Returns:
-        bool: ``True`` when ``pip install django-jwt-allauth[social]`` has been run.
+        bool: ``True`` when everything ``django-allauth[socialaccount]`` pulls in is
+        importable, which is what ``pip install django-jwt-allauth[social]`` installs.
     """
-    return find_spec('requests') is not None
+    return all(find_spec(module) is not None for module in ('requests', 'oauthlib', 'cryptography'))
 
 
 def invitations_enabled() -> bool:

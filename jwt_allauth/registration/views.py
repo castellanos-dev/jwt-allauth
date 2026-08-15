@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import status
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from django.http import HttpResponseNotFound
 
 from jwt_allauth.tokens.models import TokenModel
@@ -159,7 +159,7 @@ class RegisterView(ExtraThrottlesMixin, CreateAPIView):
         return refresh
 
 
-class UserRegisterView(CreateAPIView):
+class UserRegisterView(ExtraThrottlesMixin, CreateAPIView):
     """
     Admin-managed registration endpoint.
     - Only accessible to users with admin role (see AdminPermission).
@@ -169,6 +169,12 @@ class UserRegisterView(CreateAPIView):
     serializer_class = UserRegisterSerializer
     permission_classes = (RegisterUsersPermission,)
     http_method_names = ['post', 'head', 'options']
+    # An authorized caller, but the request still sends mail to an address of its
+    # choosing, reports whether that address is in use -- the endpoint answers conflicts
+    # rather than hiding them -- and supersedes an unclaimed account holding it. The role
+    # check bounds who may do it, not how fast, and `JWT_ALLAUTH_INVITATIONS` now routes
+    # this in installations that keep their public sign-up.
+    extra_throttle_classes = (UserRateThrottle,)
 
     @staticmethod
     def get_response_data(_):
