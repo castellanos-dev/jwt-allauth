@@ -44,6 +44,8 @@ Compatibility
 
 - **The** ``social`` **extra is probed by everything it installs** — ``requests``, ``oauthlib`` and ``cryptography`` — not by ``requests`` alone. A host carrying ``requests`` for unrelated reasons used to route the endpoints, keep ``jwt_allauth.W004`` quiet, and fail with ``ModuleNotFoundError`` on the first credential.
 
+- **``jwt-allauth startproject`` writes the RS256 signing key readable only by its owner.** It was created at the process umask — ``0644`` on most hosts, inside a ``0755`` directory — and it signs every access token the project issues; authentication is stateless by default, so a token minted with that key is accepted without a query. Existing projects are not touched by an upgrade: run ``chmod 700 keys && chmod 600 keys/private.pem``, and rotate the key if the directory was ever readable by anyone you would not hand it to.
+
 - **Provider credentials are declared sensitive.** ``id_token``, ``access_token``, ``code`` and ``code_verifier`` are masked in tracebacks, the ``django.request`` log and the mail to ``ADMINS``, as passwords already were.
 
 - **``RefreshToken.for_user`` accepts an optional** ``email_verified``. It is additive — omitted, the token asks the database as before — and lets a caller that has just checked hand the answer on instead of paying for the query twice. ``jwt_allauth.social.flows.authenticate_social_login`` now returns ``(user, email_verified)`` for that reason; it is new in this release, so nothing depended on the old shape. ``RefreshToken.set_email_verified`` takes the same optional argument, and is called with it only when a caller supplied one — so a subclass that overrides the one-argument form keeps working.

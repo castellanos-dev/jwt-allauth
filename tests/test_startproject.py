@@ -1,11 +1,12 @@
 import os
 import shutil
+import stat
 import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
 
 from django.test import SimpleTestCase, override_settings
-from jwt_allauth.bin.jwt_allauth import main, _modify_settings, _modify_urls
+from jwt_allauth.bin.jwt_allauth import main, _generate_rsa_keys, _modify_settings, _modify_urls
 
 
 class TestStartProject(unittest.TestCase):
@@ -246,3 +247,51 @@ class GeneratedProjectChecksTests(SimpleTestCase):
         ]
         with override_settings(INSTALLED_APPS=generated_apps, SOCIALACCOUNT_PROVIDERS={}):
             self.assertEqual(check_social_providers(None), [])
+
+
+class TestSigningKeyPermissions(unittest.TestCase):
+    """
+    The generated signing key is not readable by anybody but its owner.
+
+    It signs every access token the project issues, and this library authenticates
+    statelessly by default -- a token minted with a stolen key is accepted without a
+    single query. A key left at the process umask (0644 on most hosts) hands that to any
+    local user, and to anything that archives the working directory.
+    """
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp()
+        self.keys_dir = os.path.join(self.test_dir, 'keys')
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir)
+
+    @unittest.skipIf(os.name != 'posix', 'POSIX permission bits')
+    def test_private_key_is_not_readable_by_others(self):
+        # A permissive umask is the case that matters: the default on many hosts, and
+        # the one that used to decide the key's mode.
+        previous = os.umask(0o000)
+        try:
+            self.assertTrue(_generate_rsa_keys(self.keys_dir))
+        finally:
+            os.umask(previous)
+
+        private = os.path.join(self.keys_dir, 'private.pem')
+        self.assertEqual(stat.S_IMODE(os.stat(private).st_mode), 0o600)
+        self.assertEqual(stat.S_IMODE(os.stat(self.keys_dir).st_mode), 0o700)
+
+    @unittest.skipIf(os.name != 'posix', 'POSIX permission bits')
+    def test_an_existing_keys_directory_is_narrowed_too(self):
+        """``makedirs`` does nothing to a directory that already exists."""
+        os.makedirs(self.keys_dir)
+        os.chmod(self.keys_dir, 0o755)
+
+        self.assertTrue(_generate_rsa_keys(self.keys_dir))
+
+        self.assertEqual(stat.S_IMODE(os.stat(self.keys_dir).st_mode), 0o700)
+
+    def test_the_keys_are_kept_out_of_version_control(self):
+        self.assertTrue(_generate_rsa_keys(self.keys_dir))
+
+        with open(os.path.join(self.keys_dir, '.gitignore')) as f:
+            self.assertIn('*.pem', f.read())
