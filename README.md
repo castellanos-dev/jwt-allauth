@@ -12,8 +12,8 @@ JWT Allauth
 JWT Allauth gives every login its own tracked session, rotates the refresh token on each
 use, and — when a rotated token is presented a second time — revokes the entire session
 rather than just rejecting the replayed credential. Around that it ships the endpoints an
-API needs to be usable on day one: login, sign-up, e-mail verification, password reset,
-MFA and role-based permissions.
+API needs to be usable on day one: login, social login, sign-up, invitations, e-mail
+verification, password reset, MFA and role-based permissions.
 
 Built on Django REST Framework, django-allauth and Simple JWT.
 

@@ -19,8 +19,8 @@ detection.**
 JWT Allauth gives every login its own tracked session, rotates the refresh token on each
 use, and -- when a rotated token is presented a second time -- revokes the entire session
 rather than just rejecting the replayed credential. Around that it ships the endpoints an
-API needs to be usable on day one: login, sign-up, e-mail verification, password reset,
-MFA and role-based permissions.
+API needs to be usable on day one: login, social login, sign-up, invitations, e-mail
+verification, password reset, MFA and role-based permissions.
 
 Built on Django REST Framework, django-allauth and Simple JWT.
 
@@ -91,6 +91,14 @@ Install using ``pip``...
 .. code-block:: bash
 
     pip install django-jwt-allauth
+
+Optional features ship as extras, so nothing you do not use is installed::
+
+    pip install "django-jwt-allauth[social]"   # sign in through a provider
+    pip install "django-jwt-allauth[mfa]"      # TOTP second factor
+    pip install "django-jwt-allauth[schema]"   # OpenAPI schema and Swagger UI
+
+See :ref:`optional-features`.
 
 You can quickly start a new Django project with JWT Allauth pre-configured using the ``startproject`` command:
 

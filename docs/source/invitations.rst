@@ -127,11 +127,13 @@ administrator replaces a link that never arrived, so it supersedes the pending i
 and sends a fresh one. The first link dies with the account it belonged to.
 
 An invitee who signs up through ``/registration/`` instead of following their link gets
-the ordinary answer for an address that is taken: with ``ACCOUNT_PREVENT_ENUMERATION`` on
--- the default -- a ``201`` that creates nothing, and the "account already exists" notice
-by e-mail. That notice points at the password reset, which cannot help them here: the
-reset only goes out to a **verified** address, and an invited address is unverified by
-definition. Their invitation link remains the only way in, and it is untouched.
+the ordinary answer for an address that is taken. While e-mail verification is mandatory
+and ``ACCOUNT_PREVENT_ENUMERATION`` is on -- both defaults for a project that turns
+verification on -- that is a ``201`` which creates nothing, plus the "account already
+exists" notice by e-mail; otherwise there is nothing to hide and the answer is ``400``.
+
+That notice points at the password reset, which cannot help them here: the reset only goes
+out to a **verified** address, and an invited address is unverified by definition. Their invitation link remains the only way in, and it is untouched.
 
 With a second factor required
 -----------------------------
