@@ -840,8 +840,9 @@ Social login
 ------------
 
 Routed under ``/social/`` once this package is installed with its ``social`` extra
-(``pip install "django-jwt-allauth[social]"``) and ``allauth.socialaccount`` is in
-``INSTALLED_APPS``. The provider id travels in the path, e.g. ``/social/google/token/``.
+(``pip install "django-jwt-allauth[social]"``) **and** ``allauth.socialaccount`` is in
+``INSTALLED_APPS``. Both halves are required; with a provider configured and either one
+missing, ``jwt_allauth.W004`` says which at startup. The provider id travels in the path, e.g. ``/social/google/token/``.
 See :doc:`social_login`.
 
 **/social/<provider>/token/** (POST)

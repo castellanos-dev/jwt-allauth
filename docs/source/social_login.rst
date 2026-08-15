@@ -45,9 +45,10 @@ Then run migrations -- the provider connections are allauth's models:
 
     python manage.py migrate
 
-The endpoints are routed only when ``allauth.socialaccount`` is installed. If the app is in
-``INSTALLED_APPS`` but ``django-jwt-allauth[social]`` was never installed, they are
-silently absent and :ref:`jwt_allauth.W004 <social-checks>` says so at startup.
+The endpoints are routed only when both halves are present: ``allauth.socialaccount`` in
+``INSTALLED_APPS`` and the ``social`` extra installed. With a provider configured and the
+extra missing they stay absent rather than failing on the first request, and
+:ref:`jwt_allauth.W004 <social-checks>` says which half is missing at startup.
 
 Configuration
 -------------
@@ -165,7 +166,8 @@ supersedes them, and the provider account is created fresh.
 allauth's own path, ``SOCIALACCOUNT_EMAIL_AUTHENTICATION``, does not draw that line: it
 wipes the local password whenever it matches an account by address. That is the safe
 answer if you cannot tell the two cases apart, and it is why setting allauth's flag has
-no effect on these endpoints. Use ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING`` instead;
+no effect on these endpoints: the match it would make by address is discarded, so this
+module's rule is the one that decides. Use ``JWT_ALLAUTH_SOCIAL_EMAIL_LINKING`` instead;
 :ref:`jwt_allauth.W005 <social-checks>` points it out at startup if you set allauth's.
 
 .. warning::
@@ -226,11 +228,13 @@ each authorization request needs. The app secret is never part of it.
 Startup checks
 --------------
 
-- ``jwt_allauth.W004`` -- the endpoints cannot serve a request: either
-  ``allauth.socialaccount`` is installed without its dependencies, or no provider app is
-  declared in ``SOCIALACCOUNT_PROVIDERS``. Both answer ``404`` to everything.
-- ``jwt_allauth.W005`` -- ``SOCIALACCOUNT_EMAIL_AUTHENTICATION`` is declared and has no
-  effect on these endpoints. See above.
+- ``jwt_allauth.W004`` -- a provider is configured but the installation cannot serve it:
+  either the ``social`` extra is missing, so the endpoints are not routed, or no provider
+  app carries credentials, so every one of them answers ``404``. Silent until the project
+  asks for a provider -- having ``allauth.socialaccount`` installed is not asking, since
+  ``jwt-allauth startproject`` writes it into every generated project.
+- ``jwt_allauth.W005`` -- ``SOCIALACCOUNT_EMAIL_AUTHENTICATION`` is declared, globally or
+  per provider, and these endpoints override it. See above.
 
 What is not covered
 -------------------
